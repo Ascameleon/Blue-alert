@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Checkout repository and RTS engine
         uses: actions/checkout@v4
@@ -44,3 +44,45 @@ jobs:
       - name: Build OpenRTS
         working-directory: engine/OpenRTS
         run: ./gradlew --no-daemon build
+      - name: Install virtual display and screenshot tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends xvfb xauth imagemagick
+      - name: Launch OpenRTS and capture graphical smoke-test evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cat > /tmp/openrts-smoke.sh <<'SCRIPT'
+          #!/usr/bin/env bash
+          set -uo pipefail
+          ./gradlew --no-daemon run > "$GITHUB_WORKSPACE/artifacts/openrts-launch.log" 2>&1 &
+          app_pid=$!
+          cleanup() {
+            kill "$app_pid" 2>/dev/null || true
+            pkill -P "$app_pid" 2>/dev/null || true
+            wait "$app_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          for i in $(seq 1 30); do
+            if ! kill -0 "$app_pid" 2>/dev/null; then
+              echo "OpenRTS exited before the 30-second smoke-test window."
+              cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
+              exit 1
+            fi
+            sleep 1
+          done
+          import -window root "$GITHUB_WORKSPACE/artifacts/openrts-screen.png"
+          test -s "$GITHUB_WORKSPACE/artifacts/openrts-screen.png"
+          echo "Process remained alive for 30 seconds; screenshot captured."
+          SCRIPT
+          chmod +x /tmp/openrts-smoke.sh
+          xvfb-run -a -s "-screen 0 1280x720x24" /tmp/openrts-smoke.sh
+      - name: Upload graphical smoke-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openrts-graphical-smoke-test
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
