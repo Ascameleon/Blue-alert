@@ -376,8 +376,8 @@ const CFG = {
 
 /* ─── Three.js setup ─────────────────────────────────────── */
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x6a8a98);
-scene.fog = new THREE.Fog(0x6a8a98, 90, 180);
+scene.background = new THREE.Color(0x536c78);
+scene.fog = new THREE.Fog(0x536c78, 105, 220);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.15, 350);
 let camTarget = new THREE.Vector3(-18, 0, 4);
@@ -402,29 +402,32 @@ renderer.domElement.addEventListener('webglcontextlost', event => {
   }
 });
 
-scene.add(new THREE.HemisphereLight(0xc8e0f0, 0x3a4530, 1.6));
-const sun = new THREE.DirectionalLight(0xffe8c0, 2.6);
+scene.add(new THREE.HemisphereLight(0xd7e8f2, 0x303c2c, 1.85));
+const sun = new THREE.DirectionalLight(0xfff1dc, 2.8);
 sun.position.set(-40, 60, 20);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, near: 2, far: 180 });
 sun.shadow.bias = -0.0003;
 scene.add(sun);
-scene.add(new THREE.AmbientLight(0x405060, 0.35));
+const fillLight = new THREE.DirectionalLight(0x8db8d8, 0.65);
+fillLight.position.set(42, 24, -36);
+scene.add(fillLight);
+scene.add(new THREE.AmbientLight(0x405060, 0.28));
 
 /* ─── Materials ──────────────────────────────────────────── */
 const mkMat = (c, r = 0.7, m = 0.1) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
 const MAT = {
-  grass: mkMat(0x456038, 0.95, 0.02),
-  dirt: mkMat(0x5a5040, 0.92, 0.02),
-  road: mkMat(0x4a5256, 0.88, 0.05),
-  line: mkMat(0xc0b478, 0.7, 0.05),
-  concrete: mkMat(0x606870, 0.82, 0.1),
+  grass: mkMat(0x3d5635, 0.98, 0.01),
+  dirt: mkMat(0x51483b, 0.96, 0.01),
+  road: mkMat(0x343e45, 0.92, 0.03),
+  line: mkMat(0xd1c58b, 0.62, 0.08),
+  concrete: mkMat(0x737b82, 0.9, 0.06),
   dark: mkMat(0x181e22, 0.55, 0.28),
   track: mkMat(0x1e262a, 0.6, 0.22),
-  blue: mkMat(0x185070, 0.4, 0.48),
-  blue2: mkMat(0x2480b0, 0.38, 0.42),
-  blueG: mkMat(0x58c8f0, 0.28, 0.4),
+  blue: mkMat(0x123f5e, 0.34, 0.62),
+  blue2: mkMat(0x2379a5, 0.32, 0.55),
+  blueG: mkMat(0x66d8fa, 0.24, 0.5),
   red: mkMat(0x701c1c, 0.42, 0.35),
   red2: mkMat(0xa83028, 0.4, 0.3),
   gold: mkMat(0xd8b040, 0.38, 0.42),
