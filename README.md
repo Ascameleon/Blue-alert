@@ -4,6 +4,7 @@ Projet RTS avec deux éléments conservés distinctement :
 
 - **Prototype web** : [BLUE_ALERTS.html](./BLUE_ALERTS.html), prototype HTML/Three.js existant.
 - **Moteur 3D Java** : [OpenRTS](https://github.com/methusalah/OpenRTS), ajouté comme sous-module Git à `engine/OpenRTS`.
+- **Audit des moteurs RTS** : [docs/RTS_ENGINE_AUDIT.md](./docs/RTS_ENGINE_AUDIT.md), comparatif des candidats, licences et plan d'intégration.
 
 ## Récupérer le dépôt complet
 
@@ -24,7 +25,7 @@ Le sous-module est épinglé sur le commit OpenRTS `6066640f8ef2fa18b1de3e0dd213
 
 ## Lancer OpenRTS
 
-La version actuellement référencée utilise Java 21, Gradle et jMonkeyEngine 3.8.1 selon son dernier commit. Depuis le sous-module :
+La version référencée utilise Java 21, Gradle et jMonkeyEngine 3.8.1 selon son dernier commit. Depuis le sous-module :
 
 ```bash
 cd engine/OpenRTS
@@ -37,9 +38,9 @@ Commandes annoncées par OpenRTS : **F1** mode jeu, **F2** éditeur, **F3** vue 
 
 ## État d'intégration — à lire
 
-OpenRTS est maintenant référencé réellement dans ce dépôt comme sous-module Git. **Il n'est pas encore fusionné avec le prototype HTML** : ce sont deux applications et technologies distinctes (Java/jMonkeyEngine contre HTML/JavaScript/Three.js). Le jeu Java doit être compilé et lancé pour valider l'environnement, puis les mécaniques BLUE ALERTS (factions, unités, économie, missions et interface) doivent être portées ou adaptées dans OpenRTS.
+OpenRTS est référencé dans ce dépôt comme sous-module Git. **Il n'est pas encore fusionné avec le prototype HTML** : ce sont deux applications et technologies distinctes (Java/jMonkeyEngine contre HTML/JavaScript/Three.js). Le jeu Java doit être compilé et lancé pour valider l'environnement, puis les mécaniques BLUE ALERTS (factions, unités, économie, missions et interface) doivent être portées ou adaptées dans OpenRTS.
 
-Le projet OpenRTS est sous licence MIT ; consulter son fichier LICENSE et conserver les notices de licence lors de toute redistribution. Aucun achat n'est requis pour cette étape, mais le build télécharge des dépendances si elles ne sont pas déjà présentes en cache.
+OpenRTS est sous licence MIT ; conserver ses notices lors de toute redistribution. Aucun achat n'est requis pour cette étape, mais le build télécharge des dépendances si elles ne sont pas déjà en cache.
 
 ## Prototype web
 
