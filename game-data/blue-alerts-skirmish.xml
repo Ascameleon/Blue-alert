@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<blueAlertsScenario id="blue-alerts-skirmish" version="1">
+  <metadata>
+    <title>BLUE ALERTS: First Contact</title>
+    <description>Initial skirmish data pack for adapting BLUE ALERTS gameplay to OpenRTS.</description>
+    <engine>OpenRTS</engine>
+    <status>data-only-not-yet-loaded-by-engine</status>
+  </metadata>
+  <match timeLimitSeconds="1200" victoryCondition="destroy-enemy-command" defeatCondition="command-destroyed"/>
+  <resources>
+    <resource id="credits" startingAmount="800" incomePerMinute="120" cap="5000"/>
+    <resource id="power" startingAmount="20" cap="100"/>
+  </resources>
+  <factions>
+    <faction id="blue" name="Blue Command" color="#36A9FF" startX="-12" startZ="0" commandStructure="blue-hq"/>
+    <faction id="red" name="Red Dominion" color="#F04452" startX="12" startZ="0" commandStructure="red-hq"/>
+  </factions>
+  <structures>
+    <structure id="blue-hq" faction="blue" role="command" cost="0" health="1800" power="5" footprintX="3" footprintZ="3" canProduce="rifle-squad,scout-vehicle,tank"/>
+    <structure id="red-hq" faction="red" role="command" cost="0" health="1800" power="5" footprintX="3" footprintZ="3" canProduce="rifle-squad,scout-vehicle,tank"/>
+    <structure id="power-plant" faction="any" role="power" cost="250" health="500" power="35" footprintX="2" footprintZ="2"/>
+    <structure id="barracks" faction="any" role="infantry-production" cost="350" health="700" power="-5" footprintX="2" footprintZ="2" canProduce="rifle-squad"/>
+    <structure id="vehicle-factory" faction="any" role="vehicle-production" cost="600" health="950" power="-10" footprintX="3" footprintZ="2" canProduce="scout-vehicle,tank"/>
+    <structure id="turret" faction="any" role="defense" cost="300" health="650" power="-8" footprintX="1" footprintZ="1" weapon="turret-cannon"/>
+  </structures>
+  <units>
+    <unit id="rifle-squad" category="infantry" cost="180" buildSeconds="8" health="220" speed="3.4" sight="8" weapon="rifle" range="5" damage="14" cooldownSeconds="0.8"/>
+    <unit id="scout-vehicle" category="vehicle" cost="300" buildSeconds="12" health="360" speed="5.2" sight="11" weapon="autocannon" range="4.5" damage="9" cooldownSeconds="0.35"/>
+    <unit id="tank" category="heavy-vehicle" cost="550" buildSeconds="20" health="900" speed="2.2" sight="9" weapon="tank-cannon" range="7" damage="110" cooldownSeconds="2.2"/>
+  </units>
+  <weapons>
+    <weapon id="rifle" damageType="kinetic" bonusVs="infantry" bonusMultiplier="1.25"/>
+    <weapon id="autocannon" damageType="kinetic" bonusVs="light-vehicle" bonusMultiplier="1.3"/>
+    <weapon id="tank-cannon" damageType="explosive" bonusVs="heavy-vehicle,structure" bonusMultiplier="1.5"/>
+    <weapon id="turret-cannon" damageType="kinetic" bonusVs="vehicle" bonusMultiplier="1.35"/>
+  </weapons>
+  <map id="frontier-basin" width="128" depth="96" terrain="temperate" obstacles="rocks,tree-lines,ruins" capturePoints="3">
+    <capturePoint id="north-relay" x="0" z="-28" incomePerMinute="35"/>
+    <capturePoint id="central-relay" x="0" z="0" incomePerMinute="55"/>
+    <capturePoint id="south-relay" x="0" z="28" incomePerMinute="35"/>
+  </map>
+</blueAlertsScenario>
