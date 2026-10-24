@@ -1,2 +1,2 @@
-# Blur-alert
+# Blue-alert
 Jeu de stratégie 
