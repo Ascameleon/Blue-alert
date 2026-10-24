@@ -37,6 +37,8 @@ jobs:
           test -f engine/OpenRTS/gradlew
           test -x engine/OpenRTS/gradlew
           git -C engine/OpenRTS rev-parse HEAD
+      - name: Validate BLUE ALERTS HTML and inline JavaScript
+        run: python3 scripts/validate_prototype.py
       - name: Build OpenRTS
         working-directory: engine/OpenRTS
         run: ./gradlew --no-daemon build
