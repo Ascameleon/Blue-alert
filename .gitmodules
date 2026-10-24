@@ -1,0 +1,3 @@
+[submodule "engine/OpenRTS"]
+	path = engine/OpenRTS
+	url = https://github.com/methusalah/OpenRTS.git
