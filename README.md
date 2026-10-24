@@ -1,25 +1,46 @@
 # BLUE ALERTS — RTS
 
-Prototype RTS jouable en HTML/Three.js, optimisé pour pouvoir être essayé dans un navigateur moderne, y compris sur Android.
+Projet RTS avec deux éléments conservés distinctement :
 
-## Lancer le jeu
+- **Prototype web** : [BLUE_ALERTS.html](./BLUE_ALERTS.html), prototype HTML/Three.js existant.
+- **Moteur 3D Java** : [OpenRTS](https://github.com/methusalah/OpenRTS), ajouté comme sous-module Git à `engine/OpenRTS`.
 
-1. Ouvrir **[BLUE_ALERTS.html](./BLUE_ALERTS.html)**.
-2. Pour le rendu 3D, le navigateur doit pouvoir charger Three.js depuis un CDN et autoriser les modules JavaScript.
-3. Si le chargement 3D échoue, le fichier contient un mode de compatibilité 2D de secours. Ce mode est distinct du rendu 3D.
+## Récupérer le dépôt complet
 
-## Commandes et systèmes présents dans le prototype
+Clone avec sous-modules :
 
-- Sélection et ordres d'unités RTS.
-- Économie, production et construction de bâtiments.
-- Unités militaires, combats, projectiles et objectifs de mission.
-- Interface de jeu et minimap.
-- Tentatives de chargement de Three.js depuis plusieurs CDN avec mode de secours.
+```bash
+git clone --recurse-submodules https://github.com/Ascameleon/Blue-alert.git
+cd Blue-alert
+```
 
-## État et limites
+Si le dépôt a déjà été cloné sans le moteur :
 
-Ce dépôt contient un **prototype jouable**, pas un jeu commercial final ni un moteur RTS complet. Le fichier HTML charge des ressources réseau pour le rendu 3D : le fonctionnement 3D hors ligne n'est pas garanti. Les performances et la compatibilité doivent encore être testées sur appareils Android réels.
+```bash
+git submodule update --init --recursive
+```
 
-## Fichier principal
+Le sous-module est épinglé sur le commit OpenRTS `6066640f8ef2fa18b1de3e0dd213e4871b4b8543`.
 
-- `BLUE_ALERTS.html` — prototype HTML autonome (le moteur Three.js est chargé depuis un CDN).
+## Lancer OpenRTS
+
+La version actuellement référencée utilise Java 21, Gradle et jMonkeyEngine 3.8.1 selon son dernier commit. Depuis le sous-module :
+
+```bash
+cd engine/OpenRTS
+./gradlew run
+```
+
+Sous Windows, utiliser `gradlew.bat run`. Un JDK 21 et l'accès réseau aux dépendances Gradle peuvent être nécessaires.
+
+Commandes annoncées par OpenRTS : **F1** mode jeu, **F2** éditeur, **F3** vue à la première personne.
+
+## État d'intégration — à lire
+
+OpenRTS est maintenant référencé réellement dans ce dépôt comme sous-module Git. **Il n'est pas encore fusionné avec le prototype HTML** : ce sont deux applications et technologies distinctes (Java/jMonkeyEngine contre HTML/JavaScript/Three.js). Le jeu Java doit être compilé et lancé pour valider l'environnement, puis les mécaniques BLUE ALERTS (factions, unités, économie, missions et interface) doivent être portées ou adaptées dans OpenRTS.
+
+Le projet OpenRTS est sous licence MIT ; consulter son fichier LICENSE et conserver les notices de licence lors de toute redistribution. Aucun achat n'est requis pour cette étape, mais le build télécharge des dépendances si elles ne sont pas déjà présentes en cache.
+
+## Prototype web
+
+Le fichier `BLUE_ALERTS.html` conserve le prototype web précédent. Son rendu 3D dépend du chargement de Three.js depuis un CDN ; le mode 3D hors ligne n'est pas garanti.
