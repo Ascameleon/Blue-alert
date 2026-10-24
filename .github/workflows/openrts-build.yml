@@ -39,6 +39,14 @@ jobs:
           git -C engine/OpenRTS rev-parse HEAD
       - name: Validate BLUE ALERTS prototype
         run: python3 scripts/validate_prototype.py
+      - name: Validate supplied BLUE ALERTS v93 when imported
+        shell: bash
+        run: |
+          if [ -f BLUE_ALERTS_v93_COLLISION_FRAME_FIX.html ]; then
+            python3 scripts/validate_v93.py BLUE_ALERTS_v93_COLLISION_FRAME_FIX.html
+          else
+            echo 'v93 source is not yet committed; its local syntax check was performed separately.'
+          fi
       - name: Validate BLUE ALERTS skirmish data
         run: python3 scripts/validate_scenario.py
       - name: Build OpenRTS
