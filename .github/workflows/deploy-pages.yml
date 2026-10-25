@@ -1,22 +1,19 @@
-name: Publish BLUE ALERTS playable page
-
+name: Deploy BLUE ALERTS web game
 on:
   push:
     branches: [main]
     paths:
       - 'BLUE_ALERTS.html'
+      - 'docs/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: pages
   cancel-in-progress: true
-
 jobs:
   deploy:
     environment:
@@ -24,18 +21,18 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-      - name: Configure GitHub Pages
+      - name: Configure Pages
         uses: actions/configure-pages@v5
-      - name: Prepare playable HTML
+      - name: Prepare static game
         run: |
-          mkdir -p _site
-          cp BLUE_ALERTS.html _site/index.html
-      - name: Upload site
+          mkdir -p site
+          cp BLUE_ALERTS.html site/index.html
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
