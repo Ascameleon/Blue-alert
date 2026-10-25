@@ -867,38 +867,104 @@ function createUnit(x, z, team, kind) {
     addBox(g, 0, 0.85, -1.55, 1.9, 0.55, 0.85, accent);
     for (const s of [-1, 1]) addBox(g, s * 1.35, 0.28, 0, 0.38, 0.4, 3.3, MAT.track);
   } else {
-    // tank
+    // Leopard-inspired native Three.js tank assembly for BLUE ALERT.
+    // Kept native to the existing prototype so movement, targeting and effects remain unchanged.
     const heavy = kind === 'heavy';
-    const sc = heavy ? 1.25 : 1.0;
+    const sc = heavy ? 1.22 : 1.0;
     speed = heavy ? 2.3 : 3.6;
     hp = heavy ? 320 : 160;
     dmg = heavy ? 42 : 24;
     range = heavy ? 12 : 10.5;
+    const armor = team === 1 ? mkMat(0x315565, 0.68, 0.22) : mkMat(0x69332d, 0.68, 0.2);
+    const armorLight = team === 1 ? mkMat(0x477182, 0.64, 0.22) : mkMat(0x84483d, 0.64, 0.2);
+    const armorDark = mkMat(0x20282b, 0.72, 0.18);
+    const steel = mkMat(0x515a5d, 0.58, 0.28);
+    const rubber = MAT.track;
 
-    for (const s of [-1, 1]) {
-      addBox(g, s * 1.15 * sc, 0.3, 0, 0.4 * sc, 0.45 * sc, 3.4 * sc, MAT.track);
-      for (let j = -2; j <= 2; j++) {
-        const w = addCyl(g, s * 1.4 * sc, 0.28, j * 0.55 * sc, 0.18 * sc, 0.18 * sc, 0.11 * sc, MAT.dark, 8);
-        w.rotation.z = Math.PI / 2;
+    // Low, wide hull with sloped glacis and raised engine deck.
+    addBox(g, 0, 0.48 * sc, -0.02 * sc, 2.18 * sc, 0.48 * sc, 3.35 * sc, armor);
+    const glacis = addBox(g, 0, 0.76 * sc, 1.18 * sc, 2.08 * sc, 0.42 * sc, 0.92 * sc, armorLight);
+    glacis.rotation.x = -0.34;
+    const rearDeck = addBox(g, 0, 0.82 * sc, -1.18 * sc, 1.92 * sc, 0.32 * sc, 0.95 * sc, armor);
+    rearDeck.rotation.x = 0.06;
+    addBox(g, 0, 0.98 * sc, -1.37 * sc, 1.48 * sc, 0.12 * sc, 0.52 * sc, armorDark);
+    for (let k = -3; k <= 3; k++) {
+      addBox(g, k * 0.22 * sc, 1.005 * sc, -1.38 * sc, 0.13 * sc, 0.035 * sc, 0.43 * sc, steel);
+    }
+    // Angled side skirts, separate front/rear armor segments.
+    for (const side of [-1, 1]) {
+      const skirtA = addBox(g, side * 1.13 * sc, 0.55 * sc, 0.45 * sc, 0.20 * sc, 0.48 * sc, 1.55 * sc, armorLight);
+      skirtA.rotation.x = -0.04;
+      const skirtB = addBox(g, side * 1.13 * sc, 0.53 * sc, -1.02 * sc, 0.20 * sc, 0.43 * sc, 1.12 * sc, armor);
+      skirtB.rotation.x = 0.04;
+      const frontSkirt = addBox(g, side * 1.13 * sc, 0.52 * sc, 1.25 * sc, 0.19 * sc, 0.42 * sc, 0.58 * sc, armorLight);
+      frontSkirt.rotation.x = -0.3;
+      // Continuous track carcass and individual tread shoes.
+      addBox(g, side * 1.19 * sc, 0.31 * sc, 0, 0.22 * sc, 0.48 * sc, 3.55 * sc, rubber);
+      for (let n = 0; n < 7; n++) {
+        const z = (-1.38 + n * 0.46) * sc;
+        const wheel = addCyl(g, side * 1.27 * sc, 0.31 * sc, z, 0.205 * sc, 0.205 * sc, 0.13 * sc, armorDark, 12);
+        wheel.rotation.z = Math.PI / 2;
+        const hub = addCyl(g, side * 1.345 * sc, 0.31 * sc, z, 0.082 * sc, 0.082 * sc, 0.035 * sc, steel, 10);
+        hub.rotation.z = Math.PI / 2;
+      }
+      for (let n = 0; n < 18; n++) {
+        const z = (-1.69 + n * 0.198) * sc;
+        addBox(g, side * 1.315 * sc, 0.075 * sc, z, 0.065 * sc, 0.075 * sc, 0.16 * sc, steel);
+        addBox(g, side * 1.315 * sc, 0.545 * sc, z, 0.065 * sc, 0.055 * sc, 0.16 * sc, steel);
+      }
+      // Front/rear sprocket hints and mud flaps.
+      for (const z of [-1.55, 1.52]) {
+        const sprocket = addCyl(g, side * 1.28 * sc, 0.31 * sc, z * sc, 0.245 * sc, 0.245 * sc, 0.14 * sc, steel, 12);
+        sprocket.rotation.z = Math.PI / 2;
+      }
+      addBox(g, side * 1.13 * sc, 0.25 * sc, 1.72 * sc, 0.18 * sc, 0.22 * sc, 0.16 * sc, armorDark);
+    }
+    // Upper hull details: lamps, tow points, access panels and periscopes.
+    for (const side of [-1, 1]) {
+      addBox(g, side * 0.72 * sc, 0.77 * sc, 1.52 * sc, 0.20 * sc, 0.12 * sc, 0.10 * sc, team === 1 ? MAT.blueG : MAT.gold);
+      addBox(g, side * 0.78 * sc, 0.97 * sc, -0.64 * sc, 0.30 * sc, 0.08 * sc, 0.42 * sc, armorLight);
+      addCyl(g, side * 0.72 * sc, 1.00 * sc, -0.64 * sc, 0.055 * sc, 0.055 * sc, 0.09 * sc, steel, 8);
+    }
+
+    // Turret ring and faceted, angular turret with sloped cheek armor.
+    const turret = new THREE.Group();
+    turret.position.set(0, 1.02 * sc, -0.16 * sc);
+    g.add(turret);
+    const ring = addCyl(turret, 0, 0.02 * sc, 0, 0.72 * sc, 0.72 * sc, 0.18 * sc, armorDark, 16);
+    addBox(turret, 0, 0.25 * sc, -0.03 * sc, 1.62 * sc, 0.48 * sc, 1.55 * sc, armor);
+    const turretTop = addBox(turret, 0, 0.52 * sc, -0.08 * sc, 1.42 * sc, 0.20 * sc, 1.22 * sc, armorLight);
+    turretTop.rotation.x = 0.025;
+    for (const side of [-1, 1]) {
+      const cheek = addBox(turret, side * 0.73 * sc, 0.29 * sc, 0.28 * sc, 0.28 * sc, 0.42 * sc, 0.86 * sc, armorLight);
+      cheek.rotation.x = -0.18;
+      cheek.rotation.z = side * -0.12;
+      addBox(turret, side * 0.53 * sc, 0.64 * sc, -0.26 * sc, 0.36 * sc, 0.10 * sc, 0.34 * sc, armorDark);
+      // Smoke launchers angled outward.
+      for (let j = 0; j < 3; j++) {
+        const pod = addCyl(turret, side * (0.58 + j * 0.09) * sc, 0.36 * sc, 0.62 * sc, 0.065 * sc, 0.065 * sc, 0.24 * sc, steel, 8);
+        pod.rotation.x = Math.PI / 2;
+        pod.rotation.z = side * 0.12;
       }
     }
-    addBox(g, 0, 0.58 * sc, 0, 2.0 * sc, 0.55 * sc, 3.1 * sc, col);
-    addBox(g, 0, 0.9 * sc, 0.9 * sc, 1.7 * sc, 0.2 * sc, 0.55 * sc, team === 1 ? MAT.blue2 : MAT.red2);
-
-    const turret = new THREE.Group();
-    turret.position.set(0, 1.05 * sc, -0.1 * sc);
-    g.add(turret);
-    addCyl(turret, 0, 0.08, 0, 0.6 * sc, 0.7 * sc, 0.35 * sc, MAT.dark, 10);
-    addCyl(turret, 0, 0.28, 0, 0.5 * sc, 0.58 * sc, 0.4 * sc, col, 10);
-    addBox(turret, 0, 0.3, 0.5 * sc, 0.2 * sc, 0.16 * sc, 1.4 * sc, MAT.dark);
-    addBox(turret, 0, 0.3, 1.2 * sc, 0.26 * sc, 0.22 * sc, 0.2 * sc, accent);
+    // Mantlet, long cannon, reinforced muzzle brake.
+    addBox(turret, 0, 0.31 * sc, 0.78 * sc, 0.52 * sc, 0.40 * sc, 0.32 * sc, armorDark);
+    const barrel = addCyl(turret, 0, 0.36 * sc, 1.57 * sc, 0.105 * sc, 0.13 * sc, 1.68 * sc, steel, 12);
+    barrel.rotation.x = Math.PI / 2;
+    const muzzle = addCyl(turret, 0, 0.36 * sc, 2.43 * sc, 0.16 * sc, 0.14 * sc, 0.32 * sc, armorDark, 10);
+    muzzle.rotation.x = Math.PI / 2;
+    addBox(turret, 0, 0.58 * sc, -0.18 * sc, 0.40 * sc, 0.16 * sc, 0.42 * sc, armorDark);
+    addCyl(turret, -0.43 * sc, 0.63 * sc, -0.30 * sc, 0.13 * sc, 0.13 * sc, 0.13 * sc, steel, 10);
+    addCyl(turret, 0.44 * sc, 0.63 * sc, -0.30 * sc, 0.13 * sc, 0.13 * sc, 0.13 * sc, steel, 10);
+    const antenna = addCyl(turret, -0.57 * sc, 0.87 * sc, -0.50 * sc, 0.018 * sc, 0.018 * sc, 0.60 * sc, steel, 6);
+    antenna.position.y += 0.02 * sc;
     g.userData.turret = turret;
 
     const flash = new THREE.Mesh(
-      new THREE.SphereGeometry(0.18 * sc, 6, 5),
+      new THREE.SphereGeometry(0.18 * sc, 8, 6),
       new THREE.MeshBasicMaterial({ color: 0xfff0a0, transparent: true, opacity: 0 })
     );
-    flash.position.set(0, 0.3, 1.4 * sc);
+    flash.position.set(0, 0.36 * sc, 2.58 * sc);
     turret.add(flash);
     g.userData.flash = flash;
   }
