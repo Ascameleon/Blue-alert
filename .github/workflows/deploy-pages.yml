@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'BLUE_ALERTS.html'
+      - 'BLUE_ALERTS_v94_ASSET_INTEGRATION.html'
+      - 'game-data/models/**'
       - 'docs/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
@@ -27,8 +29,9 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Prepare static game
         run: |
-          mkdir -p site
-          cp BLUE_ALERTS.html site/index.html
+          mkdir -p site/game-data/models
+          cp BLUE_ALERTS_v94_ASSET_INTEGRATION.html site/index.html
+          cp game-data/models/blue-alert-models.js site/game-data/models/blue-alert-models.js
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
