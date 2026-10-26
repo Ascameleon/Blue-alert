@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blue Alert — Atelier de modèles 3D</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101719;color:#e8efec;font:14px system-ui,sans-serif}
+header{padding:14px 18px;background:#182327;border-bottom:1px solid #35474b;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+h1{font-size:17px;margin:0}small{color:#aabbb7}.controls{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+select,button{background:#27383c;color:#f2f5f3;border:1px solid #506469;border-radius:7px;padding:9px 11px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 245px;min-height:calc(100vh - 58px)}#view{min-height:65vh;position:relative}
+aside{padding:16px;background:#182327;border-left:1px solid #35474b}aside h2{font-size:14px}aside p{line-height:1.5;color:#c1ceca}
+#hint{position:absolute;bottom:12px;left:12px;background:#101719cc;padding:8px 10px;border-radius:6px;color:#c4d2ce}
+@media(max-width:700px){main{grid-template-columns:1fr}#view{min-height:65vh}aside{border-left:0;border-top:1px solid #35474b}.controls{margin-left:0}}
+</style></head><body>
+<header><h1>BLUE ALERT / Atelier de modèles 3D</h1><small>Kit procédural Three.js · sans API payante</small>
+<div class="controls"><select id="asset"><option value="tank">Char de combat</option><option value="infantry">Fantassin</option><option value="hq">Quartier général</option><option value="barracks">Caserne</option><option value="refinery">Raffinerie</option><option value="turret">Tourelle défensive</option><option value="landscape">Paysage tactique</option></select>
+<select id="team"><option value="blue">Équipe bleue</option><option value="red">Équipe rouge</option></select><button id="reset">Réinitialiser la vue</button></div></header>
+<main><section id="view"><div id="hint">Glisser : orbiter · molette : zoom · clic droit : déplacer</div></section><aside><h2 id="title">Char de combat</h2><p id="desc">Maillage 3D original composé de blindage, chenilles, roues, tourelle pivotante, canon, trappes et marquage d'équipe.</p><p><b>État :</b> modèles procéduraux en géométrie Three.js. Le code est conçu pour être appelé depuis le moteur web du jeu.</p><p><b>Commandes :</b><br>Glisser pour tourner<br>Molette pour zoomer<br>Clic droit pour déplacer la caméra</p></aside></main>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+import {createTank,createInfantry,createBuilding,createLandscape,createTree,createRock} from './blue-alert-models.js';
+const host=document.querySelector('#view'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9aa9a4);scene.fog=new THREE.Fog(0x9aa9a4,45,125);
+const camera=new THREE.PerspectiveCamera(42,1,.1,300);camera.position.set(9,8,12);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;host.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,1,0);controls.enableDamping=true;
+scene.add(new THREE.HemisphereLight(0xeaf2f0,0x4b5544,2));
+const sun=new THREE.DirectionalLight(0xfff0d5,3);sun.position.set(8,14,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
+const grid=new THREE.GridHelper(80,80,0x53655e,0x718078);grid.position.y=-.12;scene.add(grid);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0x56684f,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.16;ground.receiveShadow=true;scene.add(ground);
+let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
+const desc={
+tank:['Char de combat','Blindage à plusieurs niveaux, chenilles et roues détaillées, tourelle indépendante et canon.'],
+infantry:['Fantassin','Silhouette tactique, casque, sac à dos, bras, jambes, bottes et fusil.'],
+hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile latérale et marquage de faction.'],
+barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
+refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],
+turret:['Tourelle défensive','Socle blindé, plateforme pivotante et canon orientable.'],
+landscape:['Paysage tactique','Terrain vallonné déterministe, route, marquages, arbres low-poly et rochers.']
+};
+function build(){clear();const a=document.querySelector('#asset').value,t=document.querySelector('#team').value;
+if(a==='tank')current=createTank(THREE,{team:t});
+else if(a==='infantry')current=createInfantry(THREE,{team:t});
+else if(a==='landscape'){current=createLandscape(THREE,{size:80});}
+else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
+scene.add(current);document.querySelector('#title').textContent=desc[a][0];document.querySelector('#desc').textContent=desc[a][1];
+controls.target.set(0,a==='infantry'?.7:1,0);camera.position.set(a==='landscape'?22:8,a==='landscape'?25:7,a==='landscape'?24:11);controls.update();}
+document.querySelector('#asset').addEventListener('change',build);document.querySelector('#team').addEventListener('change',build);
+document.querySelector('#reset').addEventListener('click',build);
+function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
+new ResizeObserver(resize).observe(host);resize();build();
+renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+</script></body></html>
