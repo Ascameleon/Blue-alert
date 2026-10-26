@@ -90,6 +90,7 @@ export function createInfantry(THREE, options={}) {
 
 export function createBuilding(THREE, type='barracks', options={}) {
   const {team='blue',scale=1}=options, g=new THREE.Group(); g.name='BA_Building_'+type;
+  let rotatingGun = null;
   const faction=teamColor(THREE,team), concrete=mat(THREE,PALETTE.concrete), dark=mat(THREE,PALETTE.dark), glass=mat(THREE,PALETTE.glass), roof=mat(THREE,0x454d49);
   box(THREE,g,'foundation',[3.5,.22,2.8],[0,.11,0],dark);
   if(type==='headquarters') {
@@ -121,7 +122,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
     const head=new THREE.Group(); head.name='rotating-gun'; head.position.y=1.08; g.add(head);
     box(THREE,head,'turret-head',[1.05,.48,.8],[0,.18,0],faction);
     cylinder(THREE,head,'defense-cannon',.09,.13,1.25,[.7,.22,0],dark,10).rotation.z=-Math.PI/2;
-    g.userData.rotatingGun=head;
+    rotatingGun=head;
   } else {
     box(THREE,g,'utility-building',[2.5,1.15,2],[0,.68,0],concrete);
     box(THREE,g,'utility-roof',[2.65,.18,2.15],[0,1.34,0],faction);
@@ -130,7 +131,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
   }
   // faction banner and readable silhouette details
   box(THREE,g,'faction-panel',[.5,.22,.045],[-1.25,1.25,1.04],faction);
-  g.userData={kind:'building',buildingType:type,team}; g.scale.setScalar(scale); return g;
+  g.userData={kind:'building',buildingType:type,team,rotatingGun}; g.scale.setScalar(scale); return g;
 }
 
 export function createTree(THREE, options={}) {
