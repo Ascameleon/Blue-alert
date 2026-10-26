@@ -45,3 +45,12 @@ OpenRTS est sous licence MIT ; conserver ses notices lors de toute redistributio
 ## Prototype web
 
 Le fichier `BLUE_ALERTS.html` conserve le prototype web précédent. Son rendu 3D dépend du chargement de Three.js depuis un CDN ; le mode 3D hors ligne n'est pas garanti.
+
+
+## Version 94 — intégration des modèles 3D
+
+Fichier de première version intégrée : [BLUE_ALERTS_v94_ASSET_INTEGRATION.html](./BLUE_ALERTS_v94_ASSET_INTEGRATION.html).
+
+Cette version conserve la boucle de jeu et les mécaniques du prototype web, tout en utilisant la bibliothèque procédurale `game-data/models/blue-alert-models.js` pour le visuel des chars légers/lourds, fantassins, QG, centrale utilitaire, caserne, usine, raffinerie et tourelles. La citadelle et les moissonneuses gardent leurs modèles natifs. Si la bibliothèque de modèles ne peut pas être chargée, le code visuel natif de secours reste présent.
+
+La version importe les modules Three.js depuis un CDN, comme le prototype existant, et charge la bibliothèque de modèles par chemin relatif. Pour tester la version avec les fichiers du dépôt, lance-la depuis un serveur HTTP (par exemple GitHub Pages ou un serveur local), pas depuis une page GitHub `blob`. La validation complète du rendu WebGL dans Chrome doit encore être faite sur un navigateur réel.
