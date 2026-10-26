@@ -92,6 +92,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
   const {team='blue',scale=1}=options, g=new THREE.Group(); g.name='BA_Building_'+type;
   let rotatingGun = null;
   const faction=teamColor(THREE,team), concrete=mat(THREE,PALETTE.concrete), dark=mat(THREE,PALETTE.dark), glass=mat(THREE,PALETTE.glass), roof=mat(THREE,0x454d49);
+  const metal=mat(THREE,PALETTE.metal,0.38,0.72);
   box(THREE,g,'foundation',[3.5,.22,2.8],[0,.11,0],dark);
   if(type==='headquarters') {
     box(THREE,g,'command-core',[2.35,1.55,1.7],[0,1,0],concrete);
