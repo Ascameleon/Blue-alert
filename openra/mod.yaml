@@ -1,0 +1,26 @@
+Metadata:
+	Title: Blue Alert: Modern Front
+	Version: {DEV_VERSION}
+	WindowTitle: Blue Alert: Modern Front
+
+# Initial metadata only. Initialize this mod through OpenRAModSDK before launch.
+# The SDK must supply the engine and common package references before this is runnable.
+FileSystem: DefaultFileSystem
+	Packages:
+		^EngineDir
+		^EngineDir|mods/common
+
+MapFolders:
+	modernfront|maps: System
+
+Assemblies: OpenRA.Mods.Common.dll
+
+SupportsMapsFrom: RedAlert
+
+LoadScreen: BlankLoadScreen
+
+ServerTraits:
+	LobbyCommands
+	SkirmishLogic
+	PlayerPinger
+	MasterServerPinger
