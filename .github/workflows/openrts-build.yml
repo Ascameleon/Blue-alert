@@ -64,6 +64,7 @@ jobs:
           cat > /tmp/openrts-smoke.sh <<'SCRIPT'
           #!/usr/bin/env bash
           set -uo pipefail
+          cd "$GITHUB_WORKSPACE/engine/OpenRTS"
           ./gradlew --no-daemon run > "$GITHUB_WORKSPACE/artifacts/openrts-launch.log" 2>&1 &
           app_pid=$!
           cleanup() {
