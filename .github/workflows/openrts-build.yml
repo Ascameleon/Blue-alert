@@ -51,14 +51,28 @@ jobs:
           fi
       - name: Validate BLUE ALERTS skirmish data
         run: python3 scripts/validate_scenario.py
+      - name: Prepare BLUE ALERTS OpenRTS skirmish
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts engine/OpenRTS/core/src/app/example
+          python3 integration/create_openrts_scenario.py \
+            engine/OpenRTS/core/assets/maps/test.btf \
+            engine/OpenRTS/core/assets/maps/blue-alerts-skirmish.btf \
+            engine/OpenRTS/core/assets/data/army \
+            artifacts/blue-alerts-scenario-report.json
+          cp integration/BlueAlertsSkirmish.java engine/OpenRTS/core/src/app/example/BlueAlertsSkirmish.java
+          test -s engine/OpenRTS/core/assets/maps/blue-alerts-skirmish.btf
+          test -s engine/OpenRTS/core/src/app/example/BlueAlertsSkirmish.java
+
       - name: Build OpenRTS
         working-directory: engine/OpenRTS
         run: ./gradlew --no-daemon build
       - name: Install virtual display and screenshot tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends xvfb xauth imagemagick xdotool
-      - name: Launch OpenRTS and capture graphical smoke-test evidence
+          sudo apt-get install --yes --no-install-recommends xvfb xauth imagemagick
+      - name: Launch BLUE ALERTS skirmish and capture graphical evidence
         shell: bash
         run: |
           set -euo pipefail
@@ -66,10 +80,9 @@ jobs:
           cat > /tmp/openrts-smoke.sh <<'SCRIPT'
           #!/usr/bin/env bash
           set -uo pipefail
-          # OpenAL Soft's null backend avoids requiring a physical audio device in headless CI.
           export ALSOFT_DRIVERS=null
           cd "$GITHUB_WORKSPACE/engine/OpenRTS"
-          ./gradlew --no-daemon run > "$GITHUB_WORKSPACE/artifacts/openrts-launch.log" 2>&1 &
+          ./gradlew --no-daemon -I "$GITHUB_WORKSPACE/integration/openrts-run-bluealerts.gradle" :core:run > "$GITHUB_WORKSPACE/artifacts/openrts-launch.log" 2>&1 &
           app_pid=$!
           cleanup() {
             kill "$app_pid" 2>/dev/null || true
@@ -79,17 +92,15 @@ jobs:
           trap cleanup EXIT
           for i in $(seq 1 10); do
             if ! kill -0 "$app_pid" 2>/dev/null; then
-              echo "OpenRTS exited before the game-mode smoke test."
+              echo "BLUE ALERTS skirmish exited during startup."
               cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
               exit 1
             fi
             sleep 1
           done
-          # F1 switches the default editor controller to the actual RTS battlefield controller.
-          xdotool key F1
           for i in $(seq 1 20); do
             if ! kill -0 "$app_pid" 2>/dev/null; then
-              echo "OpenRTS exited after switching to game mode."
+              echo "BLUE ALERTS skirmish exited before screenshot capture."
               cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
               exit 1
             fi
@@ -97,7 +108,8 @@ jobs:
           done
           import -window root "$GITHUB_WORKSPACE/artifacts/openrts-screen.png"
           test -s "$GITHUB_WORKSPACE/artifacts/openrts-screen.png"
-          echo "Process remained alive for 30 seconds; screenshot captured."
+          test -s "$GITHUB_WORKSPACE/artifacts/blue-alerts-scenario-report.json"
+          echo "BLUE ALERTS skirmish remained alive for 30 seconds; screenshot captured."
           SCRIPT
           chmod +x /tmp/openrts-smoke.sh
           xvfb-run -a -s "-screen 0 1280x720x24" /tmp/openrts-smoke.sh
