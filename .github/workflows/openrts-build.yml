@@ -64,6 +64,8 @@ jobs:
           cat > /tmp/openrts-smoke.sh <<'SCRIPT'
           #!/usr/bin/env bash
           set -uo pipefail
+          # OpenAL Soft's null backend avoids requiring a physical audio device in headless CI.
+          export ALSOFT_DRIVERS=null
           cd "$GITHUB_WORKSPACE/engine/OpenRTS"
           ./gradlew --no-daemon run > "$GITHUB_WORKSPACE/artifacts/openrts-launch.log" 2>&1 &
           app_pid=$!
