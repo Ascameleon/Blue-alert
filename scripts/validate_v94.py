@@ -105,7 +105,7 @@ def main():
     if missing:
         raise SystemExit("FAIL: 3D combat rig integration missing: " + ", ".join(missing))
 
-        required_live_vfx_features = (
+    required_live_vfx_features = (
         "BLUE_MODELS?.createProjectile",
         "BLUE_MODELS?.createMuzzleFlash",
         "BLUE_MODELS?.createExplosion",
