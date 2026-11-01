@@ -395,7 +395,31 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.12;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.physicallyCorrectLights = true;
+// Procedural studio environment: adds real reflections to metallic PBR surfaces
+// without downloading HDRIs, textures or using a paid service.
+const envCanvas = document.createElement('canvas');
+envCanvas.width = 1024; envCanvas.height = 512;
+const envCtx = envCanvas.getContext('2d');
+const envGradient = envCtx.createLinearGradient(0, 0, 0, 512);
+envGradient.addColorStop(0, '#9bb7c9');
+envGradient.addColorStop(0.38, '#536b78');
+envGradient.addColorStop(0.58, '#283943');
+envGradient.addColorStop(1, '#111a20');
+envCtx.fillStyle = envGradient; envCtx.fillRect(0, 0, 1024, 512);
+for (const panel of [
+  [105,105,155,42,'#e8f1ff'],[410,78,90,28,'#fff0d1'],
+  [690,125,190,36,'#b8dfff'],[300,320,250,18,'#526c7b'],
+  [820,300,110,24,'#d5e6ef']
+]) { envCtx.fillStyle = panel[4]; envCtx.globalAlpha = .78; envCtx.fillRect(...panel.slice(0,4)); }
+envCtx.globalAlpha = 1;
+const studioEnvironment = new THREE.CanvasTexture(envCanvas);
+studioEnvironment.mapping = THREE.EquirectangularReflectionMapping;
+studioEnvironment.colorSpace = THREE.SRGBColorSpace;
+studioEnvironment.needsUpdate = true;
+scene.environment = studioEnvironment;
 viewport.appendChild(renderer.domElement);
 renderer.domElement.addEventListener('webglcontextlost', event => {
   event.preventDefault();
