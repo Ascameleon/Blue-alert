@@ -134,7 +134,9 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                     + " destination=" + project(moveDestination)
                     + " viewport=" + cam.getWidth() + "x" + cam.getHeight()
                     + " cursor=" + inputManager.getCursorPosition()
-                    + " pickPoint=" + unitPickPoint(selectedUnit));
+                    + " pickPoint=" + unitPickPoint(selectedUnit)
+                    + " camera=" + cam.getLocation()
+                    + " targetWorld=" + TranslateUtil.toVector3f(selectedUnit.pos));
         }
         if (ready && !movementVerified) {
             // Follow only until the unit reaches its destination. Freeze the
