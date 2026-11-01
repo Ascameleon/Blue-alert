@@ -321,6 +321,7 @@ try {
   assert.ok(mobileExplosionState.frameCount >= mobileKill.frameCount + 2 && mobileExplosionState.lastFrameDelta > 0, 'mobile requestAnimationFrame loop must continue after unit destruction');
   assert.ok(mobileExplosionState.modelExplosionLives[0] < mobileKill.modelExplosionLives[0], 'mobile explosion simulation lifetime must advance');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
+  const mobileCleanupStartedAt = Date.now();
   try {
     await mobile.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
@@ -333,6 +334,13 @@ try {
     throw error;
   }
   const mobileClean = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  const mobileCleanupElapsedMs = Date.now() - mobileCleanupStartedAt;
+  console.log('MOBILE_VFX_CLEANUP_PERFORMANCE ' + JSON.stringify({
+    elapsedMs: mobileCleanupElapsedMs,
+    framesAdvanced: mobileClean.frameCount - mobileKill.frameCount,
+    simulatedSeconds: Number((mobileClean.time - mobileKill.time).toFixed(3)),
+    averageFps: Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1))
+  }));
   console.log('MOBILE_COMBAT_VFX ' + JSON.stringify({ shot: mobileShot, kill: mobileKill, afterCleanup: mobileClean }));
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
