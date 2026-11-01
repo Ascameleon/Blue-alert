@@ -84,11 +84,13 @@ IFS=, read -r move_x move_y <<<"$move_pair"
 # after each move to make coordinate failures diagnosable.
 xdotool mousemove --sync --window "$window_id" "$target_x" "$target_y"
 echo "Pointer after selection move: $(xdotool getmouselocation --shell)"
+sleep 1
 xdotool click 1
 wait_for_marker "BLUE ALERTS INTERACTIVE SELECTED" 10
 
 xdotool mousemove --sync --window "$window_id" "$move_x" "$move_y"
 echo "Pointer after ground move: $(xdotool getmouselocation --shell)"
+sleep 1
 xdotool click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED" 8
 wait_for_marker "BLUE ALERTS INTERACTIVE MOVED" 28
@@ -104,6 +106,7 @@ fi
 IFS=, read -r enemy_x enemy_y <<<"$enemy_pair"
 xdotool mousemove --sync --window "$window_id" "$enemy_x" "$enemy_y"
 echo "Pointer before attack click: $(xdotool getmouselocation --shell)"
+sleep 1
 xdotool click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_CLICK_RECEIVED" 8
 wait_for_marker "BLUE ALERTS INTERACTIVE PASS selection+move+attack" 35
