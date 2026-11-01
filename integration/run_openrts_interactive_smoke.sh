@@ -95,14 +95,14 @@ xdotool mousemove --sync --window "$window_id" "$target_x" "$target_y"
 echo "Pointer after selection move: $(xdotool getmouselocation --shell)"
 xdotool windowfocus --sync "$window_id"
 sleep 1
-xdotool click --delay 150 1
+send_native_click 1
 wait_for_marker "BLUE ALERTS INTERACTIVE SELECTED" 10
 
 xdotool mousemove --sync --window "$window_id" "$move_x" "$move_y"
 echo "Pointer after ground move: $(xdotool getmouselocation --shell)"
 xdotool windowfocus --sync "$window_id"
 sleep 1
-xdotool click --delay 150 3
+send_native_click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED" 8
 wait_for_marker "BLUE ALERTS INTERACTIVE MOVED" 28
 wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_READY" 5
