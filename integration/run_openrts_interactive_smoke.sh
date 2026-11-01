@@ -52,7 +52,7 @@ wait_for_marker "BLUE ALERTS INTERACTIVE READY" 60
 # interaction run. Keep the real JME input and model-state assertions intact.
 send_native_click() {
   local button="$1"
-  xdotool click --clearmodifiers --delay 150 "$button"
+  xdotool click "$button"
   echo "Native XTest click button=$button pointer=$(xdotool getmouselocation --shell)"
 }
 
