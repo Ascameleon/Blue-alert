@@ -12,7 +12,13 @@ const PALETTE = {
   concrete: 0x777a72, sand: 0x9b8c68, grass: 0x53634b
 };
 const mat = (THREE, color, roughness=0.82, metalness=0.12) =>
-  new THREE.MeshStandardMaterial({ color, roughness, metalness });
+  new THREE.MeshPhysicalMaterial({
+    color, roughness, metalness,
+    clearcoat: metalness > 0.35 ? 0.32 : 0.12,
+    clearcoatRoughness: 0.38,
+    reflectivity: 0.62,
+    envMapIntensity: metalness > 0.35 ? 1.25 : 0.8
+  });
 const box = (THREE, parent, name, size, position, material, rotation) => {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
   mesh.name = name; mesh.position.set(...position);
