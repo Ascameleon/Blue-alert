@@ -112,6 +112,31 @@ try {
   assert.equal(tower.genericDecorationCount,0,'control tower must not have detached rectangular-building details');
   await page.screenshot({path:output+'/desktop-control-tower.png',fullPage:true});
 
+  // Verify animation changes in the live WebGL scene, not merely static source tokens.
+  async function verifyMotion(asset, label, predicate) {
+    await page.selectOption('#asset',asset);
+    await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset===document.querySelector('#asset').value,null,{timeout:10000});
+    await page.waitForTimeout(120);
+    const before=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+    await page.waitForTimeout(260);
+    const after=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+    assert.ok(after.animationElapsed-before.animationElapsed>=.2,label+' animation clock must advance');
+    assert.ok(predicate(before,after),label+' must visibly change its animated transform or effect state');
+    console.log('ANIMATION_RUNTIME_PASS '+label+' '+JSON.stringify({before,after}));
+    await page.screenshot({path:output+'/animation-'+asset+'.png',fullPage:true});
+  }
+  const changedNode=(before,after,name,field)=> {
+    const a=before.animatedNodes.find(node=>node.name===name);
+    const b=after.animatedNodes.find(node=>node.name===name);
+    return !!a && !!b && JSON.stringify(a[field])!==JSON.stringify(b[field]);
+  };
+  await verifyMotion('aircraft','aircraft banking and hover',(a,b)=>JSON.stringify(a.rootRotation)!==JSON.stringify(b.rootRotation)||JSON.stringify(a.rootPosition)!==JSON.stringify(b.rootPosition));
+  await verifyMotion('helicopter','helicopter main rotor', (a,b)=>changedNode(a,b,'main-rotor','rotation'));
+  await verifyMotion('drone','drone propellers',(a,b)=>changedNode(a,b,'propeller-rotor','rotation'));
+  await verifyMotion('controlTower','control tower radar',(a,b)=>changedNode(a,b,'rotating-radar','rotation'));
+  await verifyMotion('explosion','explosion shockwave',(a,b)=>changedNode(a,b,'shockwave-ring','scale')&&changedNode(a,b,'explosion-spark','position'));
+  await verifyMotion('muzzleFlash','muzzle flash pulse',(a,b)=>changedNode(a,b,'flash-core','scale')&&changedNode(a,b,'flash-flare','opacity'));
+
   await page.setViewportSize({width:390,height:844});
   await page.waitForTimeout(400);
   const mobile=await page.evaluate(()=>{
