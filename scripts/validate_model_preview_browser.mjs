@@ -87,10 +87,11 @@ try {
       targets
     };
   });
+  await page.screenshot({path:output+'/mobile-control-tower-390x844.png',fullPage:true});
+  console.log('MOBILE_LAYOUT '+JSON.stringify(mobile));
   assert.ok(mobile.documentWidth<=mobile.viewportWidth+1,'mobile preview must not overflow horizontally');
   assert.ok(mobile.canvasWidth>=300 && mobile.canvasHeight>=400,'mobile WebGL canvas must remain usable');
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
-  await page.screenshot({path:output+'/mobile-control-tower-390x844.png',fullPage:true});
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
   const files=['desktop-tank.png','desktop-turret.png','desktop-control-tower.png','mobile-control-tower-390x844.png'];

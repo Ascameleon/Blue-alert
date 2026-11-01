@@ -192,12 +192,15 @@ export function createBuilding(THREE, type='barracks', options={}) {
     box(THREE,g,'door',[.5,.75,.04],[0,.49,1.02],dark);
     box(THREE,g,'utility-window',[.45,.3,.04],[.75,.95,1.02],glass);
   }
-  // faction banner and readable silhouette details
-  box(THREE,g,'faction-panel',[.5,.22,.045],[-1.25,1.25,1.04],faction);
-  for(const x of [-.85,.85]){
-    box(THREE,g,'exterior-light',[.18,.12,.06],[x,1.08,1.42],glass);
-    box(THREE,g,'service-vent',[.42,.26,.07],[x,1.52,-1.42],roof);
-    for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
+  // Rectangular-building details are not reused on curved towers or turrets:
+  // their fixed offsets would leave detached panels and vents outside the silhouette.
+  if(type!=='controlTower' && type!=='tower' && type!=='turret') {
+    box(THREE,g,'faction-panel',[.5,.22,.045],[-1.25,1.25,1.04],faction);
+    for(const x of [-.85,.85]){
+      box(THREE,g,'exterior-light',[.18,.12,.06],[x,1.08,1.42],glass);
+      box(THREE,g,'service-vent',[.42,.26,.07],[x,1.52,-1.42],roof);
+      for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
+    }
   }
   g.userData={kind:'building',buildingType:type,team,rotatingGun}; g.scale.setScalar(scale); return g;
 }

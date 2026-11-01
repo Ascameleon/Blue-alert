@@ -9,7 +9,15 @@ select,button{background:#27383c;color:#f2f5f3;border:1px solid #506469;border-r
 main{display:grid;grid-template-columns:minmax(0,1fr) 245px;min-height:calc(100vh - 58px)}#view{min-height:65vh;position:relative}
 aside{padding:16px;background:#182327;border-left:1px solid #35474b}aside h2{font-size:14px}aside p{line-height:1.5;color:#c1ceca}
 #hint{position:absolute;bottom:12px;left:12px;background:#101719cc;padding:8px 10px;border-radius:6px;color:#c4d2ce}
-@media(max-width:700px){main{grid-template-columns:1fr}#view{min-height:65vh}aside{border-left:0;border-top:1px solid #35474b}.controls{margin-left:0}}
+@media(max-width:700px){
+main{grid-template-columns:1fr}
+#view{min-height:65vh}
+aside{border-left:0;border-top:1px solid #35474b}
+header{padding:12px;gap:8px;align-items:flex-start}
+.controls{flex:1 1 100%;width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-left:0}
+.controls select,.controls button{width:100%;min-width:0}
+.controls button{grid-column:1/-1}
+}
 </style></head><body>
 <header><h1>BLUE ALERT / Atelier de modèles 3D</h1><small>Kit procédural Three.js · sans API payante</small>
 <div class="controls"><select id="asset"><option value="tank">Char de combat</option><option value="infantry">Fantassin</option><option value="hq">Quartier général</option><option value="barracks">Caserne</option><option value="refinery">Raffinerie</option><option value="turret">Tourelle défensive</option><option value="controlTower">Tour de contrôle</option><option value="landscape">Paysage tactique</option><option value="aircraft">Avion d’attaque</option><option value="helicopter">Hélicoptère d’assaut</option><option value="drone">Drone de reconnaissance</option><option value="projectile">Projectile</option><option value="explosion">Explosion</option><option value="muzzleFlash">Flash de bouche</option><option value="harvester">Moissonneuse</option><option value="citadel">Citadelle</option><option value="relay">Relais de capture</option><option value="ore">Gisement de minerai</option></select>
