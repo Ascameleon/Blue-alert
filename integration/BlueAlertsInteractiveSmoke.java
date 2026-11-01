@@ -2,6 +2,7 @@ package app;
 
 import event.ControllerChangeEvent;
 import event.EventManager;
+import geometry.geom2d.Point2D;
 import geometry.geom3d.Point3D;
 import java.util.List;
 import model.CommandManager;
@@ -36,9 +37,35 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
     private boolean movementVerified;
     private boolean attackVerified;
     private boolean moveClickSeen;
+    private boolean moveCommandAccepted;
+    private boolean actionListenerAttached;
     private boolean attackClickSeen;
     private boolean failed;
     private int enemyHealthAtAttack;
+    private String moveActionDiagnostic = "not received";
+
+    private final ActionListener nativeActionListener = (name, pressed, tpf) -> {
+        if (pressed) {
+            return;
+        }
+        Point2D actionCoord = fieldCtrl.spatialSelector.getCoord(rootNode);
+        long entityId = fieldCtrl.spatialSelector.getEntityId();
+        if (!movementVerified && !moveClickSeen) {
+            moveClickSeen = true;
+            moveCommandAccepted = selectedUnit.getMover().hasDestination();
+            moveActionDiagnostic = "coord=" + actionCoord + " entity=" + entityId
+                    + " hasDestination=" + moveCommandAccepted
+                    + " destination=" + selectedUnit.getMover().getDestination()
+                    + " holdPosition=" + selectedUnit.getMover().holdPosition;
+            System.out.println("BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED " + moveActionDiagnostic);
+        } else if (movementVerified && !attackClickSeen) {
+            attackClickSeen = true;
+            enemyHealthAtAttack = enemyUnit.health;
+            phaseElapsed = 0f;
+            System.out.println("BLUE ALERTS INTERACTIVE ATTACK_CLICK_RECEIVED entity="
+                    + entityId + " coord=" + actionCoord + " enemy_health=" + enemyHealthAtAttack);
+        }
+    };
 
     @Override
     public void simpleInitApp() {
@@ -71,23 +98,6 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         CommandManager.orderHold();
         CommandManager.select(List.of());
 
-        // Observe the same native right-button event as BattlefieldInputInterpreter.
-        // Capturing health on release proves that subsequent damage followed the
-        // actual injected click rather than an unattended setup order.
-        String attackClickMapping = "BLUE_ALERTS_INTERACTIVE_ATTACK_CLICK";
-        inputManager.addMapping(attackClickMapping, new MouseButtonTrigger(1));
-        inputManager.addListener((ActionListener) (name, pressed, tpf) -> {
-            if (!pressed && !movementVerified && !moveClickSeen) {
-                moveClickSeen = true;
-                System.out.println("BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED");
-            } else if (!pressed && movementVerified && !attackClickSeen) {
-                attackClickSeen = true;
-                enemyHealthAtAttack = enemyUnit.health;
-                phaseElapsed = 0f;
-                System.out.println("BLUE ALERTS INTERACTIVE ATTACK_CLICK_RECEIVED enemy_health=" + enemyHealthAtAttack);
-            }
-        }, attackClickMapping);
-
         EventManager.post(new ControllerChangeEvent(0));
         System.out.println("BLUE ALERTS interactive scenario loaded: 12 units; 11 held; one red tank ready for native input.");
     }
@@ -105,6 +115,12 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
             cam.setLocation(new Vector3f(23f, 31f, 12f));
             cam.lookAt(new Vector3f(23f, 42f, 0f), Vector3f.UNIT_Z);
             cam.update();
+            if (!inputManager.hasMapping("action")) {
+                fail("native Battlefield ACTION mapping is not registered");
+                return;
+            }
+            inputManager.addListener(nativeActionListener, "action");
+            actionListenerAttached = true;
             ready = true;
             System.out.println("BLUE ALERTS INTERACTIVE READY"
                     + " target=" + projectUnit(selectedUnit)
@@ -125,6 +141,10 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
 
         if (selectionVerified && !movementVerified) {
             phaseElapsed += tpf;
+            if (moveClickSeen && !moveCommandAccepted && phaseElapsed > 2f) {
+                fail("native right-click was received but no move destination was assigned: " + moveActionDiagnostic);
+                return;
+            }
             double distance = selectedUnit.pos.getDistance(moveStart);
             if (distance > 2.0) {
                 movementVerified = true;
@@ -177,7 +197,6 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
     private void fail(String message) {
         failed = true;
         System.err.println("BLUE ALERTS INTERACTIVE FAILURE: " + message);
-        stop();
     }
 
     public static void main(String[] args) {
