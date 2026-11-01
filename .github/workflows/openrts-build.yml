@@ -104,14 +104,23 @@ jobs:
             fi
             sleep 1
           done
-          for i in $(seq 1 20); do
+          movement_deadline=$((SECONDS + 20))
+          while ! grep -q "BLUE ALERTS movement smoke test: 12/12 units moved." "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"; do
             if ! kill -0 "$app_pid" 2>/dev/null; then
-              echo "BLUE ALERTS skirmish exited before screenshot capture."
+              echo "BLUE ALERTS skirmish exited before all 12 units moved."
+              cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
+              exit 1
+            fi
+            if (( SECONDS >= movement_deadline )); then
+              echo "Timed out waiting for all 12 BLUE ALERTS units to move."
               cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
               exit 1
             fi
             sleep 1
           done
+          # Capture immediately after the movement assertion, before the two
+          # factions can finish their unattended combat and leave an empty map.
+          sleep 2
           import -window root "$GITHUB_WORKSPACE/artifacts/openrts-screen.png"
           test -s "$GITHUB_WORKSPACE/artifacts/openrts-screen.png"
           test "$(stat -c%s "$GITHUB_WORKSPACE/artifacts/openrts-screen.png")" -gt 10000
@@ -119,7 +128,7 @@ jobs:
           grep -q "switching controller to BattlefieldController" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
           grep -q "battlefield controller online" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
           grep -q "BLUE ALERTS runtime loaded 12 units" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
-          grep -Eq "BLUE ALERTS movement smoke test: ([1-9]|1[0-2])/12 units moved\\." "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
+          grep -q "BLUE ALERTS movement smoke test: 12/12 units moved." "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
           if grep -Eq "SEVERE: Uncaught exception|Uncaught exception thrown in Thread|Exception: java.lang" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"; then
             echo "BLUE ALERTS runtime exception detected."
             cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
