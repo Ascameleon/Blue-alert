@@ -119,6 +119,7 @@ try {
   assert.ok(!buildBefore.placement.outside.ok && !buildBefore.placement.road.ok &&
     !buildBefore.placement.overlap.ok && !buildBefore.placement.ore.ok,
     'enemy territory, road, occupied structures and ore deposits must reject construction');
+  await desktop.waitForTimeout(2800);
   await desktop.screenshot({ path: output + '/desktop-v94-gameplay.png', fullPage: true });
 
   // Real mouse input: place a power station on the pad, then prove invalid ground
