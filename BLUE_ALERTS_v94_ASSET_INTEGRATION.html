@@ -1078,7 +1078,7 @@ function createHQMarker(hq) {
     map: texture, transparent: true, depthTest: false, depthWrite: false
   }));
   label.name = 'player-hq-label';
-  label.position.set(hq.x, 5.8, hq.z + 4.4);
+  label.position.set(hq.x, isMobile ? 4.4 : 5.8, hq.z + 4.4);
   label.scale.set(9.8, 2.45, 1);
   scene.add(label);
   hq.g.userData.hqMarker = label;
