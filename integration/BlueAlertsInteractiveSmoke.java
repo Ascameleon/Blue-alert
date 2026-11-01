@@ -121,10 +121,9 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                     + " target=" + projectUnit(selectedUnit)
                     + " destination=" + project(moveDestination));
         }
-        if (ready) {
-            // The native camera manager updates before simpleUpdate. Reframe
-            // around the selected unit so the real-input click stays clear of
-            // HUD edges even when the scenario spawn point changes.
+        if (ready && !movementVerified) {
+            // Follow only until the unit reaches its destination. Freeze the
+            // view after movement so the enemy click ray uses a stable camera.
             setTestCamera();
         }
 
