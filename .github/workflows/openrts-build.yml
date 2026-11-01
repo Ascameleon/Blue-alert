@@ -55,13 +55,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p artifacts engine/OpenRTS/core/src/app/example
+          mkdir -p artifacts engine/OpenRTS/core/src/app
           python3 integration/create_openrts_scenario.py \
             engine/OpenRTS/core/assets/maps/test.btf \
             engine/OpenRTS/core/assets/maps/blue-alerts-skirmish.btf \
             engine/OpenRTS/core/assets/data/army \
             artifacts/blue-alerts-scenario-report.json
-          cp integration/BlueAlertsSkirmish.java engine/OpenRTS/core/src/app/example/BlueAlertsSkirmish.java
+          cp integration/BlueAlertsSkirmish.java engine/OpenRTS/core/src/app/BlueAlertsSkirmish.java
           test -s engine/OpenRTS/core/assets/maps/blue-alerts-skirmish.btf
           test -s engine/OpenRTS/core/src/app/example/BlueAlertsSkirmish.java
 
@@ -71,7 +71,7 @@ jobs:
       - name: Install virtual display and screenshot tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends xvfb xauth imagemagick
+          sudo apt-get install --yes --no-install-recommends xvfb xauth xdotool imagemagick
       - name: Launch BLUE ALERTS skirmish and capture graphical evidence
         shell: bash
         run: |
@@ -98,6 +98,7 @@ jobs:
             fi
             sleep 1
           done
+          xdotool key F1
           for i in $(seq 1 20); do
             if ! kill -0 "$app_pid" 2>/dev/null; then
               echo "BLUE ALERTS skirmish exited before screenshot capture."
