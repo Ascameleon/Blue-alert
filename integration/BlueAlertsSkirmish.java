@@ -90,6 +90,9 @@ public class BlueAlertsSkirmish extends MainRTS {
                 throw new IllegalStateException("Expected both factions to move all 6 units; red="
                         + redMoved + ", blue=" + blueMoved);
             }
+            // Preserve the workflow's aggregate success marker as well as the
+            // stronger per-faction assertions above.
+            System.out.println("BLUE ALERTS movement smoke test: 12/12 units moved.");
             movementVerified = true;
             // Frame the skirmish more tightly so the unit models are legible
             // in CI evidence while retaining both faction groups in view.
