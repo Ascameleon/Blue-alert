@@ -72,7 +72,7 @@ for xml_path in army_dir.rglob("*.xml"):
         if value:
             unit_ids.add(value)
 
-required = {"Marine", "humantank"}
+required = {"Marine", "rollerTank"}
 missing = sorted(required - unit_ids)
 if missing:
     raise RuntimeError(f"Required OpenRTS unit definitions are missing: {missing}")
@@ -87,14 +87,14 @@ template = templates[0]
 
 # OpenRTS default factions: 1 = red, 2 = blue.
 placements = [
-    ("humantank", "1", 35, 36, 0.0),
-    ("humantank", "1", 35, 44, 0.0),
+    ("rollerTank", "1", 35, 36, 0.0),
+    ("rollerTank", "1", 35, 44, 0.0),
     ("Marine", "1", 32, 37, 0.0),
     ("Marine", "1", 32, 40, 0.0),
     ("Marine", "1", 32, 43, 0.0),
     ("Marine", "1", 34, 40, 0.0),
-    ("humantank", "2", 45, 36, math.pi),
-    ("humantank", "2", 45, 44, math.pi),
+    ("rollerTank", "2", 45, 36, math.pi),
+    ("rollerTank", "2", 45, 44, math.pi),
     ("Marine", "2", 48, 37, math.pi),
     ("Marine", "2", 48, 40, math.pi),
     ("Marine", "2", 48, 43, math.pi),
@@ -155,7 +155,7 @@ report = {
     "map": {"width": width, "height": height, "style": map_data.get("mapStyleID")},
     "unit_count": len(verified_units),
     "factions": {"1": "red", "2": "blue"},
-    "unit_composition": {"humantank": 4, "Marine": 8},
+    "unit_composition": {"rollerTank": 4, "Marine": 8},
     "cliff_shape_id": DEFAULT_CLIFF_SHAPE_ID,
     "cliff_shape_defaults_applied": cliff_shape_defaults_applied,
     "ramp_count": ramp_count,
