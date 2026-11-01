@@ -1582,7 +1582,7 @@ function fireProjectile(shooter, target) {
   }
 
   if (BLUE_MODELS?.createMuzzleFlash) {
-    const flash = BLUE_MODELS.createMuzzleFlash(THREE, { team: isBlue ? 'blue' : 'red', scale: 0.65 });
+    const flash = BLUE_MODELS.createMuzzleFlash(THREE, { team: isBlue ? 'blue' : 'red', scale: 0.95 });
     flash.position.copy(start);
     flash.rotation.y = Math.atan2(-dir.z, dir.x);
     scene.add(flash);
@@ -1591,7 +1591,7 @@ function fireProjectile(shooter, target) {
 
   let ball;
   if (BLUE_MODELS?.createProjectile) {
-    ball = BLUE_MODELS.createProjectile(THREE, { team: isBlue ? 'blue' : 'red', scale: 0.72 });
+    ball = BLUE_MODELS.createProjectile(THREE, { team: isBlue ? 'blue' : 'red', scale: 1.0 });
     ball.rotation.y = Math.atan2(-dir.z, dir.x);
   } else {
     ball = new THREE.Mesh(
@@ -1675,7 +1675,8 @@ function applyDamage(target, amount, fromTeam) {
 
   if (target.hp <= 0) {
     target.hp = 0;
-    target.dead = true;
+    const unitTarget = target.g && (!target.kind || ['light', 'heavy', 'infantry', 'harvester'].includes(target.kind));
+    if (!unitTarget) target.dead = true;
 
     if (target.kind === 'citadel') {
       gameOver = true;
@@ -2776,6 +2777,8 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     modelProjectiles: projectiles.filter(p => p.mesh?.userData?.kind === 'projectile').length,
     modelMuzzleFlashes: fx.filter(e => e.kind === 'model-muzzle').length,
     modelExplosions: fx.filter(e => e.kind === 'model-explosion').length,
+    kills,
+    credits,
     livingBlueCombatUnits: units.filter(u => !u.dead && u.team === 1 && u.dmg > 0).length,
     livingRedCombatUnits: units.filter(u => !u.dead && u.team === 2 && u.dmg > 0).length
   });
@@ -2785,15 +2788,23 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       const shooter = units.find(u => !u.dead && u.team === 1 && u.dmg > 0);
       const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);
       if (!shooter || !target) throw new Error('Combat QA requires living blue and red combat units.');
+      camTarget.set(shooter.g.position.x, 0, shooter.g.position.z);
+      camDist = Math.min(camDist, 26);
       fireProjectile(shooter, target);
       return { shooterKind: shooter.kind, targetKind: target.kind, ...combatState() };
     },
     destroyEnemyUnit() {
       const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);
       if (!target) throw new Error('Combat QA requires a living red combat unit.');
-      const targetKind = target.kind;
-      applyDamage(target, target.hp, 1);
-      return { targetKind, targetDead: target.dead, ...combatState() };
+      const targetKind = target.kind, hpBefore = target.hp, killsBefore = kills, creditsBefore = credits;
+      camTarget.set(target.g.position.x, 0, target.g.position.z);
+      camDist = Math.min(camDist, 26);
+      applyDamage(target, hpBefore, 1);
+      return {
+        targetKind, targetDead: target.dead, targetRemoved: !scene.children.includes(target.g),
+        killsDelta: kills - killsBefore, creditsDelta: credits - creditsBefore,
+        ...combatState()
+      };
     }
   });
 }

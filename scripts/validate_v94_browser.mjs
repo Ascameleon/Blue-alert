@@ -112,7 +112,8 @@ try {
   await desktop.waitForTimeout(35);
   await desktop.screenshot({ path: output + '/desktop-v94-projectile-vfx.png', fullPage: true });
   const desktopKill = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
-  assert.ok(desktopKill.targetDead && desktopKill.modelExplosions === 1, 'desktop unit destruction must spawn the procedural explosion');
+  console.log('DESKTOP_UNIT_DEATH ' + JSON.stringify(desktopKill));
+  assert.ok(desktopKill.targetDead && desktopKill.targetRemoved && desktopKill.killsDelta === 1 && desktopKill.creditsDelta >= 50 && desktopKill.modelExplosions === 1, 'desktop unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
   await desktop.waitForTimeout(180);
   const desktopExplosionState = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   assert.equal(desktopExplosionState.modelExplosions, 1, 'desktop explosion must remain in the live scene during its authored lifetime');
@@ -168,7 +169,8 @@ try {
   await mobile.waitForTimeout(35);
   await mobile.screenshot({ path: output + '/mobile-v94-projectile-vfx-390x844.png', fullPage: true });
   const mobileKill = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
-  assert.ok(mobileKill.targetDead && mobileKill.modelExplosions === 1, 'mobile unit destruction must spawn the procedural explosion');
+  console.log('MOBILE_UNIT_DEATH ' + JSON.stringify(mobileKill));
+  assert.ok(mobileKill.targetDead && mobileKill.targetRemoved && mobileKill.killsDelta === 1 && mobileKill.creditsDelta >= 50 && mobileKill.modelExplosions === 1, 'mobile unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
   await mobile.waitForTimeout(180);
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
   await mobile.waitForTimeout(2100);

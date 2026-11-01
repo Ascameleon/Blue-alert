@@ -92,6 +92,8 @@ def main():
         "model-muzzle",
         "disposeObject3D",
         "window.__BLUE_ALERTS_COMBAT_QA__",
+        "const unitTarget = target.g &&",
+        "if (!unitTarget) target.dead = true;",
     )
     missing = [feature for feature in required_features if feature not in source]
     if missing:
