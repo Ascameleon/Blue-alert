@@ -9,6 +9,8 @@ import model.ModelManager;
 import model.battlefield.army.ArmyManager;
 import model.battlefield.army.components.Unit;
 import com.jme3.math.Vector3f;
+import com.jme3.input.controls.ActionListener;
+import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.scene.Spatial.CullHint;
 import com.jme3.system.AppSettings;
 import view.math.TranslateUtil;
@@ -33,6 +35,7 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
     private boolean selectionVerified;
     private boolean movementVerified;
     private boolean attackVerified;
+    private boolean attackClickSeen;
     private boolean failed;
     private int enemyHealthAtAttack;
 
@@ -66,6 +69,20 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         CommandManager.select(heldUnits);
         CommandManager.orderHold();
         CommandManager.select(List.of());
+
+        // Observe the same native right-button event as BattlefieldInputInterpreter.
+        // Capturing health on release proves that subsequent damage followed the
+        // actual injected click rather than an unattended setup order.
+        String attackClickMapping = "BLUE_ALERTS_INTERACTIVE_ATTACK_CLICK";
+        inputManager.addMapping(attackClickMapping, new MouseButtonTrigger(1));
+        inputManager.addListener((ActionListener) (name, pressed, tpf) -> {
+            if (!pressed && movementVerified && !attackClickSeen) {
+                attackClickSeen = true;
+                enemyHealthAtAttack = enemyUnit.health;
+                phaseElapsed = 0f;
+                System.out.println("BLUE ALERTS INTERACTIVE ATTACK_CLICK_RECEIVED enemy_health=" + enemyHealthAtAttack);
+            }
+        }, attackClickMapping);
 
         EventManager.post(new ControllerChangeEvent(0));
         System.out.println("BLUE ALERTS interactive scenario loaded: 12 units; 11 held; one red tank ready for native input.");
@@ -108,17 +125,16 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
             if (distance > 2.0) {
                 movementVerified = true;
                 phaseElapsed = 0f;
-                enemyHealthAtAttack = enemyUnit.health;
                 System.out.println("BLUE ALERTS INTERACTIVE MOVED distance=" + distance
                         + " start=" + moveStart + " end=" + selectedUnit.pos);
                 System.out.println("BLUE ALERTS INTERACTIVE ENEMY_SCREEN " + projectUnit(enemyUnit));
-                System.out.println("BLUE ALERTS INTERACTIVE ATTACK_READY enemy_health=" + enemyHealthAtAttack);
+                System.out.println("BLUE ALERTS INTERACTIVE ATTACK_READY");
             } else if (phaseElapsed > 18f) {
                 fail("real right-click ground order did not move the selected tank");
             }
         }
 
-        if (movementVerified && !attackVerified) {
+        if (movementVerified && attackClickSeen && !attackVerified) {
             phaseElapsed += tpf;
             if (enemyUnit.health < enemyHealthAtAttack) {
                 attackVerified = true;
@@ -128,6 +144,8 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
             } else if (phaseElapsed > 30f) {
                 fail("real right-click on the enemy did not reduce its health");
             }
+        } else if (movementVerified && !attackClickSeen && phaseElapsed > 12f) {
+            fail("native right-click event for enemy attack was not received");
         }
     }
 
