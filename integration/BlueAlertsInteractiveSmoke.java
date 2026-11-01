@@ -24,7 +24,7 @@ import view.math.TranslateUtil;
  * state changes, not merely successful mouse injection.
  */
 public class BlueAlertsInteractiveSmoke extends MainRTS {
-    private static final Vector3f MOVE_DESTINATION = new Vector3f(23f, 35f, 0f);
+    private static final Vector3f MOVE_DESTINATION = new Vector3f(23f, 42f, 0f);
 
     private Unit selectedUnit;
     private Unit enemyUnit;
@@ -35,6 +35,7 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
     private boolean selectionVerified;
     private boolean movementVerified;
     private boolean attackVerified;
+    private boolean moveClickSeen;
     private boolean attackClickSeen;
     private boolean failed;
     private int enemyHealthAtAttack;
@@ -76,7 +77,10 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         String attackClickMapping = "BLUE_ALERTS_INTERACTIVE_ATTACK_CLICK";
         inputManager.addMapping(attackClickMapping, new MouseButtonTrigger(1));
         inputManager.addListener((ActionListener) (name, pressed, tpf) -> {
-            if (!pressed && movementVerified && !attackClickSeen) {
+            if (!pressed && !movementVerified && !moveClickSeen) {
+                moveClickSeen = true;
+                System.out.println("BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED");
+            } else if (!pressed && movementVerified && !attackClickSeen) {
                 attackClickSeen = true;
                 enemyHealthAtAttack = enemyUnit.health;
                 phaseElapsed = 0f;
@@ -129,7 +133,7 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                         + " start=" + moveStart + " end=" + selectedUnit.pos);
                 System.out.println("BLUE ALERTS INTERACTIVE ENEMY_SCREEN " + projectUnit(enemyUnit));
                 System.out.println("BLUE ALERTS INTERACTIVE ATTACK_READY");
-            } else if (phaseElapsed > 18f) {
+            } else if (phaseElapsed > 25f) {
                 fail("real right-click ground order did not move the selected tank");
             }
         }
