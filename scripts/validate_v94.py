@@ -90,6 +90,21 @@ def main():
     if missing:
         raise SystemExit("FAIL: expected v94 3D/game features missing: " + ", ".join(missing))
 
+    required_combat_features = (
+        "tank.rotation.y = -Math.PI / 2;",
+        "g.userData.turret = tank.userData.turret || null;",
+        "BLUE_MODELS.createMuzzleFlash",
+        "g.userData.flash = muzzleFlash;",
+        "function setMuzzleFlashIntensity",
+        "muzzle.getWorldPosition(from)",
+        "start: start.clone()",
+        "Math.atan2(dx, dz) - u.g.rotation.y",
+        "window.__BLUE_ALERTS_COMBAT_QA",
+    )
+    missing = [feature for feature in required_combat_features if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: 3D combat rig integration missing: " + ", ".join(missing))
+
     terrain_start = source.index("/* ─── Deterministic terrain art")
     terrain_end = source.index("/* ─── Game state", terrain_start)
     terrain_section = source[terrain_start:terrain_end]

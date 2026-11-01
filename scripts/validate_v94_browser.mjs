@@ -47,9 +47,9 @@ function watch(page) {
     }
   });
 }
-async function loadGame(page) {
+async function loadGame(page, combatQa = false) {
   watch(page);
-  const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+  const response = await page.goto(url + (combatQa ? '?qa=combat-rig' : ''), { waitUntil: 'networkidle', timeout: 60000 });
   assert.equal(response?.status(), 200, 'v94 game HTML must load');
   await page.waitForFunction(() => {
     const canvas = document.querySelector('#viewport canvas');
@@ -97,7 +97,7 @@ try {
   });
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  await loadGame(desktop);
+  await loadGame(desktop, true);
   const desktopMetrics = await metrics(desktop);
   assert.ok(desktopMetrics.webgl && !desktopMetrics.contextLost, 'desktop must render with a live WebGL context');
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
@@ -108,6 +108,25 @@ try {
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : OFF', 'desktop sound toggle must respond');
   await desktop.locator('#btnSound').click();
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : ON', 'desktop sound toggle must restore');
+
+  const combatProbe = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA.arm());
+  assert.ok(combatProbe.shooterId && combatProbe.targetId, 'combat probe must arm real in-game 3D units');
+  await desktop.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA?.snapshot();
+    return state && state.projectileStart && state.flashVisible && state.flashOpacity > 0.05;
+  }, null, { timeout: 5000 });
+  const combatRig = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA.snapshot());
+  const muzzleError = Math.hypot(
+    combatRig.projectileStart[0] - combatRig.muzzleWorld[0],
+    combatRig.projectileStart[1] - combatRig.muzzleWorld[1],
+    combatRig.projectileStart[2] - combatRig.muzzleWorld[2]
+  );
+  assert.ok(combatRig.turretAvailable && combatRig.alignment > 0.995,
+    'detailed 3D tank turret must align with the target in world space');
+  assert.ok(combatRig.flashVisible && combatRig.flashOpacity > 0.05,
+    'detailed 3D tank must render its muzzle flash during firing');
+  assert.ok(muzzleError < 0.05,
+    'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
 
   const mobile = await browser.newPage({
     viewport: { width: 390, height: 844 },
@@ -154,6 +173,8 @@ try {
     desktop: desktopMetrics,
     mobile: mobileMetrics,
     touchTargets,
+    combatRig,
+    muzzleError,
     successfulThree,
     successfulModel,
     screenshots: ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']
