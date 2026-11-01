@@ -12,13 +12,13 @@ aside{padding:16px;background:#182327;border-left:1px solid #35474b}aside h2{fon
 @media(max-width:700px){main{grid-template-columns:1fr}#view{min-height:65vh}aside{border-left:0;border-top:1px solid #35474b}.controls{margin-left:0}}
 </style></head><body>
 <header><h1>BLUE ALERT / Atelier de modèles 3D</h1><small>Kit procédural Three.js · sans API payante</small>
-<div class="controls"><select id="asset"><option value="tank">Char de combat</option><option value="infantry">Fantassin</option><option value="hq">Quartier général</option><option value="barracks">Caserne</option><option value="refinery">Raffinerie</option><option value="turret">Tourelle défensive</option><option value="landscape">Paysage tactique</option><option value="aircraft">Avion d’attaque</option><option value="helicopter">Hélicoptère d’assaut</option><option value="drone">Drone de reconnaissance</option><option value="projectile">Projectile</option><option value="explosion">Explosion</option><option value="muzzleFlash">Flash de bouche</option></select>
+<div class="controls"><select id="asset"><option value="tank">Char de combat</option><option value="infantry">Fantassin</option><option value="hq">Quartier général</option><option value="barracks">Caserne</option><option value="refinery">Raffinerie</option><option value="turret">Tourelle défensive</option><option value="landscape">Paysage tactique</option><option value="aircraft">Avion d’attaque</option><option value="helicopter">Hélicoptère d’assaut</option><option value="drone">Drone de reconnaissance</option><option value="projectile">Projectile</option><option value="explosion">Explosion</option><option value="muzzleFlash">Flash de bouche</option><option value="harvester">Moissonneuse</option><option value="citadel">Citadelle</option><option value="relay">Relais de capture</option><option value="ore">Gisement de minerai</option></select>
 <select id="team"><option value="blue">Équipe bleue</option><option value="red">Équipe rouge</option></select><button id="reset">Réinitialiser la vue</button></div></header>
 <main><section id="view"><div id="hint">Glisser : orbiter · molette : zoom · clic droit : déplacer</div></section><aside><h2 id="title">Char de combat</h2><p id="desc">Maillage 3D original composé de blindage, chenilles, roues, tourelle pivotante, canon, trappes et marquage d'équipe.</p><p><b>État :</b> modèles procéduraux en géométrie Three.js. Le code est conçu pour être appelé depuis le moteur web du jeu.</p><p><b>Commandes :</b><br>Glisser pour tourner<br>Molette pour zoomer<br>Clic droit pour déplacer la caméra</p></aside></main>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-import {createTank,createInfantry,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash} from './blue-alert-models.js';
+import {createTank,createInfantry,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode} from './blue-alert-models.js';
 const host=document.querySelector('#view'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9aa9a4);scene.fog=new THREE.Fog(0x9aa9a4,45,125);
 const camera=new THREE.PerspectiveCamera(42,1,.1,300);camera.position.set(9,8,12);
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;host.appendChild(renderer.domElement);
@@ -41,7 +41,11 @@ helicopter:['Hélicoptère d’assaut','Cabine blindée, verrière, poutre de qu
 drone:['Drone de reconnaissance','Châssis quadrirotor, bras carbone, moteurs, hélices et caméra sur nacelle.'],
 projectile:['Projectile','Corps balistique, ogive, ailettes et traceur lumineux.'],
 explosion:['Explosion','Noyau incandescent, anneaux de choc, étincelles et fumée.'],
-muzzleFlash:['Flash de bouche','Éclair de tir compact avec noyau lumineux et rayons de chaleur.']
+muzzleFlash:['Flash de bouche','Éclair de tir compact avec noyau lumineux et rayons de chaleur.'],
+harvester:['Moissonneuse','Châssis chenillé, trémie, cabine vitrée et tambour frontal de collecte.'],
+citadel:['Citadelle','Forteresse circulaire, bastions blindés et cœur énergétique central.'],
+relay:['Relais de capture','Mât de communication, antennes et halo de contrôle territorial.'],
+ore:['Gisement de minerai','Amas rocheux et cristaux métalliques sur un disque de ressource.']
 };
 function build(){clear();const a=document.querySelector('#asset').value,t=document.querySelector('#team').value;
 if(a==='tank')current=createTank(THREE,{team:t});
@@ -53,6 +57,10 @@ else if(a==='drone')current=createDrone(THREE,{team:t});
 else if(a==='projectile')current=createProjectile(THREE,{team:t});
 else if(a==='explosion')current=createExplosion(THREE);
 else if(a==='muzzleFlash')current=createMuzzleFlash(THREE,{team:t});
+else if(a==='harvester')current=createHarvester(THREE,{team:t});
+else if(a==='citadel')current=createCitadel(THREE,{team:t});
+else if(a==='relay')current=createRelay(THREE,{team:t});
+else if(a==='ore')current=createOreNode(THREE);
 else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
 scene.add(current);document.querySelector('#title').textContent=desc[a][0];document.querySelector('#desc').textContent=desc[a][1];
 controls.target.set(0,a==='infantry'?.7:1,0);camera.position.set(a==='landscape'?22:8,a==='landscape'?25:7,a==='landscape'?24:11);controls.update();}
