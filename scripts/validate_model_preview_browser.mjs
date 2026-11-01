@@ -2,22 +2,19 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile, mkdir, stat } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
 
 const root=process.cwd();
-const baseBranch=process.env.GITHUB_BASE_REF||'main';
-console.log('Fetching '+baseBranch+' for visual before/after comparison');
-execFileSync('git',['fetch','--no-tags','--depth=1','origin',baseBranch],{stdio:'ignore',timeout:30000});
-console.log('Base branch fetched');
-const baseRef='FETCH_HEAD';
-const baselinePreviewRaw=execFileSync('git',['show',baseRef+':game-data/models/preview.html'],{encoding:'utf8',maxBuffer:16*1024*1024});
+const baselineSnapshot=JSON.parse(await readFile(resolve(root,'qa/baseline/base_snapshot.json'),'utf8'));
+assert.equal(baselineSnapshot.base_commit,'b179e8088c348c0709589bfd5fa19fb024d42c82','baseline snapshot must match the PR base');
+const baselinePreviewRaw=baselineSnapshot.preview_html;
 const baselineImportMap='<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>';
 const baselinePreview=baselinePreviewRaw.includes('type="importmap"')?baselinePreviewRaw:baselinePreviewRaw.replace('</head>',baselineImportMap+'</head>');
 const baselineFiles=new Map([
   ['/game-data/models/preview.html',baselinePreview],
-  ['/game-data/models/blue-alert-models.js',execFileSync('git',['show',baseRef+':game-data/models/blue-alert-models.js'],{encoding:'utf8',maxBuffer:16*1024*1024})]
+  ['/game-data/models/blue-alert-models.js',baselineSnapshot.models_js]
 ]);
+console.log('Using frozen base visual fixtures from '+baselineSnapshot.base_commit);
 const allowed=new Set([
   '/game-data/models/preview.html',
   '/game-data/models/blue-alert-models.js',
