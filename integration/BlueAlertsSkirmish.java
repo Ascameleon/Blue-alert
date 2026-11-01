@@ -1,18 +1,17 @@
-package app.example;
+package app;
 
-import app.OpenRTSApplication;
 import model.ModelManager;
 
 /**
  * BLUE ALERTS first playable OpenRTS skirmish.
- * Loads the generated two-faction battlefield without starting a network client.
+ * Reuses the initialized RTS editor shell, loads the two-faction battlefield,
+ * then the smoke test switches to the native battlefield controller with F1.
  */
-public class BlueAlertsSkirmish extends Game {
+public class BlueAlertsSkirmish extends MainRTS {
     @Override
     public void simpleInitApp() {
         super.simpleInitApp();
         ModelManager.loadBattlefield("assets/maps/blue-alerts-skirmish.btf");
-        faction = ModelManager.getBattlefield().getEngagement().getFactions().get(0);
     }
 
     public static void main(String[] args) {
