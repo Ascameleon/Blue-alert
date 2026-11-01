@@ -44,6 +44,18 @@ wait_for_marker() {
 
 wait_for_marker "BLUE ALERTS INTERACTIVE READY" 60
 
+# Deliver actual XTest button transitions. A previous revision called this
+# helper without defining it, so the native-input step exited before sending
+# any click. Keep the press long enough for the JME input listener to observe it.
+send_native_click() {
+  local button="$1"
+  xdotool windowfocus --sync "$window_id"
+  xdotool mousedown "$button"
+  sleep 0.2
+  xdotool mouseup "$button"
+  echo "Native XTest click button=$button pointer=$(xdotool getmouselocation --shell)"
+}
+
 window_id=""
 for _ in $(seq 1 20); do
   window_id="$(xdotool search --onlyvisible --name "BLUE ALERTS Interactive Smoke" 2>/dev/null | head -n1 || true)"
@@ -119,7 +131,7 @@ xdotool mousemove --sync --window "$window_id" "$enemy_x" "$enemy_y"
 echo "Pointer before attack click: $(xdotool getmouselocation --shell)"
 xdotool windowfocus --sync "$window_id"
 sleep 1
-xdotool click --delay 150 3
+send_native_click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_CLICK_RECEIVED" 8
 wait_for_marker "BLUE ALERTS INTERACTIVE PASS selection+move+attack" 35
 
