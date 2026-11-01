@@ -62,22 +62,14 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         }
     };
 
+    // Observe native left-click delivery without querying or mutating the
+    // SpatialSelector from a second listener. The engine's own selection
+    // listener remains the sole owner of the selection ray.
     private final ActionListener selectDiagnosticListener = (name, pressed, tpf) -> {
-        long entityId = fieldCtrl.spatialSelector.getEntityId();
-        Point2D coord = fieldCtrl.spatialSelector.getCoord(rootNode);
-        Vector3f pickPoint = unitPickPoint(selectedUnit);
-        Vector3f projected = cam.getScreenCoordinates(pickPoint);
-        System.out.println("BLUE ALERTS INTERACTIVE RAW_SELECT pressed=" + pressed
-                + " cursor=" + inputManager.getCursorPosition()
-                + " entity=" + entityId
-                + " expectedEntity=" + selectedUnit.getId()
-                + " coord=" + coord
-                + " unitPos=" + selectedUnit.pos
-                + " pickPoint=" + pickPoint
-                + " projected=" + projected
-                + " selected=" + CommandManager.selection.contains(selectedUnit));
-        if (pressed && entityId == selectedUnit.getId()) {
-            System.out.println("BLUE ALERTS INTERACTIVE RAW_SELECT_TARGET_HIT");
+        if (pressed) {
+            System.out.println("BLUE ALERTS INTERACTIVE SELECT_EVENT cursor="
+                    + inputManager.getCursorPosition()
+                    + " selected=" + CommandManager.selection.contains(selectedUnit));
         }
     };
 
@@ -141,7 +133,8 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                     + " target=" + projectUnit(selectedUnit)
                     + " destination=" + project(moveDestination)
                     + " viewport=" + cam.getWidth() + "x" + cam.getHeight()
-                    + " cursor=" + inputManager.getCursorPosition());
+                    + " cursor=" + inputManager.getCursorPosition()
+                    + " pickPoint=" + unitPickPoint(selectedUnit));
         }
         if (ready && !movementVerified) {
             // Follow only until the unit reaches its destination. Freeze the
@@ -225,8 +218,6 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
     }
 
     private Vector3f unitPickPoint(Unit unit) {
-        // Pick the visible model itself, not an arbitrary height above the
-        // logical unit origin. This keeps the native ray on the actual mesh.
         var spatial = unit.actor.getViewElements().spatial;
         if (spatial != null && spatial.getWorldBound() != null) {
             return spatial.getWorldBound().getCenter().clone();
