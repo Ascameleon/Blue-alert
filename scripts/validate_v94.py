@@ -124,7 +124,7 @@ def main():
     if missing:
         raise SystemExit("FAIL: live combat VFX/death lifecycle missing: " + ", ".join(missing))
 
-        required_building_damage_features = (
+    required_building_damage_features = (
         "function spawnImpact(",
         "kind: 'impact-ring'",
         "kind: 'impact-spark'",
