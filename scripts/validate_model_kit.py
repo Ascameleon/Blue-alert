@@ -13,6 +13,18 @@ REQUIRED_EXPORTS = (
     "createDrone", "createProjectile", "createExplosion", "createMuzzleFlash",
     "createHarvester", "createCitadel", "createRelay", "createOreNode",
 )
+REQUIRED_ANIMATION = (
+    "const previewClock=new THREE.Clock()",
+    "if(o.name==='main-rotor')",
+    "if(o.name==='tail-rotor')",
+    "if(o.name==='propeller-rotor')",
+    "if(o.name==='shockwave-ring')",
+    "if(o.name==='explosion-spark')",
+    "if(o.name==='flash-core'||o.name==='flash-flare'||o.name==='flash-ray')",
+    "if(current?.userData?.kind==='aircraft')",
+    "if(current?.userData?.kind==='helicopter')",
+    "if(current?.userData?.kind==='drone')",
+)
 REQUIRED_PREVIEW = (
     "Avion d’attaque", "Hélicoptère d’assaut", "Drone de reconnaissance",
     "Projectile", "Explosion", "Flash de bouche", "createMuzzleFlash", "createAircraft", "createHelicopter",
@@ -48,6 +60,9 @@ def main():
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
+    missing = [name for name in REQUIRED_ANIMATION if name not in preview]
+    if missing:
+        raise SystemExit("FAIL: preview animation regressions: " + ", ".join(missing))
     for token in ("blue-alert-models.js?v=3", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
