@@ -93,8 +93,20 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
       if (material?.isMeshPhysicalMaterial) physicalMaterialCount++;
     }
   });
+  const animatedNodes=[];
+  current?.traverse(object=>{
+    if(!['rotating-radar','main-rotor','tail-rotor','propeller-rotor','shockwave-ring','explosion-spark','flash-core','flash-flare','flash-ray'].includes(object.name))return;
+    animatedNodes.push({
+      name:object.name,
+      rotation:[object.rotation.x,object.rotation.y,object.rotation.z],
+      position:[object.position.x,object.position.y,object.position.z],
+      scale:[object.scale.x,object.scale.y,object.scale.z],
+      opacity:object.material?.opacity??null
+    });
+  });
   return {
     asset:document.querySelector('#asset').value,
+    animationElapsed:elapsed,animatedNodes,
     meshCount,triangleCount,physicalMaterialCount,genericDecorationCount,
     environment:!!scene.environment,
     drawCalls:renderer.info.render.calls,
