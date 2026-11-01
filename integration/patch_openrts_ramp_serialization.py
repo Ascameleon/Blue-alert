@@ -46,5 +46,17 @@ if "setTilesRef(List<Integer> refs)" not in source or "getTilesRef()" not in sou
 if "@JsonIgnore\n\tpublic List<Tile> getTiles()" not in source:
     raise RuntimeError("Ramp.getTiles() is not ignored for JSON serialization")
 
+# During map loading ModelManager deliberately marks the battlefield unavailable.
+# Ramp.compute already has a tile bound to its map, so use that map directly
+# instead of querying the unavailable global battlefield singleton.
+global_lookup = "for (Tile n : ModelManager.getBattlefield().getMap().get8Around(t)) {"
+map_lookup = "for (Tile n : t.getMap().get8Around(t)) {"
+if global_lookup in source:
+    source = source.replace(global_lookup, map_lookup, 1)
+elif map_lookup not in source:
+    raise RuntimeError("Ramp.compute() neighbor lookup not found")
+if map_lookup not in source:
+    raise RuntimeError("Ramp.compute() was not patched to use Tile.getMap()")
+
 path.write_text(source)
-print("Patched OpenRTS Ramp JSON mapping: tilesRef indices are serialized; Tile objects are runtime-only.")
+print("Patched OpenRTS Ramp JSON mapping and load-time neighbor lookup.")
