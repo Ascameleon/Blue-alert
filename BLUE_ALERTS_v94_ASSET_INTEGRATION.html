@@ -568,7 +568,7 @@ addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
 for (let x = -95; x < 95; x += 6) addBox(scene, x, 0.055, 0, 2.4, 0.01, 0.12, MAT.line);
 
 // Trees — deterministic placement keeps every match and visual test reproducible.
-for (let i = 0; i < (isMobile ? 100 : 160); i++)
+for (let i = 0; i < (isMobile ? 100 : 160); i++) {
   const x = (terrainRandom() - 0.5) * 185;
   const z = (terrainRandom() - 0.5) * 145;
   if (Math.abs(z) < 7) continue;
@@ -581,7 +581,7 @@ for (let i = 0; i < (isMobile ? 100 : 160); i++)
   scene.add(crown);
 }
 // Rocks — same seeded stream, separate from gameplay randomness.
-for (let i = 0; i < (isMobile ? 48 : 80); i++)
+for (let i = 0; i < (isMobile ? 48 : 80); i++) {
   const x = (terrainRandom() - 0.5) * 180;
   const z = (terrainRandom() - 0.5) * 140;
   if (Math.abs(z) < 6) continue;
