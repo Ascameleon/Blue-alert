@@ -101,7 +101,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 
 /* Minimap */
  #mobileCommands{display:none;position:absolute;top:42px;left:8px;right:8px;z-index:35;gap:5px;justify-content:center;pointer-events:auto}
-#mobileCommands button{flex:1;min-width:0;min-height:40px;padding:7px 5px;border:1px solid #315b78;border-radius:6px;background:#0b1926ef;color:#d8eafa;font-size:10px;font-weight:800;touch-action:manipulation}
+#mobileCommands button{flex:1;min-width:0;min-height:44px;padding:8px 5px;border:1px solid #315b78;border-radius:6px;background:#0b1926ef;color:#d8eafa;font-size:10px;font-weight:800;touch-action:manipulation}
 #mobileCommands button[aria-pressed="true"]{border-color:#e8c040;color:#ffe17a;background:#26301f}
 #minimap{
   position:absolute;right:210px;bottom:10px;width:160px;height:120px;z-index:15;
@@ -1382,6 +1382,11 @@ function selectUnit(u, add) {
   sfx('select');
   updateHUD();
 }
+function syncMobileAttackButton() {
+  const button = $('mobileAttack');
+  if (button) button.setAttribute('aria-pressed', String(attackMoveMode));
+}
+
 function selectAll() {
   clearSelection();
   for (const u of units) {
@@ -1415,6 +1420,7 @@ function stopSelected() {
   }
   toast('Stop');
   attackMoveMode = false;
+  syncMobileAttackButton();
   $('cmdMode').textContent = 'SÉLECTION';
 }
 
@@ -1477,6 +1483,7 @@ function issueMove(wx, wz, isAttackMove = false) {
   placeOrderMark(wx, wz, isAttackMove);
   toast(isAttackMove ? 'Attack-move' : 'Déplacement');
   attackMoveMode = false;
+  syncMobileAttackButton();
   $('cmdMode').textContent = 'SÉLECTION';
 }
 function issueAttack(target) {
@@ -1502,6 +1509,7 @@ function issueAttack(target) {
   placeOrderMark(tx, tz, true);
   toast('Attaque : ' + (CFG.labels[target.kind] || 'cible'));
   attackMoveMode = false;
+  syncMobileAttackButton();
   $('cmdMode').textContent = 'SÉLECTION';
 }
 function placeOrderMark(x, z, isAtk) {
@@ -2097,6 +2105,7 @@ addEventListener('keydown', e => {
   if (k === 's') stopSelected();
   else if (k === 'a') {
     attackMoveMode = true;
+    syncMobileAttackButton();
     mode = 'select';
     placeKind = null; clearGhost();
     $('cmdMode').textContent = 'ATTACK-MOVE';
@@ -2111,6 +2120,7 @@ addEventListener('keydown', e => {
   else if (k === 'escape') {
     placeKind = null; mode = 'select'; clearGhost();
     attackMoveMode = false;
+    syncMobileAttackButton();
     $('cmdMode').textContent = 'SÉLECTION';
   }
 });
@@ -2144,7 +2154,7 @@ $('mobileStop')?.addEventListener('click', stopSelected);
 $('mobileCenter')?.addEventListener('click', () => { camTarget.set(-18,0,4); camYaw=.4; camPitch=.72; camDist=48; });
 $('mobileAttack')?.addEventListener('click', () => {
   attackMoveMode = !attackMoveMode; mode='select'; placeKind=null; clearGhost();
-  $('mobileAttack').setAttribute('aria-pressed',String(attackMoveMode));
+  syncMobileAttackButton();
   $('cmdMode').textContent=attackMoveMode?'ATTACK-MOVE':'SÉLECTION';
   toast(attackMoveMode?'Attack-move : touche la destination':'Mode sélection');
 });
