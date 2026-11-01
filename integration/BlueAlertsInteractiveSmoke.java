@@ -144,8 +144,11 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
             } else if (phaseElapsed > 30f) {
                 fail("real right-click on the enemy did not reduce its health");
             }
-        } else if (movementVerified && !attackClickSeen && phaseElapsed > 12f) {
-            fail("native right-click event for enemy attack was not received");
+        } else if (movementVerified && !attackClickSeen) {
+            phaseElapsed += tpf;
+            if (phaseElapsed > 12f) {
+                fail("native right-click event for enemy attack was not received");
+            }
         }
     }
 
