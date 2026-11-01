@@ -3363,25 +3363,33 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
 }
 
 if (new URLSearchParams(location.search).get('qa') === '1') {
+  let buildingProbeTarget = null;
   const buildingDamageSnapshot = () => {
-    const target = buildings.find(b => !b.dead && b.team === 2 && b.kind === 'turret');
-    if (!target) return null;
+    const target = buildingProbeTarget;
+    if (!target || target.dead) return null;
     return {
-      kind: target.kind, hp: target.hp, maxHp: target.maxHp,
+      targetId: target.id, kind: target.kind, hp: target.hp, maxHp: target.maxHp,
       damageStage: target.damageStage || 0,
       smokeSpawned: target.smokeSpawned || 0,
       flamesSpawned: target.flamesSpawned || 0,
       scorchMark: !!target.scorch,
+      pendingProjectiles: projectiles.filter(p => p.target === target).length,
       activeSmoke: fx.filter(e => e.kind === 'building-smoke').length,
       activeFlames: fx.filter(e => e.kind === 'building-flame').length
     };
   };
   window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__ = Object.freeze({
     snapshot: buildingDamageSnapshot,
-    fireBurst(count) {
-      const target = buildings.find(b => !b.dead && b.team === 2 && b.kind === 'turret');
+    fireToStage(stage) {
+      if (stage !== 1 && stage !== 2) throw new Error('Building damage QA stage must be 1 or 2.');
+      if (stage === 1 || !buildingProbeTarget || buildingProbeTarget.dead) {
+        buildingProbeTarget = buildings
+          .filter(b => !b.dead && b.team === 2 && b.kind === 'turret' && b.hp > b.maxHp * 0.55)
+          .sort((a, b) => b.hp - a.hp)[0] || null;
+      }
+      const target = buildingProbeTarget;
       const shooter = units.find(u => !u.dead && u.team === 1 && u.kind === 'light');
-      if (!target || !shooter) throw new Error('Building damage QA requires a live blue light unit and enemy turret.');
+      if (!target || !shooter) throw new Error('Building damage QA requires a healthy enemy turret and a live blue light unit.');
       shooter.g.position.set(target.x - 6, 0.04, target.z + 1);
       shooter.g.rotation.y = 0;
       shooter.path = null; shooter.pathIdx = 0; shooter.dest = null;
@@ -3389,8 +3397,13 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       camTarget.set(target.x, 0, target.z);
       camDist = Math.min(camDist, 20);
       const hpBefore = target.hp;
-      for (let i = 0; i < count; i++) fireProjectile(shooter, target);
-      return { shots: count, hpBefore, ...buildingDamageSnapshot() };
+      const damagePerShot = Math.max(1, shooter.dmg || 18);
+      const threshold = target.maxHp * (stage === 1 ? 0.55 : 0.25);
+      const shots = Math.max(1, Math.ceil((hpBefore - threshold) / damagePerShot));
+      const expectedHpAfter = hpBefore - shots * damagePerShot;
+      if (expectedHpAfter <= 0) throw new Error('Building damage QA refuses a burst that would destroy the target before its damage state can be inspected.');
+      for (let i = 0; i < shots; i++) fireProjectile(shooter, target);
+      return { stage, shots, damagePerShot, hpBefore, expectedHpAfter, ...buildingDamageSnapshot() };
     }
   });
 }
