@@ -193,6 +193,15 @@ try {
   assert.equal(desktopShot.modelMuzzleFlashes, 1, 'desktop live combat must show the procedural muzzle flash');
   await desktop.waitForTimeout(35);
   await desktop.screenshot({ path: output + '/desktop-v94-projectile-vfx.png', fullPage: true });
+  await desktop.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+    return state && state.impactRings > 0 && state.impactSparks > 0;
+  }, null, { timeout: 4000, polling: 50 });
+  const desktopImpact = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  console.log('DESKTOP_PROJECTILE_IMPACT ' + JSON.stringify(desktopImpact));
+  assert.ok(desktopImpact.impactRings > 0 && desktopImpact.impactSparks > 0, 'desktop projectile hit must create a shock ring and sparks');
+  await desktop.screenshot({ path: output + '/desktop-v94-impact-vfx.png', fullPage: true });
+
   const desktopKill = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
   console.log('DESKTOP_UNIT_DEATH ' + JSON.stringify(desktopKill));
   assert.ok(desktopKill.targetDead && desktopKill.targetRemoved && desktopKill.killsDelta === 1 && desktopKill.creditsDelta >= 50 && desktopKill.modelExplosions === 1, 'desktop unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
@@ -227,7 +236,7 @@ try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0;
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
     }, null, { timeout: 8000 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -255,6 +264,26 @@ try {
     'detailed 3D tank must render its muzzle flash during firing');
   assert.ok(muzzleError < 0.05,
     'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
+
+  const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireBurst(6));
+  await desktop.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
+    return state && state.damageStage === 1 && state.hp <= 180 && state.hp > 75 && state.smokeSpawned > 0;
+  }, null, { timeout: 5000, polling: 50 });
+  const desktopBuildingStage1 = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.snapshot());
+  assert.ok(desktopBuildingStage1.hp <= 180 && desktopBuildingStage1.hp > 75 && desktopBuildingStage1.damageStage === 1 && desktopBuildingStage1.smokeSpawned > 0,
+    'desktop building must enter damaged state with visible smoke after real projectile hits');
+  await desktop.screenshot({ path: output + '/desktop-v94-building-damaged.png', fullPage: true });
+  await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireBurst(4));
+  await desktop.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
+    return state && state.damageStage === 2 && state.hp <= 75 && state.hp > 0 && state.scorchMark && state.flamesSpawned > 0;
+  }, null, { timeout: 5000, polling: 50 });
+  const desktopBuildingStage2 = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.snapshot());
+  console.log('DESKTOP_BUILDING_DAMAGE ' + JSON.stringify({ start: desktopBuildingStart, stage1: desktopBuildingStage1, stage2: desktopBuildingStage2 }));
+  assert.ok(desktopBuildingStage2.hp <= 75 && desktopBuildingStage2.hp > 0 && desktopBuildingStage2.scorchMark && desktopBuildingStage2.flamesSpawned > 0,
+    'desktop critical building damage must show scorch and fire while the building remains alive');
+  await desktop.screenshot({ path: output + '/desktop-v94-building-critical.png', fullPage: true });
 
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
@@ -384,6 +413,15 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.equal(mobileShot.modelMuzzleFlashes, 1, 'mobile live combat must show the procedural muzzle flash');
   await mobile.waitForTimeout(35);
   await mobile.screenshot({ path: output + '/mobile-v94-projectile-vfx-390x844.png', fullPage: true });
+  await mobile.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+    return state && state.impactRings > 0 && state.impactSparks > 0;
+  }, null, { timeout: 4000, polling: 50 });
+  const mobileImpact = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  console.log('MOBILE_PROJECTILE_IMPACT ' + JSON.stringify(mobileImpact));
+  assert.ok(mobileImpact.impactRings > 0 && mobileImpact.impactSparks > 0, 'mobile projectile hit must create a shock ring and sparks');
+  await mobile.screenshot({ path: output + '/mobile-v94-impact-vfx-390x844.png', fullPage: true });
+
   const mobileKill = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
   console.log('MOBILE_UNIT_DEATH ' + JSON.stringify(mobileKill));
   assert.ok(mobileKill.targetDead && mobileKill.targetRemoved && mobileKill.killsDelta === 1 && mobileKill.creditsDelta >= 50 && mobileKill.modelExplosions === 1, 'mobile unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
@@ -418,7 +456,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     await mobile.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0;
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
     }, null, { timeout: 8000 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -435,9 +473,29 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   }));
   console.log('MOBILE_COMBAT_VFX ' + JSON.stringify({ shot: mobileShot, kill: mobileKill, afterCleanup: mobileClean }));
 
+  const mobileBuildingStart = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireBurst(6));
+  await mobile.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
+    return state && state.damageStage === 1 && state.hp <= 180 && state.hp > 75 && state.smokeSpawned > 0;
+  }, null, { timeout: 5000, polling: 50 });
+  const mobileBuildingStage1 = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.snapshot());
+  assert.ok(mobileBuildingStage1.hp <= 180 && mobileBuildingStage1.hp > 75 && mobileBuildingStage1.damageStage === 1 && mobileBuildingStage1.smokeSpawned > 0,
+    'mobile building must enter damaged state with visible smoke after real projectile hits');
+  await mobile.screenshot({ path: output + '/mobile-v94-building-damaged-390x844.png', fullPage: true });
+  await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireBurst(4));
+  await mobile.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
+    return state && state.damageStage === 2 && state.hp <= 75 && state.hp > 0 && state.scorchMark && state.flamesSpawned > 0;
+  }, null, { timeout: 5000, polling: 50 });
+  const mobileBuildingStage2 = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.snapshot());
+  console.log('MOBILE_BUILDING_DAMAGE ' + JSON.stringify({ start: mobileBuildingStart, stage1: mobileBuildingStage1, stage2: mobileBuildingStage2 }));
+  assert.ok(mobileBuildingStage2.hp <= 75 && mobileBuildingStage2.hp > 0 && mobileBuildingStage2.scorchMark && mobileBuildingStage2.flamesSpawned > 0,
+    'mobile critical building damage must show scorch and fire while the building remains alive');
+  await mobile.screenshot({ path: output + '/mobile-v94-building-critical-390x844.png', fullPage: true });
+
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
