@@ -25,6 +25,8 @@ public class BlueAlertsSkirmish extends MainRTS {
     @Override
     public void simpleInitApp() {
         super.simpleInitApp();
+        setDisplayStatView(false);
+        setDisplayFps(false);
         ModelManager.loadBattlefield("assets/maps/blue-alerts-skirmish.btf");
         int loadedUnits = ArmyManager.getUnits().size();
         if (loadedUnits != 12) {
@@ -40,8 +42,8 @@ public class BlueAlertsSkirmish extends MainRTS {
         if (CommandManager.selection.size() != 12) {
             throw new IllegalStateException("Select-all selected " + CommandManager.selection.size() + " of 12 units.");
         }
-        CommandManager.act(-1L, new Point2D(40, 50));
-        System.out.println("BLUE ALERTS issued group move order to (40, 50).");
+        CommandManager.act(-1L, new Point2D(23, 42));
+        System.out.println("BLUE ALERTS issued group move order to (23, 42).");
         EventManager.post(new ControllerChangeEvent(0));
     }
 
@@ -68,8 +70,8 @@ public class BlueAlertsSkirmish extends MainRTS {
             // The stock editor camera starts near map origin; explicitly frame
             // the skirmish cluster so CI screenshots prove that the units render.
             cam.setFrustumPerspective(55f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
-            cam.setLocation(new Vector3f(40f, 18f, 34f));
-            cam.lookAt(new Vector3f(40f, 44f, 0f), Vector3f.UNIT_Z);
+            cam.setLocation(new Vector3f(23f, 10f, 30f));
+            cam.lookAt(new Vector3f(23f, 40f, 0f), Vector3f.UNIT_Z);
             System.out.println("BLUE ALERTS camera framed around skirmish units at " + cam.getLocation());
         }
     }
