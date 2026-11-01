@@ -85,6 +85,13 @@ def main():
         "vertexColors: true",
         "terrain-ground",
         "window.__BLUE_ALERTS_TERRAIN",
+        "BLUE_MODELS?.createProjectile",
+        "BLUE_MODELS?.createMuzzleFlash",
+        "BLUE_MODELS?.createExplosion",
+        "model-explosion",
+        "model-muzzle",
+        "disposeObject3D",
+        "window.__BLUE_ALERTS_COMBAT_QA__",
     )
     missing = [feature for feature in required_features if feature not in source]
     if missing:
