@@ -105,6 +105,21 @@ def main():
     if missing:
         raise SystemExit("FAIL: 3D combat rig integration missing: " + ", ".join(missing))
 
+    required_live_vfx_features = (
+        "BLUE_MODELS?.createProjectile",
+        "BLUE_MODELS?.createMuzzleFlash",
+        "BLUE_MODELS?.createExplosion",
+        "model-explosion",
+        "model-muzzle",
+        "disposeObject3D",
+        "const unitTarget = target.g &&",
+        "if (!unitTarget) target.dead = true;",
+        "window.__BLUE_ALERTS_COMBAT_QA__",
+    )
+    missing = [feature for feature in required_live_vfx_features if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: live combat VFX/death lifecycle missing: " + ", ".join(missing))
+
     terrain_start = source.index("/* ─── Deterministic terrain art")
     terrain_end = source.index("/* ─── Game state", terrain_start)
     terrain_section = source[terrain_start:terrain_end]

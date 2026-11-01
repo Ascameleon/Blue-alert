@@ -47,9 +47,13 @@ function watch(page) {
     }
   });
 }
-async function loadGame(page, combatQa = false) {
+async function loadGame(page, options = {}) {
   watch(page);
-  const response = await page.goto(url + (combatQa ? '?qa=combat-rig' : ''), { waitUntil: 'networkidle', timeout: 60000 });
+  const params = new URLSearchParams();
+  if (options.combatVfx) params.set('qa', '1');
+  if (options.combatRig) params.set('combat-rig', '1');
+  const query = params.toString();
+  const response = await page.goto(url + (query ? '?' + query : ''), { waitUntil: 'networkidle', timeout: 60000 });
   assert.equal(response?.status(), 200, 'v94 game HTML must load');
   await page.waitForFunction(() => {
     const canvas = document.querySelector('#viewport canvas');
@@ -97,7 +101,7 @@ try {
   });
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  await loadGame(desktop, true);
+  await loadGame(desktop, { combatRig: true, combatVfx: true });
   const desktopMetrics = await metrics(desktop);
   assert.ok(desktopMetrics.webgl && !desktopMetrics.contextLost, 'desktop must render with a live WebGL context');
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
@@ -108,6 +112,36 @@ try {
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : OFF', 'desktop sound toggle must respond');
   await desktop.locator('#btnSound').click();
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : ON', 'desktop sound toggle must restore');
+
+  const desktopCombatBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+  assert.ok(desktopCombatBefore?.livingBlueCombatUnits > 0 && desktopCombatBefore?.livingRedCombatUnits > 0, 'desktop combat QA must find live units on both factions');
+  assert.equal(desktopCombatBefore.modelProjectiles, 0, 'desktop VFX test must start without active procedural projectiles');
+  const desktopShot = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.fire());
+  assert.equal(desktopShot.modelProjectiles, 1, 'desktop live combat must use the procedural projectile model');
+  assert.equal(desktopShot.modelMuzzleFlashes, 1, 'desktop live combat must show the procedural muzzle flash');
+  await desktop.waitForTimeout(35);
+  await desktop.screenshot({ path: output + '/desktop-v94-projectile-vfx.png', fullPage: true });
+  const desktopKill = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
+  console.log('DESKTOP_UNIT_DEATH ' + JSON.stringify(desktopKill));
+  assert.ok(desktopKill.targetDead && desktopKill.targetRemoved && desktopKill.killsDelta === 1 && desktopKill.creditsDelta >= 50 && desktopKill.modelExplosions === 1, 'desktop unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
+  await desktop.waitForTimeout(180);
+  const desktopExplosionState = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  assert.equal(desktopExplosionState.modelExplosions, 1, 'desktop explosion must remain in the live scene during its authored lifetime');
+  assert.ok(desktopExplosionState.modelExplosionLives[0] < desktopKill.modelExplosionLives[0], 'desktop explosion simulation lifetime must advance');
+  await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
+  try {
+    await desktop.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0;
+    }, null, { timeout: 8000 });
+  } catch (error) {
+    const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('DESKTOP_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
+  const desktopClean = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  console.log('DESKTOP_COMBAT_VFX ' + JSON.stringify({ shot: desktopShot, kill: desktopKill, afterCleanup: desktopClean }));
 
   const combatProbe = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA.arm());
   assert.ok(combatProbe.shooterId && combatProbe.targetId, 'combat probe must arm real in-game 3D units');
@@ -134,7 +168,7 @@ try {
     isMobile: true,
     hasTouch: true
   });
-  await loadGame(mobile);
+  await loadGame(mobile, { combatVfx: true });
   const mobileMetrics = await metrics(mobile);
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
@@ -162,10 +196,38 @@ try {
   await assert.ok(await mobile.locator('#sidebar .tab[data-t="units"]').evaluate(el => el.classList.contains('active')), 'mobile touch must switch the unit tab');
   await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
 
+  const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+  assert.ok(mobileCombatBefore?.livingBlueCombatUnits > 0 && mobileCombatBefore?.livingRedCombatUnits > 0, 'mobile combat QA must find live units on both factions');
+  const mobileShot = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.fire());
+  assert.equal(mobileShot.modelProjectiles, 1, 'mobile live combat must use the procedural projectile model');
+  assert.equal(mobileShot.modelMuzzleFlashes, 1, 'mobile live combat must show the procedural muzzle flash');
+  await mobile.waitForTimeout(35);
+  await mobile.screenshot({ path: output + '/mobile-v94-projectile-vfx-390x844.png', fullPage: true });
+  const mobileKill = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
+  console.log('MOBILE_UNIT_DEATH ' + JSON.stringify(mobileKill));
+  assert.ok(mobileKill.targetDead && mobileKill.targetRemoved && mobileKill.killsDelta === 1 && mobileKill.creditsDelta >= 50 && mobileKill.modelExplosions === 1, 'mobile unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
+  await mobile.waitForTimeout(180);
+  const mobileExplosionState = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  assert.ok(mobileExplosionState.modelExplosionLives[0] < mobileKill.modelExplosionLives[0], 'mobile explosion simulation lifetime must advance');
+  await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
+  try {
+    await mobile.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0;
+    }, null, { timeout: 8000 });
+  } catch (error) {
+    const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
+  const mobileClean = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  console.log('MOBILE_COMBAT_VFX ' + JSON.stringify({ shot: mobileShot, kill: mobileKill, afterCleanup: mobileClean }));
+
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.ok(successfulModel.length > 0, 'the local BLUE ALERTS model module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   console.log(JSON.stringify({
