@@ -4,6 +4,7 @@ import geometry.geom2d.Point2D;
 import geometry.geom3d.Point3D;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import model.CommandManager;
 import model.ModelManager;
 import model.battlefield.army.ArmyManager;
@@ -44,8 +45,22 @@ public class BlueAlertsSkirmish extends MainRTS {
         if (CommandManager.selection.size() != 12) {
             throw new IllegalStateException("Select-all selected " + CommandManager.selection.size() + " of 12 units.");
         }
-        CommandManager.act(-1L, new Point2D(23, 42));
-        System.out.println("BLUE ALERTS issued group move order to (23, 42).");
+        List<Unit> redUnits = ArmyManager.getUnits().stream()
+                .filter(unit -> "1".equals(unit.faction.getName()))
+                .toList();
+        List<Unit> blueUnits = ArmyManager.getUnits().stream()
+                .filter(unit -> "2".equals(unit.faction.getName()))
+                .toList();
+        if (redUnits.size() != 6 || blueUnits.size() != 6) {
+            throw new IllegalStateException("Expected 6 units per faction; red="
+                    + redUnits.size() + ", blue=" + blueUnits.size());
+        }
+        CommandManager.select(redUnits);
+        CommandManager.act(-1L, new Point2D(18, 42));
+        System.out.println("BLUE ALERTS issued red group move order to (18, 42).");
+        CommandManager.select(blueUnits);
+        CommandManager.act(-1L, new Point2D(28, 42));
+        System.out.println("BLUE ALERTS issued blue group move order to (28, 42).");
         EventManager.post(new ControllerChangeEvent(0));
     }
 
