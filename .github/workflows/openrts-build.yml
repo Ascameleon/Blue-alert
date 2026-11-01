@@ -102,7 +102,6 @@ jobs:
             fi
             sleep 1
           done
-          xdotool key F1
           for i in $(seq 1 20); do
             if ! kill -0 "$app_pid" 2>/dev/null; then
               echo "BLUE ALERTS skirmish exited before screenshot capture."
