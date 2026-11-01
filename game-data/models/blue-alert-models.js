@@ -1,9 +1,9 @@
 /**
  * BLUE ALERT — procedural RTS asset kit
  * Original Three.js meshes; no external asset/API dependency.
- * API: createTank(THREE, options), createInfantry(THREE, options),
- * createBuilding(THREE, type, options), createLandscape(THREE, options),
- * createTree(THREE, options), createRock(THREE, options).
+ * API: createTank, createInfantry, createHarvester, createBuilding, createCitadel,
+ * createAircraft, createHelicopter, createDrone, createProjectile, createExplosion,
+ * createMuzzleFlash, createRelay, createOreNode, createLandscape, createTree, createRock.
  */
 const PALETTE = {
   blue: 0x416d83, blueDark: 0x263f4b, blueLight: 0x86a9b5,
@@ -328,5 +328,121 @@ export function createMuzzleFlash(THREE, options={}) {
   const flare=new THREE.Mesh(new THREE.ConeGeometry(.22,.72,8),glow);flare.name='flash-flare';flare.rotation.z=-Math.PI/2;flare.position.x=.34;g.add(flare);
   for(let i=0;i<4;i++){const ray=new THREE.Mesh(new THREE.ConeGeometry(.045,.42,5),hot);ray.name='flash-ray';ray.rotation.z=-Math.PI/2+i*Math.PI/2;ray.position.set(.12,Math.cos(i*Math.PI/2)*.18,Math.sin(i*Math.PI/2)*.18);g.add(ray);}
   g.userData={kind:'effect',effectType:'muzzle-flash',lifetimeSeconds:.12,requiresRuntimeAnimation:true};
+  g.scale.setScalar(scale);return g;
+}
+
+
+/* --- Economy, objective and command-core assets (v95.1) --- */
+export function createHarvester(THREE, options={}) {
+  const {team='blue',scale=1}=options;
+  const g=new THREE.Group();g.name='BA_Harvester';
+  const paint=teamColor(THREE,team), armor=mat(THREE,0x77765a,.76,.22), dark=mat(THREE,0x252b29,.78,.18), steel=mat(THREE,0x8b928b,.42,.68), glass=mat(THREE,0x8fc5d0,.18,.55), ore=mat(THREE,0xb68b3a,.42,.52);
+  box(THREE,g,'tracked-chassis',[2.7,.62,3.5],[-.15,.48,0],paint);
+  box(THREE,g,'engine-deck',[2.1,.34,1.05],[-.65,.93,-.9],armor);
+  box(THREE,g,'cargo-hopper',[2.25,.88,1.72],[-.62,1.14,-.08],dark);
+  box(THREE,g,'hopper-rim',[2.42,.12,1.9],[-.62,1.63,-.08],steel);
+  for(const side of [-1,1]){
+    box(THREE,g,'track-belt',[.22,.52,3.72],[-.1,.34,side*1.43],dark);
+    for(let i=0;i<7;i++){
+      const wheel=cylinder(THREE,g,'road-wheel',.22,.22,.14,[-1.35+i*.39,.32,side*1.52],steel,10);
+      wheel.rotation.x=Math.PI/2;
+      box(THREE,g,'track-cleat',[.07,.08,.13],[-1.35+i*.39,.08,side*1.58],steel);
+    }
+    box(THREE,g,'hopper-side-rail',[.1,.3,1.8],[-.62,1.88,side*.98],armor);
+    cylinder(THREE,g,'hydraulic-line',.035,.035,1.35,[.25,.72,side*1.02],steel,8).rotation.z=-.24;
+  }
+  box(THREE,g,'operator-cabin',[1.18,1.25,1.05],[.88,1.05,.56],armor);
+  box(THREE,g,'windscreen',[.92,.62,.045],[.9,1.26,1.1],glass);
+  box(THREE,g,'cabin-roof',[1.35,.15,1.2],[.88,1.76,.55],paint);
+  cylinder(THREE,g,'exhaust-stack',.09,.12,.68,[-1.05,1.42,-.92],dark,8);
+  // Front collection assembly with roller drum and replaceable teeth.
+  box(THREE,g,'scoop-frame',[.32,.62,2.8],[1.55,.48,0],steel);
+  const drum=cylinder(THREE,g,'ore-collection-drum',.34,.34,2.45,[1.78,.42,0],dark,14);drum.rotation.x=Math.PI/2;
+  for(let i=0;i<12;i++){
+    const a=i*Math.PI/6;
+    const tooth=box(THREE,g,'scoop-tooth',[.32,.11,.1],[1.78+Math.cos(a)*.34,.42+Math.sin(a)*.34,0],ore);
+    tooth.rotation.z=a;
+  }
+  for(const z of [-.86,-.43,0,.43,.86])box(THREE,g,'scoop-divider',[.28,.48,.055],[1.58,.52,z],steel);
+  addMarking(THREE,g,.05,.83,-1.77,team);
+  g.userData={kind:'vehicle',unitType:'harvester',team,facingAxis:'+X',collectionDrum:drum};
+  g.scale.setScalar(scale);return g;
+}
+
+export function createCitadel(THREE, options={}) {
+  const {team='red',scale=1}=options;
+  const g=new THREE.Group();g.name='BA_Citadel';
+  const faction=teamColor(THREE,team), dark=mat(THREE,0x252a2c,.5,.72), stone=mat(THREE,0x686c69,.92,.12), steel=mat(THREE,0x9ba19b,.4,.72);
+  const glowColor=team==='red'?0xff4c43:0x43c8ff;
+  cylinder(THREE,g,'citadel-foundation',5.1,5.4,.42,[0,.21,0],dark,24);
+  cylinder(THREE,g,'outer-fortress-ring',4.45,4.8,.82,[0,.78,0],stone,20);
+  cylinder(THREE,g,'armored-ring',3.85,4.0,.28,[0,1.32,0],faction,20);
+  cylinder(THREE,g,'inner-command-base',2.8,3.2,1.25,[0,1.9,0],dark,18);
+  cylinder(THREE,g,'core-platform',2.15,2.35,.24,[0,2.64,0],steel,18);
+  const coreMat=new THREE.MeshStandardMaterial({color:glowColor,emissive:glowColor,emissiveIntensity:1.15,metalness:.35,roughness:.22});
+  const core=new THREE.Mesh(new THREE.IcosahedronGeometry(1.55,1),coreMat);
+  core.name='citadel-reactor-core';core.position.set(0,3.95,0);core.castShadow=true;g.add(core);
+  const cage=new THREE.Group();cage.name='reactor-cage';g.add(cage);
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4,x=Math.cos(a)*2.1,z=Math.sin(a)*2.1;
+    const pylon=cylinder(THREE,cage,'reactor-pylon',.16,.22,2.5,[x,3.6,z],steel,8);
+    pylon.rotation.z=Math.cos(a)*-.12;pylon.rotation.x=Math.sin(a)*.12;
+    box(THREE,cage,'pylon-light',[.12,.18,.12],[x,4.25,z],mat(THREE,glowColor,.25,.5));
+  }
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(2.05,.075,8,32),new THREE.MeshStandardMaterial({color:glowColor,emissive:glowColor,emissiveIntensity:.65,metalness:.45,roughness:.3}));
+  ring.name='reactor-energy-ring';ring.rotation.x=Math.PI/2;ring.position.y=3.85;g.add(ring);
+  for(let i=0;i<4;i++){
+    const a=i*Math.PI/2;
+    const bastion=cylinder(THREE,g,'outer-bastion',.68,.9,2.3,[Math.cos(a)*4.05,1.45,Math.sin(a)*4.05],dark,10);
+    cylinder(THREE,g,'bastion-cap',.72,.72,.16,[Math.cos(a)*4.05,2.68,Math.sin(a)*4.05],faction,10);
+    const slit=box(THREE,g,'bastion-slit',[.12,.55,.08],[Math.cos(a)*4.05,1.6,Math.sin(a)*4.05],mat(THREE,glowColor,.25,.45));
+    slit.rotation.y=a;
+  }
+  box(THREE,g,'command-antenna-base',[.38,.18,.38],[-2.4,2.1,-1.8],steel);
+  cylinder(THREE,g,'command-antenna',.035,.035,1.6,[-2.4,2.95,-1.8],steel,8);
+  g.userData={kind:'building',buildingType:'citadel',team,core,reactorRing:ring};
+  g.scale.setScalar(scale);return g;
+}
+
+export function createRelay(THREE, options={}) {
+  const {team='neutral',scale=1}=options;
+  const g=new THREE.Group();g.name='BA_Relay';
+  const dark=mat(THREE,0x28343a,.55,.68), metal=mat(THREE,0x89968f,.42,.65), faction=team==='red'?mat(THREE,0xb64a43):team==='blue'?mat(THREE,0x438fb1):mat(THREE,0x9b9a81);
+  const beaconColor=team==='red'?0xff554d:team==='blue'?0x4bc9ff:0xf3d36b;
+  cylinder(THREE,g,'relay-foundation',1.7,1.9,.32,[0,.16,0],dark,16);
+  cylinder(THREE,g,'relay-base',1.1,1.35,.62,[0,.56,0],faction,12);
+  cylinder(THREE,g,'relay-mast',.12,.18,3.2,[0,2.4,0],metal,10);
+  for(const y of [1.35,2.05,2.75])cylinder(THREE,g,'mast-collar',.28,.28,.12,[0,y,0],dark,12);
+  for(let i=0;i<3;i++){
+    const a=i*Math.PI*2/3;
+    const arm=box(THREE,g,'relay-antenna-arm',[.12,.1,1.55],[0,3.05,0],metal);
+    arm.rotation.y=a;
+  }
+  const beaconMat=new THREE.MeshStandardMaterial({color:beaconColor,emissive:beaconColor,emissiveIntensity:1.2,roughness:.25,metalness:.35});
+  sphere(THREE,g,'relay-beacon',.32,[0,3.95,0],beaconMat,[1,1.2,1]);
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(1.15,.045,8,32),new THREE.MeshBasicMaterial({color:beaconColor,transparent:true,opacity:.72}));
+  halo.name='capture-halo';halo.rotation.x=Math.PI/2;halo.position.y=.12;g.add(halo);
+  g.userData={kind:'objective',objectiveType:'relay',team,beacon:g.children.find(o=>o.name==='relay-beacon')};
+  g.scale.setScalar(scale);return g;
+}
+
+export function createOreNode(THREE, options={}) {
+  const {scale=1,seed=31}=options;
+  const g=new THREE.Group();g.name='BA_OreNode';
+  const stone=mat(THREE,0x514e43,.98,.05), ore=mat(THREE,0xb38a3b,.42,.48), bright=mat(THREE,0xe2bf67,.32,.5);
+  let state=seed>>>0;const rand=()=>{state=(1664525*state+1013904223)>>>0;return state/4294967296;};
+  for(let i=0;i<7;i++){
+    const a=rand()*Math.PI*2,r=.25+rand()*1.15,h=.22+rand()*.32;
+    const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.48+rand()*.3,0),stone);
+    rock.name='ore-rock';rock.position.set(Math.cos(a)*r,h,Math.sin(a)*r);rock.rotation.set(rand(),rand()*Math.PI,rand());rock.scale.set(1,.72,1.15);rock.castShadow=true;g.add(rock);
+  }
+  for(let i=0;i<5;i++){
+    const a=i*Math.PI*2/5,r=.38+rand()*.65;
+    const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.32+rand()*.22,0),i%2?ore:bright);
+    crystal.name='ore-crystal';crystal.position.set(Math.cos(a)*r,.48+rand()*.22,Math.sin(a)*r);crystal.rotation.set(rand(),rand()*Math.PI,rand());crystal.castShadow=true;g.add(crystal);
+  }
+  const disk=new THREE.Mesh(new THREE.CircleGeometry(2.25,20),new THREE.MeshBasicMaterial({color:0xc0a020,transparent:true,opacity:.12,side:THREE.DoubleSide}));
+  disk.name='ore-field-glow';disk.rotation.x=-Math.PI/2;disk.position.y=.025;g.add(disk);
+  g.userData={kind:'resource',resourceType:'ore',seed};
   g.scale.setScalar(scale);return g;
 }
