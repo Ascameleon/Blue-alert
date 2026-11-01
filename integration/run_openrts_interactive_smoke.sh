@@ -44,15 +44,12 @@ wait_for_marker() {
 
 wait_for_marker "BLUE ALERTS INTERACTIVE READY" 60
 
-# Deliver actual XTest button transitions. A previous revision called this
-# helper without defining it, so the native-input step exited before sending
-# any click. Keep the press long enough for the JME input listener to observe it.
+# Use xdotool's XTest click sequence. The prior known-good harness used
+# xdotool click; separate mousedown/mouseup calls did not reach JME's listener
+# reliably in this Xvfb run. Keep a 150 ms hold and retain model-state assertions.
 send_native_click() {
   local button="$1"
-  xdotool windowfocus --sync "$window_id"
-  xdotool mousedown "$button"
-  sleep 0.2
-  xdotool mouseup "$button"
+  xdotool click --clearmodifiers --delay 150 "$button"
   echo "Native XTest click button=$button pointer=$(xdotool getmouselocation --shell)"
 }
 
@@ -105,14 +102,12 @@ IFS=, read -r move_x move_y <<<"$move_pair"
 # after each move to make coordinate failures diagnosable.
 xdotool mousemove --sync --window "$window_id" "$target_x" "$target_y"
 echo "Pointer after selection move: $(xdotool getmouselocation --shell)"
-xdotool windowfocus --sync "$window_id"
 sleep 1
 send_native_click 1
 wait_for_marker "BLUE ALERTS INTERACTIVE SELECTED" 10
 
 xdotool mousemove --sync --window "$window_id" "$move_x" "$move_y"
 echo "Pointer after ground move: $(xdotool getmouselocation --shell)"
-xdotool windowfocus --sync "$window_id"
 sleep 1
 send_native_click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED" 8
@@ -129,7 +124,6 @@ fi
 IFS=, read -r enemy_x enemy_y <<<"$enemy_pair"
 xdotool mousemove --sync --window "$window_id" "$enemy_x" "$enemy_y"
 echo "Pointer before attack click: $(xdotool getmouselocation --shell)"
-xdotool windowfocus --sync "$window_id"
 sleep 1
 send_native_click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_CLICK_RECEIVED" 8
