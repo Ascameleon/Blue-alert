@@ -11,8 +11,11 @@ console.log('Fetching '+baseBranch+' for visual before/after comparison');
 execFileSync('git',['fetch','--no-tags','--depth=1','origin',baseBranch],{stdio:'ignore',timeout:30000});
 console.log('Base branch fetched');
 const baseRef='FETCH_HEAD';
+const baselinePreviewRaw=execFileSync('git',['show',baseRef+':game-data/models/preview.html'],{encoding:'utf8',maxBuffer:16*1024*1024});
+const baselineImportMap='<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>';
+const baselinePreview=baselinePreviewRaw.includes('type="importmap"')?baselinePreviewRaw:baselinePreviewRaw.replace('</head>',baselineImportMap+'</head>');
 const baselineFiles=new Map([
-  ['/game-data/models/preview.html',execFileSync('git',['show',baseRef+':game-data/models/preview.html'],{encoding:'utf8',maxBuffer:16*1024*1024})],
+  ['/game-data/models/preview.html',baselinePreview],
   ['/game-data/models/blue-alert-models.js',execFileSync('git',['show',baseRef+':game-data/models/blue-alert-models.js'],{encoding:'utf8',maxBuffer:16*1024*1024})]
 ]);
 const allowed=new Set([
