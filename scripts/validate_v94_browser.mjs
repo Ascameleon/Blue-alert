@@ -128,11 +128,31 @@ try {
   const desktopKill = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
   console.log('DESKTOP_UNIT_DEATH ' + JSON.stringify(desktopKill));
   assert.ok(desktopKill.targetDead && desktopKill.targetRemoved && desktopKill.killsDelta === 1 && desktopKill.creditsDelta >= 50 && desktopKill.modelExplosions === 1, 'desktop unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
-  await desktop.waitForTimeout(180);
+  await desktop.bringToFront();
+  try {
+    await desktop.waitForFunction(({ frameCount, time, life }) => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.frameCount >= frameCount + 2 && state.time > time &&
+        state.modelExplosionLives.length === 1 && state.modelExplosionLives[0] < life;
+    }, {
+      frameCount: desktopKill.frameCount,
+      time: desktopKill.time,
+      life: desktopKill.modelExplosionLives[0]
+    }, { timeout: 5000, polling: 50 });
+  } catch (error) {
+    const diagnostic = await desktop.evaluate(() => ({
+      state: window.__BLUE_ALERTS_COMBAT_QA__?.state(),
+      hasFocus: document.hasFocus(),
+      visibilityState: document.visibilityState
+    }));
+    console.log('DESKTOP_EXPLOSION_PROGRESS_TIMEOUT ' + JSON.stringify({ before: desktopKill, diagnostic }));
+    throw error;
+  }
   const desktopExplosionState = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   assert.equal(desktopExplosionState.modelExplosions, 1, 'desktop explosion must remain in the live scene during its authored lifetime');
   console.log('DESKTOP_EXPLOSION_LIFECYCLE ' + JSON.stringify({ before: desktopKill, after: desktopExplosionState }));
   assert.ok(desktopExplosionState.started && !desktopExplosionState.gameOver && desktopExplosionState.time > desktopKill.time, 'desktop simulation clock must advance while the explosion is alive');
+  assert.ok(desktopExplosionState.frameCount >= desktopKill.frameCount + 2 && desktopExplosionState.lastFrameDelta > 0, 'desktop requestAnimationFrame loop must continue after unit destruction');
   assert.ok(desktopExplosionState.modelExplosionLives[0] < desktopKill.modelExplosionLives[0], 'desktop explosion simulation lifetime must advance');
   await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
   try {
@@ -214,10 +234,30 @@ try {
   const mobileKill = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
   console.log('MOBILE_UNIT_DEATH ' + JSON.stringify(mobileKill));
   assert.ok(mobileKill.targetDead && mobileKill.targetRemoved && mobileKill.killsDelta === 1 && mobileKill.creditsDelta >= 50 && mobileKill.modelExplosions === 1, 'mobile unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
-  await mobile.waitForTimeout(180);
+  await mobile.bringToFront();
+  try {
+    await mobile.waitForFunction(({ frameCount, time, life }) => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.frameCount >= frameCount + 2 && state.time > time &&
+        state.modelExplosionLives.length === 1 && state.modelExplosionLives[0] < life;
+    }, {
+      frameCount: mobileKill.frameCount,
+      time: mobileKill.time,
+      life: mobileKill.modelExplosionLives[0]
+    }, { timeout: 5000, polling: 50 });
+  } catch (error) {
+    const diagnostic = await mobile.evaluate(() => ({
+      state: window.__BLUE_ALERTS_COMBAT_QA__?.state(),
+      hasFocus: document.hasFocus(),
+      visibilityState: document.visibilityState
+    }));
+    console.log('MOBILE_EXPLOSION_PROGRESS_TIMEOUT ' + JSON.stringify({ before: mobileKill, diagnostic }));
+    throw error;
+  }
   const mobileExplosionState = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   console.log('MOBILE_EXPLOSION_LIFECYCLE ' + JSON.stringify({ before: mobileKill, after: mobileExplosionState }));
   assert.ok(mobileExplosionState.started && !mobileExplosionState.gameOver && mobileExplosionState.time > mobileKill.time, 'mobile simulation clock must advance while the explosion is alive');
+  assert.ok(mobileExplosionState.frameCount >= mobileKill.frameCount + 2 && mobileExplosionState.lastFrameDelta > 0, 'mobile requestAnimationFrame loop must continue after unit destruction');
   assert.ok(mobileExplosionState.modelExplosionLives[0] < mobileKill.modelExplosionLives[0], 'mobile explosion simulation lifetime must advance');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
   try {
