@@ -129,9 +129,6 @@ renderer.setAnimationLoop(()=>{
       if(o.material?.opacity!==undefined)o.material.opacity=.35+pulse*.6;
     }
   });
-  if(current?.userData?.core)current.userData.core.rotation.y+=delta*.75;
-  if(current?.userData?.reactorRing)current.userData.reactorRing.rotation.z+=delta*.5;
-  if(current?.userData?.captureHalo)current.userData.captureHalo.rotation.z+=delta*.5;
   if(current?.userData?.kind==='aircraft'){current.rotation.z=Math.sin(elapsed*1.1)*.025;current.position.y=Math.sin(elapsed*2)*.035;}
   if(current?.userData?.kind==='helicopter')current.position.y=.08+Math.sin(elapsed*3)*.035;
   if(current?.userData?.kind==='drone')current.rotation.y+=delta*.22;
