@@ -79,10 +79,24 @@ def main():
         "game-data/models/blue-alert-models.js",
         "new THREE.Scene",
         "new THREE.PerspectiveCamera",
+        "function terrainHash",
+        "function terrainNoise",
+        "createSeededTerrainRandom",
+        "vertexColors: true",
+        "terrain-ground",
+        "window.__BLUE_ALERTS_TERRAIN",
     )
     missing = [feature for feature in required_features if feature not in source]
     if missing:
         raise SystemExit("FAIL: expected v94 3D/game features missing: " + ", ".join(missing))
+
+    terrain_start = source.index("/* ─── Deterministic terrain art")
+    terrain_end = source.index("/* ─── Game state", terrain_start)
+    terrain_section = source[terrain_start:terrain_end]
+    if "Math.random()" in terrain_section:
+        raise SystemExit("FAIL: terrain prop placement must be deterministic")
+    if "vertexColors: true" not in terrain_section:
+        raise SystemExit("FAIL: terrain must use deterministic vertex color variation")
 
     parser = ScriptCollector()
     parser.feed(source)

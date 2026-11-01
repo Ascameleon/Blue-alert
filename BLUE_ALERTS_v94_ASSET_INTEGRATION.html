@@ -484,32 +484,105 @@ function addCyl(parent, x, y, z, rt, rb, h, mat, seg = 10) {
   parent.add(m); return m;
 }
 
-/* ─── Terrain ────────────────────────────────────────────── */
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 160, 60, 48), MAT.grass);
-ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+/* ─── Deterministic terrain art ───────────────────────────── */
+function terrainHash(ix, iz) {
+  let h = Math.imul((ix | 0) ^ 0x45d9f3b, 0x45d9f3b);
+  h ^= Math.imul((iz | 0) ^ 0x119de1f3, 0x27d4eb2d);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+  return ((h ^ (h >>> 15)) >>> 0) / 4294967295;
+}
+function terrainNoise(x, z, scale) {
+  const sx = x * scale, sz = z * scale;
+  const x0 = Math.floor(sx), z0 = Math.floor(sz);
+  const tx = sx - x0, tz = sz - z0;
+  const fade = t => t * t * (3 - 2 * t);
+  const u = fade(tx), v = fade(tz);
+  const a = terrainHash(x0, z0), b = terrainHash(x0 + 1, z0);
+  const c = terrainHash(x0, z0 + 1), d = terrainHash(x0 + 1, z0 + 1);
+  const top = a + (b - a) * u;
+  const bottom = c + (d - c) * u;
+  return top + (bottom - top) * v;
+}
+function createSeededTerrainRandom(seed = 0x424c5545) {
+  let state = seed >>> 0;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
+const terrainRandom = createSeededTerrainRandom();
+const terrainGeometry = new THREE.PlaneGeometry(200, 160, 60, 48);
+const terrainPositions = terrainGeometry.attributes.position;
+const terrainColors = new Float32Array(terrainPositions.count * 3);
+const grassColor = new THREE.Color(0x3d5635);
+const dryColor = new THREE.Color(0x746b43);
+const shadedColor = new THREE.Color(0x29422f);
+const soilColor = new THREE.Color(0x62513d);
+const terrainSmoothstep = (a, b, value) => {
+  const t = Math.max(0, Math.min(1, (value - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+for (let i = 0; i < terrainPositions.count; i++) {
+  const x = terrainPositions.getX(i);
+  const z = terrainPositions.getY(i);
+  const broad = terrainNoise(x, z, 0.035);
+  const medium = terrainNoise(x + 13, z - 7, 0.11);
+  const fine = terrainNoise(x - 5, z + 11, 0.42);
+  const moisture = broad * 0.62 + medium * 0.27 + fine * 0.11;
+  const color = grassColor.clone();
+  color.lerp(dryColor, terrainSmoothstep(0.57, 0.82, moisture) * 0.42);
+  color.lerp(shadedColor, terrainSmoothstep(0.12, 0.42, 1 - moisture) * 0.28);
+  const roadShoulder = 1 - terrainSmoothstep(3.4, 7.8, Math.abs(z));
+  color.lerp(soilColor, roadShoulder * 0.24);
+  color.multiplyScalar(0.94 + fine * 0.12);
+  color.toArray(terrainColors, i * 3);
+}
+terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
+const terrainMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff, vertexColors: true, roughness: 1, metalness: 0
+});
+const ground = new THREE.Mesh(terrainGeometry, terrainMaterial);
+ground.name = 'terrain-ground';
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+window.__BLUE_ALERTS_TERRAIN = Object.freeze({
+  seed: 0x424c5545,
+  vertexCount: terrainPositions.count,
+  colorCount: terrainColors.length / 3,
+  vertexColors: ground.material.vertexColors
+});
 
 // Road
 addBox(scene, 0, 0.015, 0, 200, 0.03, 5.0, MAT.concrete);
 addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
 for (let x = -95; x < 95; x += 6) addBox(scene, x, 0.055, 0, 2.4, 0.01, 0.12, MAT.line);
 
-// Trees
+// Trees — deterministic placement keeps every match and visual test reproducible.
 for (let i = 0; i < 160; i++) {
-  let x = (Math.random() - 0.5) * 185, z = (Math.random() - 0.5) * 145;
+  const x = (terrainRandom() - 0.5) * 185;
+  const z = (terrainRandom() - 0.5) * 145;
   if (Math.abs(z) < 7) continue;
   if (Math.abs(x) < 55 && Math.abs(z) < 35) continue;
-  const sc = 0.5 + Math.random() * 1.4;
+  const sc = 0.5 + terrainRandom() * 1.4;
   addCyl(scene, x, 0.4 * sc, z, 0.1 * sc, 0.16 * sc, 0.85 * sc, mkMat(0x4a3820), 6);
   const crown = new THREE.Mesh(new THREE.ConeGeometry(sc * 0.85, 2.3 * sc, 6), i % 3 ? MAT.tree : MAT.tree2);
-  crown.position.set(x, 1.5 * sc, z); crown.castShadow = true; scene.add(crown);
+  crown.position.set(x, 1.5 * sc, z);
+  crown.castShadow = true;
+  scene.add(crown);
 }
-// Rocks
+// Rocks — same seeded stream, separate from gameplay randomness.
 for (let i = 0; i < 80; i++) {
-  let x = (Math.random() - 0.5) * 180, z = (Math.random() - 0.5) * 140;
+  const x = (terrainRandom() - 0.5) * 180;
+  const z = (terrainRandom() - 0.5) * 140;
   if (Math.abs(z) < 6) continue;
-  const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15 + Math.random() * 0.45, 0), MAT.rock);
-  r.position.set(x, 0.1, z); r.scale.y = 0.4 + Math.random() * 0.5;
-  r.rotation.set(Math.random(), Math.random(), Math.random()); r.castShadow = true; scene.add(r);
+  const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15 + terrainRandom() * 0.45, 0), MAT.rock);
+  r.position.set(x, 0.1, z);
+  r.scale.y = 0.4 + terrainRandom() * 0.5;
+  r.rotation.set(terrainRandom(), terrainRandom(), terrainRandom());
+  r.castShadow = true;
+  scene.add(r);
 }
 
 /* ─── Game state ─────────────────────────────────────────── */
