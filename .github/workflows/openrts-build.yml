@@ -47,6 +47,8 @@ jobs:
         run: python3 scripts/validate_prototype.py
       - name: Validate BLUE ALERTS v94 3D prototype
         run: python3 scripts/validate_v94.py
+      - name: Validate expanded BLUE ALERTS model kit
+        run: python3 scripts/validate_model_kit.py
       - name: Validate supplied BLUE ALERTS v93 when imported
         shell: bash
         run: |
