@@ -124,6 +124,25 @@ def main():
     if missing:
         raise SystemExit("FAIL: live combat VFX/death lifecycle missing: " + ", ".join(missing))
 
+        required_building_damage_features = (
+        "function spawnImpact(",
+        "kind: 'impact-ring'",
+        "kind: 'impact-spark'",
+        "function applyBuildingDamageVisuals(",
+        "function spawnBuildingSmoke(",
+        "function spawnBuildingFlame(",
+        "damageStage: 0",
+        "if (!unitTarget && target.g) target.damageFxCd",
+        "damageStage = stage",
+        "scorchMark: !!target.scorch",
+        "window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__",
+        "impactRings: fx.filter(e => e.kind === 'impact-ring').length",
+        "buildingSmoke: fx.filter(e => e.kind === 'building-smoke').length",
+    )
+    missing = [feature for feature in required_building_damage_features if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: live impact/building damage states missing: " + ", ".join(missing))
+
     terrain_start = source.index("/* ─── Deterministic terrain art")
     terrain_end = source.index("/* ─── Game state", terrain_start)
     terrain_section = source[terrain_start:terrain_end]
