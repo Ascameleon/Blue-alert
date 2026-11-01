@@ -106,7 +106,7 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
   });
   return {
     asset:document.querySelector('#asset').value,
-    animationElapsed:elapsed,animatedNodes,
+    animationElapsed:elapsed,rootRotation:current?[current.rotation.x,current.rotation.y,current.rotation.z]:null,rootPosition:current?[current.position.x,current.position.y,current.position.z]:null,animatedNodes,
     meshCount,triangleCount,physicalMaterialCount,genericDecorationCount,
     environment:!!scene.environment,
     drawCalls:renderer.info.render.calls,
