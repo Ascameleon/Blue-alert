@@ -422,7 +422,7 @@ export function createRelay(THREE, options={}) {
   sphere(THREE,g,'relay-beacon',.32,[0,3.95,0],beaconMat,[1,1.2,1]);
   const halo=new THREE.Mesh(new THREE.TorusGeometry(1.15,.045,8,32),new THREE.MeshBasicMaterial({color:beaconColor,transparent:true,opacity:.72}));
   halo.name='capture-halo';halo.rotation.x=Math.PI/2;halo.position.y=.12;g.add(halo);
-  g.userData={kind:'objective',objectiveType:'relay',team,beacon:g.children.find(o=>o.name==='relay-beacon')};
+  g.userData={kind:'objective',objectiveType:'relay',team,beacon:g.children.find(o=>o.name==='relay-beacon'),captureHalo:halo};
   g.scale.setScalar(scale);return g;
 }
 
