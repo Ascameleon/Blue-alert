@@ -113,7 +113,7 @@ selection_confirmed=false
 for attempt in 1 2 3; do
   send_native_click 1
   for _ in $(seq 1 3); do
-    if grep -Fq "$selection_marker" "$LOG"; then
+    if grep -Fq "BLUE ALERTS INTERACTIVE RAW_SELECT_TARGET_HIT" "$LOG" && grep -Fq "$selection_marker" "$LOG"; then
       selection_confirmed=true
       echo "Native selection confirmed after click attempt $attempt."
       break
