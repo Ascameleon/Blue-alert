@@ -269,6 +269,8 @@ try {
   await mobile.locator('.tab[data-t="struct"]').tap();
   const mobileBuildBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
 const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
+  await mobile.screenshot({ path: 'artifacts/v94-browser/mobile-v94-gameplay-390x844.png', fullPage: false });
+  console.log('MOBILE_HQ_LAYOUT', JSON.stringify({ labelScreenY: mobileBuildBefore?.hq?.labelScreenY, labelWorldY: mobileBuildBefore?.hq?.labelY, commandsBox: mobileCommandsBox }));
   assert.ok(mobileCommandsBox && mobileBuildBefore?.hq?.labelScreenY > mobileCommandsBox.y + mobileCommandsBox.height + 6,
     'the QG label must remain visible below the mobile command dock, not underneath it');
   assert.ok(mobileBuildBefore && mobileBuildBefore.pads.every(p => p.pad && p.grid && p.border),
