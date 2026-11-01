@@ -1,106 +1,96 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Blue Alert — Atelier de modèles 3D</title>
+<title>BLUE ALERTS — Atelier 3D</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#101719;color:#e8efec;font:14px system-ui,sans-serif}
-header{padding:14px 18px;background:#182327;border-bottom:1px solid #35474b;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-h1{font-size:17px;margin:0}small{color:#aabbb7}.controls{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+header{padding:12px 16px;background:#182327;border-bottom:1px solid #35474b;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+h1{font-size:16px;margin:0}small{color:#aabbb7}.controls{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
 select,button{background:#27383c;color:#f2f5f3;border:1px solid #506469;border-radius:7px;padding:9px 11px;min-height:44px;min-width:44px;touch-action:manipulation}
-main{display:grid;grid-template-columns:minmax(0,1fr) 245px;min-height:calc(100vh - 58px);width:100%;min-width:0}#view{min-height:65vh;position:relative;min-width:0;width:100%;overflow:hidden}#view canvas{display:block;max-width:100%;width:100%;height:100%}
+button[aria-pressed="true"]{border-color:#78b9a6;background:#23443e}
+main{display:grid;grid-template-columns:minmax(0,1fr) 250px;min-height:calc(100vh - 58px);min-width:0}
+#view{min-height:65vh;position:relative;min-width:0;overflow:hidden}#view canvas{display:block;width:100%;height:100%}
 aside{padding:16px;background:#182327;border-left:1px solid #35474b}aside h2{font-size:14px}aside p{line-height:1.5;color:#c1ceca}
-#hint{position:absolute;bottom:12px;left:12px;background:#101719cc;padding:8px 10px;border-radius:6px;color:#c4d2ce}
-@media(max-width:700px){
-main{grid-template-columns:minmax(0,1fr)}
-#view{min-height:65vh;min-width:0;width:100%}
-aside{border-left:0;border-top:1px solid #35474b}
-header{padding:12px;gap:8px;align-items:flex-start}
-.controls{flex:1 1 100%;width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-left:0}
-.controls select,.controls button{width:100%;min-width:0}
-.controls button{grid-column:1/-1}
-}
+#hint,#stats{position:absolute;background:#101719dc;padding:8px 10px;border-radius:6px;color:#c4d2ce;pointer-events:none}
+#hint{bottom:12px;left:12px}#stats{top:12px;left:12px;font-variant-numeric:tabular-nums}
+@media(max-width:700px){main{grid-template-columns:minmax(0,1fr)}#view{min-height:62vh}aside{border-left:0;border-top:1px solid #35474b}header{padding:10px;align-items:flex-start}.controls{flex:1 1 100%;width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-left:0}.controls select,.controls button{width:100%;min-width:0}.controls button{grid-column:auto}}
 </style></head><body>
-<header><h1>BLUE ALERT / Atelier de modèles 3D</h1><small>Kit procédural Three.js · sans API payante</small>
-<div class="controls"><select id="asset"><option value="tank">Char de combat</option><option value="infantry">Fantassin</option><option value="hq">Quartier général</option><option value="barracks">Caserne</option><option value="refinery">Raffinerie</option><option value="turret">Tourelle défensive</option><option value="controlTower">Tour de contrôle</option><option value="landscape">Paysage tactique</option><option value="aircraft">Avion d’attaque</option><option value="helicopter">Hélicoptère d’assaut</option><option value="drone">Drone de reconnaissance</option><option value="projectile">Projectile</option><option value="explosion">Explosion</option><option value="muzzleFlash">Flash de bouche</option><option value="harvester">Moissonneuse</option><option value="citadel">Citadelle</option><option value="relay">Relais de capture</option><option value="ore">Gisement de minerai</option></select>
-<select id="team"><option value="blue">Équipe bleue</option><option value="red">Équipe rouge</option></select><button id="reset">Réinitialiser la vue</button></div></header>
-<main><section id="view"><div id="hint">Glisser : orbiter · molette : zoom · clic droit : déplacer</div></section><aside><h2 id="title">Char de combat</h2><p id="desc">Maillage 3D original composé de blindage, chenilles, roues, tourelle pivotante, canon, trappes et marquage d'équipe.</p><p><b>État :</b> modèles procéduraux en géométrie Three.js. Le code est conçu pour être appelé depuis le moteur web du jeu.</p><p><b>Commandes :</b><br>Glisser pour tourner<br>Molette pour zoomer<br>Clic droit pour déplacer la caméra</p></aside></main>
-<script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
-</script>
+<header><h1>BLUE ALERTS / Atelier 3D</h1><small>Kit procédural Three.js · local · sans API payante</small>
+<div class="controls">
+<select id="asset" aria-label="Modèle"><option value="tank">Char de combat</option><option value="infantry">Fantassin</option><option value="hq">Quartier général</option><option value="barracks">Caserne</option><option value="refinery">Raffinerie</option><option value="turret">Tourelle défensive</option><option value="controlTower">Tour de contrôle</option><option value="landscape">Paysage tactique</option><option value="aircraft">Avion d’attaque</option><option value="helicopter">Hélicoptère d’assaut</option><option value="drone">Drone de reconnaissance</option><option value="projectile">Projectile</option><option value="explosion">Explosion</option><option value="muzzleFlash">Flash de bouche</option><option value="harvester">Moissonneuse</option><option value="citadel">Citadelle</option><option value="relay">Relais de capture</option><option value="ore">Gisement de minerai</option></select>
+<select id="team" aria-label="Faction"><option value="blue">Équipe bleue</option><option value="red">Équipe rouge</option></select>
+<button id="fit" type="button">Cadrer</button><button id="rotate" type="button" aria-pressed="true">Rotation : oui</button><button id="animate" type="button" aria-pressed="true">Animation : oui</button>
+</div></header>
+<main><section id="view"><div id="stats">Initialisation…</div><div id="hint">Glisser : orbiter · pincer/molette : zoom · clic droit : déplacer</div></section>
+<aside><h2 id="title">Char de combat</h2><p id="desc">Modèle tactique détaillé.</p><p><b>Commandes</b><br>Glisser pour tourner<br>Zoom pour rapprocher<br>Clic droit pour déplacer la caméra</p><p id="quality">Qualité : adaptation automatique au mobile.</p><p><b>Diagnostic</b><br><span id="diagnostic">En attente du modèle…</span></p></aside></main>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-import {createTank,createInfantry,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode} from './blue-alert-models.js';
-const host=document.querySelector('#view'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9aa9a4);scene.fog=new THREE.Fog(0x9aa9a4,45,125);
-const camera=new THREE.PerspectiveCamera(42,1,.1,300);camera.position.set(9,8,12);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
-const envCanvas=document.createElement('canvas');envCanvas.width=1024;envCanvas.height=512;const envCtx=envCanvas.getContext('2d');const envGrad=envCtx.createLinearGradient(0,0,0,512);envGrad.addColorStop(0,'#b9d0df');envGrad.addColorStop(.42,'#617d8a');envGrad.addColorStop(.7,'#293d48');envGrad.addColorStop(1,'#111a20');envCtx.fillStyle=envGrad;envCtx.fillRect(0,0,1024,512);for(const p of [[100,90,180,44],[410,70,110,28],[720,115,190,38],[280,330,260,20]]){envCtx.fillStyle='#edf5ff';envCtx.globalAlpha=.72;envCtx.fillRect(...p)}envCtx.globalAlpha=1;const studioEnv=new THREE.CanvasTexture(envCanvas);studioEnv.mapping=THREE.EquirectangularReflectionMapping;studioEnv.colorSpace=THREE.SRGBColorSpace;scene.environment=studioEnv;host.appendChild(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,1,0);controls.enableDamping=true;
+import {createTank,createInfantry,createBuilding,createLandscape,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode} from './blue-alert-models.js';
+const $=id=>document.getElementById(id),host=$('view'),scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9aa9a4);scene.fog=new THREE.Fog(0x9aa9a4,55,150);
+const camera=new THREE.PerspectiveCamera(42,1,.1,500);camera.position.set(9,8,12);
+const mobile=matchMedia('(max-width:700px)').matches;
+const renderer=new THREE.WebGLRenderer({antialias:!mobile,powerPreference:'high-performance',alpha:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1.25:1.6));renderer.shadowMap.enabled=!mobile;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;host.appendChild(renderer.domElement);
+const envCanvas=document.createElement('canvas');envCanvas.width=512;envCanvas.height=256;const ctx=envCanvas.getContext('2d'),grad=ctx.createLinearGradient(0,0,0,256);
+grad.addColorStop(0,'#b9d0df');grad.addColorStop(.42,'#617d8a');grad.addColorStop(.7,'#293d48');grad.addColorStop(1,'#111a20');ctx.fillStyle=grad;ctx.fillRect(0,0,512,256);
+for(const p of [[50,45,90,22],[205,35,55,14],[360,58,95,19],[140,165,130,10]]){ctx.fillStyle='#edf5ff';ctx.globalAlpha=.72;ctx.fillRect(...p)}ctx.globalAlpha=1;
+const env=new THREE.CanvasTexture(envCanvas);env.mapping=THREE.EquirectangularReflectionMapping;env.colorSpace=THREE.SRGBColorSpace;scene.environment=env;
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,1,0);controls.minDistance=1.8;controls.maxDistance=180;
 scene.add(new THREE.HemisphereLight(0xeaf2f0,0x4b5544,2));
-const sun=new THREE.DirectionalLight(0xfff0d5,3);sun.position.set(8,14,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
-const grid=new THREE.GridHelper(80,80,0x53655e,0x718078);grid.position.y=-.12;scene.add(grid);
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0x56684f,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.16;ground.receiveShadow=true;scene.add(ground);
-let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
-const desc={
-tank:['Char de combat','Blindage à plusieurs niveaux, chenilles et roues détaillées, tourelle indépendante et canon.'],
-infantry:['Fantassin','Silhouette tactique, casque, sac à dos, bras, jambes, bottes et fusil.'],
-hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile latérale et marquage de faction.'],
-barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
-refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],
-turret:['Tourelle défensive','Barbette circulaire, coupole blindée facettée, double autocanon, optiques et boulonnerie périphérique.'],
-controlTower:['Tour de contrôle','Tour octogonale effilée, contreforts, passerelle, cabine panoramique vitrée, feux de balisage et radar orientable.'],
-landscape:['Paysage tactique','Terrain vallonné déterministe, route, marquages, arbres low-poly et rochers.'],
-aircraft:['Avion d’attaque','Fuselage profilé, cockpit, ailes, empennage, réacteurs, train et pylônes d’armement.'],
-helicopter:['Hélicoptère d’assaut','Cabine blindée, verrière, poutre de queue, rotor principal et rotor anticouple.'],
-drone:['Drone de reconnaissance','Châssis quadrirotor, bras carbone, moteurs, hélices et caméra sur nacelle.'],
-projectile:['Projectile','Corps balistique, ogive, ailettes et traceur lumineux.'],
-explosion:['Explosion','Noyau incandescent, anneaux de choc, étincelles et fumée.'],
-muzzleFlash:['Flash de bouche','Éclair de tir compact avec noyau lumineux et rayons de chaleur.'],
-harvester:['Moissonneuse','Châssis chenillé, trémie, cabine vitrée et tambour frontal de collecte.'],
-citadel:['Citadelle','Forteresse circulaire, bastions blindés et cœur énergétique central.'],
-relay:['Relais de capture','Mât de communication, antennes et halo de contrôle territorial.'],
-ore:['Gisement de minerai','Amas rocheux et cristaux métalliques sur un disque de ressource.']
+const sun=new THREE.DirectionalLight(0xfff0d5,3);sun.position.set(8,14,9);sun.castShadow=!mobile;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
+const grid=new THREE.GridHelper(100,100,0x53655e,0x718078);grid.position.y=-.12;scene.add(grid);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshStandardMaterial({color:0x56684f,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.16;ground.receiveShadow=true;scene.add(ground);
+let current=null,autoRotate=true,animations=true,elapsed=0,lastFrame=0,fps=0,frameCount=0,fpsClock=0;
+const descriptions={
+tank:['Char de combat','Blindage multicouche, chenilles, roues, tourelle indépendante et canon.'],infantry:['Fantassin','Silhouette tactique, casque, sac à dos, équipement et fusil.'],
+hq:['Quartier général','Centre de commandement, radar, vitres renforcées et aile latérale.'],barracks:['Caserne','Bâtiment de production avec toit renforcé, garage, fenêtres et ventilation.'],
+refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],turret:['Tourelle défensive','Barbette, coupole blindée, double autocanon et optiques.'],
+controlTower:['Tour de contrôle','Tour octogonale, contreforts, passerelle, cabine vitrée et radar.'],landscape:['Paysage tactique','Terrain, route, végétation low-poly et rochers.'],
+aircraft:['Avion d’attaque','Fuselage, cockpit, ailes, empennage, réacteurs et pylônes.'],helicopter:['Hélicoptère d’assaut','Cabine blindée, poutre de queue et rotors.'],
+drone:['Drone de reconnaissance','Châssis quadrirotor, bras, moteurs, hélices et caméra.'],projectile:['Projectile','Corps balistique, ogive, ailettes et traceur lumineux.'],
+explosion:['Explosion','Noyau incandescent, anneaux de choc, étincelles et fumée.'],muzzleFlash:['Flash de bouche','Éclair de tir avec noyau lumineux et rayons.'],
+harvester:['Moissonneuse','Châssis chenillé, trémie, cabine vitrée et tambour frontal.'],citadel:['Citadelle','Forteresse circulaire, bastions blindés et cœur énergétique.'],
+relay:['Relais de capture','Mât de communication, antennes et halo territorial.'],ore:['Gisement de minerai','Amas rocheux et cristaux métalliques.']
 };
-function build(){clear();const a=document.querySelector('#asset').value,t=document.querySelector('#team').value;
-if(a==='tank')current=createTank(THREE,{team:t});
-else if(a==='infantry')current=createInfantry(THREE,{team:t});
-else if(a==='landscape'){current=createLandscape(THREE,{size:80});}
-else if(a==='aircraft')current=createAircraft(THREE,{team:t});
-else if(a==='helicopter')current=createHelicopter(THREE,{team:t});
-else if(a==='drone')current=createDrone(THREE,{team:t});
-else if(a==='projectile')current=createProjectile(THREE,{team:t});
-else if(a==='explosion')current=createExplosion(THREE);
-else if(a==='muzzleFlash')current=createMuzzleFlash(THREE,{team:t});
-else if(a==='harvester')current=createHarvester(THREE,{team:t});
-else if(a==='citadel')current=createCitadel(THREE,{team:t});
-else if(a==='relay')current=createRelay(THREE,{team:t});
-else if(a==='ore')current=createOreNode(THREE);
+function disposeObject(root){root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)for(const m of(Array.isArray(o.material)?o.material:[o.material]))m.dispose();});}
+function frameObject(){if(!current)return;const bounds=new THREE.Box3().setFromObject(current),sphere=bounds.getBoundingSphere(new THREE.Sphere());
+const radius=Math.max(sphere.radius,.8),fov=THREE.MathUtils.degToRad(camera.fov),distance=(radius/Math.sin(fov/2))*1.18;
+controls.target.copy(sphere.center);camera.position.copy(sphere.center).add(new THREE.Vector3(1,Math.max(.62,radius*.68),1.35).normalize().multiplyScalar(distance));
+camera.near=Math.max(.05,distance/1000);camera.far=Math.max(300,distance*8);camera.updateProjectionMatrix();controls.minDistance=radius*.75;controls.maxDistance=radius*14;controls.update();}
+function build(){if(current){scene.remove(current);disposeObject(current);current=null;}
+const a=$('asset').value,t=$('team').value;
+if(a==='tank')current=createTank(THREE,{team:t});else if(a==='infantry')current=createInfantry(THREE,{team:t});else if(a==='landscape')current=createLandscape(THREE,{size:80});
+else if(a==='aircraft')current=createAircraft(THREE,{team:t});else if(a==='helicopter')current=createHelicopter(THREE,{team:t});else if(a==='drone')current=createDrone(THREE,{team:t});
+else if(a==='projectile')current=createProjectile(THREE,{team:t});else if(a==='explosion')current=createExplosion(THREE);else if(a==='muzzleFlash')current=createMuzzleFlash(THREE,{team:t});
+else if(a==='harvester')current=createHarvester(THREE,{team:t});else if(a==='citadel')current=createCitadel(THREE,{team:t});else if(a==='relay')current=createRelay(THREE,{team:t});else if(a==='ore')current=createOreNode(THREE);
 else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
-scene.add(current);document.querySelector('#title').textContent=desc[a][0];document.querySelector('#desc').textContent=desc[a][1];
-controls.target.set(0,a==='infantry'?.7:1,0);camera.position.set(a==='landscape'?22:8,a==='landscape'?25:7,a==='landscape'?24:11);controls.update();}
-document.querySelector('#asset').addEventListener('change',build);document.querySelector('#team').addEventListener('change',build);
-document.querySelector('#reset').addEventListener('click',build);
-function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
-new ResizeObserver(resize).observe(host);resize();build();
-window.__BLUE_ALERTS_PREVIEW__ = () => {
-  let meshCount=0, triangleCount=0, physicalMaterialCount=0, genericDecorationCount=0;
-  current?.traverse(object => {
-    if (!object.isMesh) return;
-    meshCount++;
-    if (['faction-panel','exterior-light','service-vent','vent-slat'].includes(object.name)) genericDecorationCount++;
-    const geometry=object.geometry;
-    triangleCount += geometry.index ? geometry.index.count/3 : (geometry.attributes.position?.count || 0)/3;
-    for (const material of (Array.isArray(object.material)?object.material:[object.material])) {
-      if (material?.isMeshPhysicalMaterial) physicalMaterialCount++;
-    }
-  });
-  return {
-    asset:document.querySelector('#asset').value,
-    meshCount,triangleCount,physicalMaterialCount,genericDecorationCount,
-    environment:!!scene.environment,
-    drawCalls:renderer.info.render.calls,
-    canvasWidth:renderer.domElement.width,
-    canvasHeight:renderer.domElement.height
-  };
-};
-let previewClock=0;renderer.setAnimationLoop(()=>{previewClock+=.016;if(current?.userData?.rotatingGun)current.userData.rotatingGun.rotation.y+=.006;if(current?.userData?.rotatingGun?.name==='rotating-radar')current.userData.rotatingGun.rotation.y+=.018;current?.traverse(o=>{if(o.userData?.emissivePulse&&o.material?.emissiveIntensity!==undefined)o.material.emissiveIntensity=.55+Math.sin(previewClock*3.2)*.45;});if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;if(current?.userData?.collectionDrum)current.userData.collectionDrum.rotation.x+=.08;if(current?.userData?.reactorRing)current.userData.reactorRing.rotation.z+=.008;if(current?.userData?.core)current.userData.core.rotation.y+=.012;if(current?.userData?.captureHalo)current.userData.captureHalo.rotation.z+=.008;controls.update();renderer.render(scene,camera);});
+scene.add(current);$('title').textContent=descriptions[a][0];$('desc').textContent=descriptions[a][1];frameObject();updateStats();}
+function updateStats(){if(!current)return;let meshes=0,triangles=0,materials=0;
+current.traverse(o=>{if(!o.isMesh)return;meshes++;const g=o.geometry;triangles+=g.index?g.index.count/3:(g.attributes.position?.count||0)/3;for(const m of(Array.isArray(o.material)?o.material:[o.material]))if(m)materials++;});
+$('diagnostic').textContent=meshes+' maillages · '+Math.round(triangles).toLocaleString('fr-FR')+' triangles · '+materials+' matériaux';
+$('quality').textContent='Mode '+(mobile?'mobile optimisé':'bureau haute qualité')+' · '+renderer.getPixelRatio().toFixed(2)+'× pixels';}
+$('asset').addEventListener('change',build);$('team').addEventListener('change',build);$('fit').addEventListener('click',frameObject);
+$('rotate').addEventListener('click',()=>{autoRotate=!autoRotate;$('rotate').setAttribute('aria-pressed',String(autoRotate));$('rotate').textContent='Rotation : '+(autoRotate?'oui':'non');});
+$('animate').addEventListener('click',()=>{animations=!animations;$('animate').setAttribute('aria-pressed',String(animations));$('animate').textContent='Animation : '+(animations?'oui':'non');});
+function resize(){const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);}
+const observer=new ResizeObserver(resize);observer.observe(host);resize();build();
+renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();$('stats').textContent='Contexte graphique perdu — rechargez la page.';});
+window.__BLUE_ALERTS_PREVIEW__=()=>({asset:$('asset').value,meshes:current?.children.length||0,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,pixelRatio:renderer.getPixelRatio(),fps});
+renderer.setAnimationLoop(now=>{const delta=Math.min((now-lastFrame)/1000||0,.05);lastFrame=now;elapsed+=delta;frameCount++;fpsClock+=delta;
+if(fpsClock>=1){fps=frameCount/fpsClock;frameCount=0;fpsClock=0;$('stats').textContent='FPS '+Math.round(fps)+' · '+renderer.info.render.calls+' appels GPU · '+renderer.info.render.triangles.toLocaleString('fr-FR')+' triangles';}
+if(animations&&current){const pulse=.5+.5*Math.sin(elapsed*5.5);current.traverse(o=>{
+if(o.userData?.emissivePulse&&o.material?.emissiveIntensity!==undefined)o.material.emissiveIntensity=.35+pulse*.9;
+if(o.name==='main-rotor')o.rotation.y+=delta*17;if(o.name==='tail-rotor')o.rotation.x+=delta*23;if(o.name==='propeller-rotor')o.rotation.y+=delta*22;
+if(o.name==='ore-collection-drum')o.rotation.x+=delta*4.8;if(o.name==='reactor-energy-ring')o.rotation.z+=delta*.5;if(o.name==='citadel-reactor-core')o.rotation.y+=delta*.75;if(o.name==='capture-halo')o.rotation.z+=delta*.5;
+if(o.name==='fireball-core'){const s=1+pulse*.13;o.scale.set(s,s*.82,s);}if(o.name==='hot-core'){const s=.88+pulse*.22;o.scale.set(s,s*.9,s);}
+if(o.name==='shockwave-ring'){const s=1+((elapsed*1.15)%1.2);o.scale.setScalar(s);if(o.material?.opacity!==undefined)o.material.opacity=Math.max(.08,.72-((s-1)/1.2)*.62);}
+if(o.name==='explosion-spark'){o.position.y+=delta*.55;o.rotation.z+=delta*2.4;}
+});if(current.userData?.rotatingGun)current.userData.rotatingGun.rotation.y+=delta*(current.userData.rotatingGun.name==='rotating-radar'?1.35:.42);
+if(current.userData?.mainRotor)current.userData.mainRotor.rotation.y+=delta*17;if(current.userData?.tailRotor)current.userData.tailRotor.rotation.x+=delta*23;
+if(current.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=delta*22;if(current.userData?.collectionDrum)current.userData.collectionDrum.rotation.x+=delta*4.8;
+if(current.userData?.reactorRing)current.userData.reactorRing.rotation.z+=delta*.5;if(current.userData?.core)current.userData.core.rotation.y+=delta*.75;if(current.userData?.captureHalo)current.userData.captureHalo.rotation.z+=delta*.5;}
+if(autoRotate&&current)current.rotation.y+=delta*.22;controls.update();renderer.render(scene,camera);});
 </script></body></html>
