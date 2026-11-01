@@ -147,7 +147,8 @@ export function createBuilding(THREE, type='barracks', options={}) {
     box(THREE,g,'loading-bay',[.65,.5,.45],[.65,.36,.75],dark);
   } else if(type==='controlTower' || type==='tower') {
     // Elevated octagonal air-traffic/control tower: tapered shaft, buttresses and panoramic glazed cab.
-    const shaft=mat(THREE,0x68777a,.72,.28), trim=mat(THREE,0x303d42,.42,.55), warning=mat(THREE,0xe2ad45,.48,.28);\n    const beaconMat=new THREE.MeshStandardMaterial({color:0xffc75a,emissive:0xff9e36,emissiveIntensity:.8,roughness:.28,metalness:.18});
+    const shaft=mat(THREE,0x68777a,.72,.28), trim=mat(THREE,0x303d42,.42,.55), warning=mat(THREE,0xe2ad45,.48,.28);
+    const beaconMat=new THREE.MeshStandardMaterial({color:0xffc75a,emissive:0xff9e36,emissiveIntensity:.8,roughness:.28,metalness:.18});
     cylinder(THREE,g,'tower-foundation',1.18,1.35,.34,[0,.28,0],dark,12);
     cylinder(THREE,g,'tower-pedestal',.72,.95,.62,[0,.72,0],concrete,10);
     cylinder(THREE,g,'tapered-control-shaft',.48,.72,3.05,[0,2.48,0],shaft,10);
