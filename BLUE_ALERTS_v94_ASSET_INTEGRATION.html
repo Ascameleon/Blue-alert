@@ -288,7 +288,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 <script type="module">
 let BLUE_MODELS = null;
 try {
-  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=2');
+  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=3');
 } catch (assetError) {
   console.warn('BLUE ALERTS: bibliothèque de modèles indisponible, géométries natives conservées.', assetError);
 }
@@ -739,23 +739,26 @@ rebuildNavGrid();
 /* ─── Ore fields ─────────────────────────────────────────── */
 function spawnOre(x, z, amount) {
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2 + Math.random() * 0.3;
-    const rr = 0.3 + Math.random() * 1.4;
-    const c = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.3 + Math.random() * 0.45, 0),
-      i % 2 ? MAT.ore : MAT.ore2
+  if (BLUE_MODELS && BLUE_MODELS.createOreNode) {
+    g.add(BLUE_MODELS.createOreNode(THREE, { seed: Math.round((x + 100) * 100 + z), scale: 0.92 }));
+  } else {
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + Math.random() * 0.3;
+      const rr = 0.3 + Math.random() * 1.4;
+      const c = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.3 + Math.random() * 0.45, 0),
+        i % 2 ? MAT.ore : MAT.ore2
+      );
+      c.position.set(Math.cos(a) * rr, 0.3 + Math.random() * 0.35, Math.sin(a) * rr);
+      c.rotation.set(Math.random(), Math.random(), Math.random());
+      c.castShadow = true; g.add(c);
+    }
+    const disk = new THREE.Mesh(
+      new THREE.CircleGeometry(2.5, 16),
+      new THREE.MeshBasicMaterial({ color: 0xc0a020, transparent: true, opacity: 0.12, side: THREE.DoubleSide })
     );
-    c.position.set(Math.cos(a) * rr, 0.3 + Math.random() * 0.35, Math.sin(a) * rr);
-    c.rotation.set(Math.random(), Math.random(), Math.random());
-    c.castShadow = true; g.add(c);
+    disk.rotation.x = -Math.PI / 2; disk.position.y = 0.03; g.add(disk);
   }
-  // glow disk
-  const disk = new THREE.Mesh(
-    new THREE.CircleGeometry(2.5, 16),
-    new THREE.MeshBasicMaterial({ color: 0xc0a020, transparent: true, opacity: 0.12, side: THREE.DoubleSide })
-  );
-  disk.rotation.x = -Math.PI / 2; disk.position.y = 0.03; g.add(disk);
   ores.push({ x, z, amount, max: amount, mesh: g, r: 3 });
 }
 spawnOre(-6, 24, 3500);
@@ -771,7 +774,12 @@ function createBuilding(x, z, team, kind) {
   const trim = team === 1 ? MAT.blueG : MAT.gold;
   let hp = 400, radius = 3;
 
-  if (BLUE_MODELS && kind !== 'citadel') {
+  if (BLUE_MODELS && kind === 'citadel' && BLUE_MODELS.createCitadel) {
+    const model = BLUE_MODELS.createCitadel(THREE, { team: team === 1 ? 'blue' : 'red' });
+    g.add(model);
+    g.userData.core = model.userData.core || null;
+    hp = 2500; radius = 5.5;
+  } else if (BLUE_MODELS && kind !== 'citadel') {
     const modelType = ({ hq: 'headquarters', power: 'utility', factory: 'utility', barracks: 'barracks', refinery: 'refinery', turret: 'turret' })[kind] || 'utility';
     const model = BLUE_MODELS.createBuilding(THREE, modelType, { team: team === 1 ? 'blue' : 'red' });
     // Keep the original gameplay footprint/health; swap only the visual mesh.
@@ -886,6 +894,11 @@ function createUnit(x, z, team, kind) {
       tank.rotation.y = Math.PI / 2;
       g.add(tank);
     }
+  } else if (BLUE_MODELS && kind === 'harvester' && BLUE_MODELS.createHarvester) {
+    speed = 2.5; hp = 220; dmg = 0; range = 0;
+    const harvester = BLUE_MODELS.createHarvester(THREE, { team: team === 1 ? 'blue' : 'red' });
+    harvester.rotation.y = Math.PI / 2;
+    g.add(harvester);
   } else if (kind === 'infantry') {
     speed = 2.9; hp = 50; dmg = 9; range = 7.5;
     addCyl(g, 0, 0.5, 0, 0.2, 0.26, 0.85, col, 8);

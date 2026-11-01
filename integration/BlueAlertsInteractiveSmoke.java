@@ -24,7 +24,7 @@ import view.math.TranslateUtil;
  * state changes, not merely successful mouse injection.
  */
 public class BlueAlertsInteractiveSmoke extends MainRTS {
-    private static final Vector3f MOVE_DESTINATION = new Vector3f(18f, 48f, 0f);
+    private Vector3f moveDestination;
 
     private Unit selectedUnit;
     private Unit enemyUnit;
@@ -85,6 +85,10 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                 .filter(unit -> "rollerTank".equals(unit.builderID))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Blue target tank is missing"));
+        Vector3f initial = TranslateUtil.toVector3f(selectedUnit.pos);
+        float destinationX = Math.max(6f, Math.min(74f, initial.x + (initial.x < 40f ? 7f : -7f)));
+        float destinationY = Math.max(6f, Math.min(74f, initial.y + (initial.y < 40f ? 5f : -5f)));
+        moveDestination = new Vector3f(destinationX, destinationY, 0f);
 
         // Freeze all other units so the input test measures only the selected
         // red tank's mouse-issued orders and the target's resulting damage.
@@ -106,10 +110,7 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         elapsed += tpf;
 
         if (!ready && elapsed >= 3f) {
-            cam.setFrustumPerspective(50f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
-            cam.setLocation(new Vector3f(23f, 31f, 12f));
-            cam.lookAt(new Vector3f(23f, 42f, 0f), Vector3f.UNIT_Z);
-            cam.update();
+            if (!movementVerified) setTestCamera();
             if (!inputManager.hasMapping("action")) {
                 fail("native Battlefield ACTION mapping is not registered");
                 return;
@@ -118,15 +119,12 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
             ready = true;
             System.out.println("BLUE ALERTS INTERACTIVE READY"
                     + " target=" + projectUnit(selectedUnit)
-                    + " destination=" + project(MOVE_DESTINATION));
+                    + " destination=" + project(moveDestination));
         }
-        if (ready) {
-            // The native camera manager updates before simpleUpdate. Reapply
-            // the test camera every frame so projected click coordinates and
-            // the SpatialSelector ray use the same view matrix.
-            cam.setLocation(new Vector3f(23f, 31f, 12f));
-            cam.lookAt(new Vector3f(23f, 42f, 0f), Vector3f.UNIT_Z);
-            cam.update();
+        if (ready && !movementVerified) {
+            // Follow only until the unit reaches its destination. Freeze the
+            // view after movement so the enemy click ray uses a stable camera.
+            setTestCamera();
         }
 
         if (ready && !selectionVerified) {
@@ -191,6 +189,17 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                 fail("native right-click event for enemy attack was not received");
             }
         }
+    }
+
+    private void setTestCamera() {
+        // Follow the selected tank while it is being selected/moved, then
+        // freeze the camera once movement is verified. This keeps the enemy
+        // projection and SpatialSelector ray on the same stable view at attack.
+        Vector3f target = TranslateUtil.toVector3f(selectedUnit.pos);
+        cam.setFrustumPerspective(50f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
+        cam.setLocation(new Vector3f(target.x, target.y - 14f, target.z + 16f));
+        cam.lookAt(target, Vector3f.UNIT_Z);
+        cam.update();
     }
 
     private String projectUnit(Unit unit) {

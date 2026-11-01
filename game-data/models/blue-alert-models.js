@@ -1,9 +1,9 @@
 /**
  * BLUE ALERT — procedural RTS asset kit
  * Original Three.js meshes; no external asset/API dependency.
- * API: createTank(THREE, options), createInfantry(THREE, options),
- * createBuilding(THREE, type, options), createLandscape(THREE, options),
- * createTree(THREE, options), createRock(THREE, options).
+ * API: createTank, createInfantry, createHarvester, createBuilding, createCitadel,
+ * createAircraft, createHelicopter, createDrone, createProjectile, createExplosion,
+ * createMuzzleFlash, createRelay, createOreNode, createLandscape, createTree, createRock.
  */
 const PALETTE = {
   blue: 0x416d83, blueDark: 0x263f4b, blueLight: 0x86a9b5,
@@ -39,6 +39,15 @@ export function createTank(THREE, options={}) {
   const hull=teamColor(THREE,team), armor=mat(THREE,PALETTE.olive), dark=mat(THREE,PALETTE.dark), metal=mat(THREE,PALETTE.metal);
   box(THREE,g,'lower-hull',[2.55,.48,1.48],[0,.55,0],hull);
   box(THREE,g,'upper-hull',[1.85,.35,1.22],[-.12,.91,0],armor);
+  const reactiveArmor=mat(THREE,0x858c78,.72,.24), optics=mat(THREE,0x79b6bd,.2,.62);
+  for(const side of [-1,1]){
+    for(let i=0;i<4;i++) box(THREE,g,'reactive-armor-tile',[.3,.19,.1],[-.72+i*.43,.73,side*.68],reactiveArmor);
+    box(THREE,g,'side-skirt-armor',[1.55,.16,.09],[-.05,.56,side*.72],armor);
+    for(let i=0;i<2;i++) cylinder(THREE,g,'smoke-discharger',.045,.055,.16,[.68+i*.15,1.05,side*.48],dark,8).rotation.z=Math.PI/2;
+  }
+  box(THREE,g,'commander-hatch',[.32,.08,.3],[-.62,1.12,.08],dark);
+  sphere(THREE,g,'gunner-optic',.075,[.36,1.18,.28],optics,[1,.55,.7]);
+  cylinder(THREE,g,'radio-antenna',.018,.018,.72,[-.86,1.42,-.35],dark,6);
   // Continuous track housings with individual road wheels.
   for (const side of [-1,1]) {
     box(THREE,g,'track-belt',[2.65,.48,.22],[0,.39,side*.79],dark);
@@ -75,6 +84,14 @@ export function createInfantry(THREE, options={}) {
   sphere(THREE,g,'head',.14,[0,1.12,0],skin,[.88,1.05,.88]);
   cylinder(THREE,g,'helmet',.17,.18,.11,[0,1.24,0],cloth,10);
   box(THREE,g,'helmet-rim',[.34,.035,.27],[0,1.2,0],cloth);
+  const armorPlate=mat(THREE,0x56645b,.72,.18), lens=mat(THREE,0x8fc5d0,.18,.55);
+  box(THREE,g,'plate-carrier',[.31,.29,.25],[0,.78,.13],armorPlate);
+  for(const side of [-1,1]){
+    box(THREE,g,'utility-pouch',[.11,.13,.12],[side*.19,.68,.13],cloth);
+    box(THREE,g,'knee-pad',[.16,.12,.17],[side*.1,.31,.08],armorPlate);
+    sphere(THREE,g,'helmet-goggle-lens',.045,[side*.075,1.17,.12],lens,[1,.7,.45]);
+  }
+  box(THREE,g,'radio-antenna',[.025,.42,.025],[-.13,1.12,-.2],dark);
   box(THREE,g,'backpack',[.22,.3,.13],[-.02,.78,-.17],cloth);
   for (const side of [-1,1]) {
     box(THREE,g,'upper-arm',[.12,.32,.13],[side*.23,.79,0],uniform,[0,0,side*-.18]);
@@ -132,6 +149,11 @@ export function createBuilding(THREE, type='barracks', options={}) {
   }
   // faction banner and readable silhouette details
   box(THREE,g,'faction-panel',[.5,.22,.045],[-1.25,1.25,1.04],faction);
+  for(const x of [-.85,.85]){
+    box(THREE,g,'exterior-light',[.18,.12,.06],[x,1.08,1.42],glass);
+    box(THREE,g,'service-vent',[.42,.26,.07],[x,1.52,-1.42],roof);
+    for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
+  }
   g.userData={kind:'building',buildingType:type,team,rotatingGun}; g.scale.setScalar(scale); return g;
 }
 
@@ -177,3 +199,250 @@ export function createLandscape(THREE, options={}) {
   g.userData={kind:'landscape',seed,size}; return g;
 }
 export const BLUE_ALERT_PALETTE = Object.freeze({...PALETTE});
+
+
+/* --- Expanded air, support and combat-effect assets (v95 kit) --- */
+export function createAircraft(THREE, options={}) {
+  const {team='blue', variant='strike-fighter', scale=1}=options;
+  const g=new THREE.Group(); g.name='BA_Aircraft_'+variant;
+  const paint=teamColor(THREE,team), underside=mat(THREE,0x343e43), canopy=mat(THREE,0x8fc5d0,.22,.48), metal=mat(THREE,0x9aa5a5,.42,.62), dark=mat(THREE,0x20282b);
+  // Fuselage: nose points +X; wings span the Z axis.
+  sphere(THREE,g,'fuselage-core',.5,[0,.52,0],paint,[3.25,.55,.66]);
+  const nose=cylinder(THREE,g,'radome',.02,.34,.9,[1.68,.52,0],underside,12); nose.rotation.z=-Math.PI/2;
+  box(THREE,g,'belly-armor',[2.25,.16,.72],[-.05,.22,0],underside);
+  sphere(THREE,g,'cockpit-canopy',.39,[.42,.91,0],canopy,[1.18,.56,.82]);
+  box(THREE,g,'main-wing',[1.15,.12,4.85],[-.12,.48,0],paint,[0,0,-.015]);
+  box(THREE,g,'left-wingtip',[.34,.1,.42],[-.18,.49,2.55],underside);
+  box(THREE,g,'right-wingtip',[.34,.1,.42],[-.18,.49,-2.55],underside);
+  box(THREE,g,'tailplane',[.72,.1,2.05],[-1.45,.64,0],paint);
+  box(THREE,g,'vertical-fin',[.82,.9,.14],[-1.55,.96,0],paint,[0,0,-.12]);
+  for(const z of [-.48,.48]){
+    const engine=cylinder(THREE,g,'jet-engine',.22,.28,1.05,[-1.28,.43,z],dark,12); engine.rotation.z=Math.PI/2;
+    cylinder(THREE,g,'engine-nozzle',.18,.22,.12,[-1.82,.43,z],metal,12).rotation.z=Math.PI/2;
+    box(THREE,g,'missile-pylon',[.62,.12,.13],[.05,.27,z*2.05],dark);
+    const missile=cylinder(THREE,g,'air-to-ground-missile',.055,.075,.72,[.45,.2,z*2.05],metal,8); missile.rotation.z=-Math.PI/2;
+  }
+  for(const x of [-.95,.82]){
+    const gear=cylinder(THREE,g,'landing-gear',.045,.045,.38,[x,.08,0],metal,8);
+    gear.rotation.z=.18;
+    cylinder(THREE,g,'landing-wheel',.12,.12,.08,[x-.05,-.08,0],dark,10).rotation.x=Math.PI/2;
+  }
+  addMarking(THREE,g,-.35,.56,-.94,team);
+  g.userData={kind:'aircraft',unitType:variant,team,facingAxis:'+X'};
+  g.scale.setScalar(scale); return g;
+}
+
+export function createHelicopter(THREE, options={}) {
+  const {team='blue',variant='attack-helicopter',scale=1}=options;
+  const g=new THREE.Group(); g.name='BA_Helicopter_'+variant;
+  const paint=teamColor(THREE,team), glass=mat(THREE,0x8fc5d0,.2,.42), dark=mat(THREE,0x252c2b), metal=mat(THREE,0x89948f,.42,.6);
+  sphere(THREE,g,'armored-cabin',.62,[.28,.72,0],paint,[1.65,.92,1.05]);
+  sphere(THREE,g,'cockpit-glass',.38,[.78,.92,0],glass,[.72,.76,1.22]);
+  box(THREE,g,'lower-keel',[1.25,.18,.62],[.12,.29,0],dark);
+  const boom=cylinder(THREE,g,'tail-boom',.11,.2,2.15,[-1.18,.82,0],paint,10); boom.rotation.z=Math.PI/2;
+  box(THREE,g,'tail-fin',[.52,.72,.12],[-2.05,.98,0],paint,[0,0,-.12]);
+  box(THREE,g,'tailplane',[.25,.08,1.05],[-1.85,.8,0],paint);
+  const mast=cylinder(THREE,g,'rotor-mast',.055,.07,.72,[.05,1.43,0],metal,10);
+  const rotor=new THREE.Group(); rotor.name='main-rotor'; rotor.position.set(.05,1.82,0); g.add(rotor);
+  for(let i=0;i<4;i++){const blade=box(THREE,rotor,'main-rotor-blade',[.13,.035,3.35],[0,0,0],dark); blade.rotation.y=i*Math.PI/2;}
+  const tailRotor=new THREE.Group(); tailRotor.name='tail-rotor'; tailRotor.position.set(-2.17,1.02,0); g.add(tailRotor);
+  for(let i=0;i<4;i++){const blade=box(THREE,tailRotor,'tail-rotor-blade',[.08,.035,.72],[0,0,0],metal); blade.rotation.y=i*Math.PI/2;}
+  for(const z of [-.78,.78]){
+    box(THREE,g,'weapon-stub-wing',[.82,.1,.16],[-.12,.58,z],paint);
+    for(const x of [-.28,.24]){const rocket=cylinder(THREE,g,'rocket-pod',.1,.1,.62,[x,.42,z],metal,8);rocket.rotation.z=-Math.PI/2;}
+    const skid=cylinder(THREE,g,'landing-skid',.055,.055,1.85,[.05,.12,z*.7],dark,8);skid.rotation.x=Math.PI/2;
+    box(THREE,g,'skid-strut',[.08,.42,.08],[.08,.27,z*.7],metal);
+  }
+  addMarking(THREE,g,.15,.8,-.63,team);
+  g.userData={kind:'helicopter',unitType:variant,team,mainRotor:rotor,tailRotor,facingAxis:'+X'};
+  g.scale.setScalar(scale); return g;
+}
+
+export function createDrone(THREE, options={}) {
+  const {team='blue',variant='recon-quadcopter',scale=1}=options;
+  const g=new THREE.Group(); g.name='BA_Drone_'+variant;
+  const paint=teamColor(THREE,team), dark=mat(THREE,0x252c2b), metal=mat(THREE,0x89948f,.38,.7), lens=mat(THREE,0x73c7df,.16,.7);
+  box(THREE,g,'central-airframe',[.72,.2,.62],[0,.48,0],paint);
+  sphere(THREE,g,'sensor-gimbal',.19,[.28,.26,0],dark,[1,.78,1]);
+  sphere(THREE,g,'camera-lens',.095,[.43,.27,0],lens,[.55,1,1]);
+  const rotors=[];
+  for(const x of [-1,1]) for(const z of [-1,1]){
+    const arm=box(THREE,g,'carbon-arm',[1.25,.075,.09],[x*.53,.48,z*.53],dark);
+    arm.rotation.y=x*z*.08;
+    cylinder(THREE,g,'motor-pod',.17,.18,.18,[x*1.02,.52,z*1.02],metal,10);
+    const rotor=new THREE.Group();rotor.name='propeller-rotor';rotor.position.set(x*1.02,.63,z*1.02);g.add(rotor);
+    for(let i=0;i<2;i++){const blade=box(THREE,rotor,'propeller-blade',[.1,.025,.82],[0,0,0],dark);blade.rotation.y=i*Math.PI/2;}
+    rotors.push(rotor);
+    const leg=cylinder(THREE,g,'landing-leg',.035,.035,.32,[x*.64,.2,z*.64],metal,8);
+    leg.rotation.z=x*.18;
+  }
+  box(THREE,g,'battery-pack',[.42,.16,.34],[-.22,.31,0],dark);
+  addMarking(THREE,g,0,.59,-.33,team);
+  g.userData={kind:'drone',unitType:variant,team,rotors};
+  g.scale.setScalar(scale); return g;
+}
+
+export function createProjectile(THREE, options={}) {
+  const {team='blue',type='cannon-shell',scale=1}=options;
+  const g=new THREE.Group();g.name='BA_Projectile_'+type;
+  const shell=mat(THREE,team==='red'?0xc76b43:0xb8c5c3,.32,.72), tip=mat(THREE,0xe0c27b,.3,.65), dark=mat(THREE,0x252b2a,.45,.6);
+  const body=cylinder(THREE,g,'projectile-body',.085,.11,.68,[0,0,0],shell,10);body.rotation.z=-Math.PI/2;
+  const nose=new THREE.Mesh(new THREE.ConeGeometry(.09,.24,10),tip);nose.name='projectile-nose';nose.rotation.z=-Math.PI/2;nose.position.x=.44;nose.castShadow=true;g.add(nose);
+  for(let i=0;i<4;i++){const fin=box(THREE,g,'stabilizer-fin',[.18,.025,.14],[-.27,0,0],dark);fin.rotation.x=i*Math.PI/2;}
+  const tracer=sphere(THREE,g,'tracer-core',.045,[-.42,0,0],mat(THREE,0xffb64a,.3,.1),[2.8,.8,.8]);
+  g.userData={kind:'projectile',projectileType:type,team,facingAxis:'+X',tracer};
+  g.scale.setScalar(scale);return g;
+}
+
+export function createExplosion(THREE, options={}) {
+  const {scale=1,intensity='medium',seed=23}=options;
+  const g=new THREE.Group();g.name='BA_Explosion_'+intensity;
+  const factor=intensity==='large'?1.45:intensity==='small'?.65:1;
+  const coreMat=new THREE.MeshBasicMaterial({color:0xffb347,transparent:true,opacity:.88});
+  const hotMat=new THREE.MeshBasicMaterial({color:0xffe4a1,transparent:true,opacity:.82});
+  const smokeMat=mat(THREE,0x4b4b45,.98,0);
+  sphere(THREE,g,'fireball-core',.72*factor,[0,.18,0],coreMat,[1,.82,1]);
+  sphere(THREE,g,'hot-core',.38*factor,[.05,.2,.02],hotMat,[1,.9,1]);
+  for(let i=0;i<3;i++){
+    const ring=new THREE.Mesh(new THREE.TorusGeometry((.62+i*.22)*factor,.035*factor,6,24),new THREE.MeshBasicMaterial({color:i===0?0xffc05b:0xb6a17a,transparent:true,opacity:.68-i*.15}));
+    ring.name='shockwave-ring';ring.rotation.x=Math.PI/2+i*.18;ring.position.y=.12+i*.1;g.add(ring);
+  }
+  let state=seed>>>0;const rand=()=>{state=(1664525*state+1013904223)>>>0;return state/4294967296;};
+  for(let i=0;i<12;i++){
+    const angle=rand()*Math.PI*2,radius=(.5+rand()*1.25)*factor,height=(rand()-.25)*1.2*factor;
+    const spark=new THREE.Mesh(new THREE.ConeGeometry(.045*factor,.28*factor,5),new THREE.MeshBasicMaterial({color:i%3===0?0xffe28a:0xff7838}));
+    spark.name='explosion-spark';spark.position.set(Math.cos(angle)*radius,height,Math.sin(angle)*radius);spark.rotation.z=-angle;g.add(spark);
+  }
+  for(let i=0;i<5;i++)sphere(THREE,g,'smoke-puff',.28*factor,[((i%3)-1)*.36,.45+(i%2)*.24,((i*2)%3-1)*.28],smokeMat,[1.1,1.25,1]);
+  g.userData={kind:'effect',effectType:'explosion',intensity,lifetimeSeconds:intensity==='large'?1.8:1.2,requiresRuntimeAnimation:true};
+  g.scale.setScalar(scale);return g;
+}
+
+
+export function createMuzzleFlash(THREE, options={}) {
+  const {team='blue',scale=1}=options;
+  const g=new THREE.Group();g.name='BA_MuzzleFlash';
+  const hot=new THREE.MeshBasicMaterial({color:0xffef9a,transparent:true,opacity:.95});
+  const glow=new THREE.MeshBasicMaterial({color:team==='red'?0xff7040:0xffb84a,transparent:true,opacity:.7});
+  const core=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),hot);core.name='flash-core';core.scale.set(1.8,.8,.8);g.add(core);
+  const flare=new THREE.Mesh(new THREE.ConeGeometry(.22,.72,8),glow);flare.name='flash-flare';flare.rotation.z=-Math.PI/2;flare.position.x=.34;g.add(flare);
+  for(let i=0;i<4;i++){const ray=new THREE.Mesh(new THREE.ConeGeometry(.045,.42,5),hot);ray.name='flash-ray';ray.rotation.z=-Math.PI/2+i*Math.PI/2;ray.position.set(.12,Math.cos(i*Math.PI/2)*.18,Math.sin(i*Math.PI/2)*.18);g.add(ray);}
+  g.userData={kind:'effect',effectType:'muzzle-flash',lifetimeSeconds:.12,requiresRuntimeAnimation:true};
+  g.scale.setScalar(scale);return g;
+}
+
+
+/* --- Economy, objective and command-core assets (v95.1) --- */
+export function createHarvester(THREE, options={}) {
+  const {team='blue',scale=1}=options;
+  const g=new THREE.Group();g.name='BA_Harvester';
+  const paint=teamColor(THREE,team), armor=mat(THREE,0x77765a,.76,.22), dark=mat(THREE,0x252b29,.78,.18), steel=mat(THREE,0x8b928b,.42,.68), glass=mat(THREE,0x8fc5d0,.18,.55), ore=mat(THREE,0xb68b3a,.42,.52);
+  box(THREE,g,'tracked-chassis',[2.7,.62,3.5],[-.15,.48,0],paint);
+  box(THREE,g,'engine-deck',[2.1,.34,1.05],[-.65,.93,-.9],armor);
+  box(THREE,g,'cargo-hopper',[2.25,.88,1.72],[-.62,1.14,-.08],dark);
+  box(THREE,g,'hopper-rim',[2.42,.12,1.9],[-.62,1.63,-.08],steel);
+  for(const side of [-1,1]){
+    box(THREE,g,'track-belt',[.22,.52,3.72],[-.1,.34,side*1.43],dark);
+    for(let i=0;i<7;i++){
+      const wheel=cylinder(THREE,g,'road-wheel',.22,.22,.14,[-1.35+i*.39,.32,side*1.52],steel,10);
+      wheel.rotation.x=Math.PI/2;
+      box(THREE,g,'track-cleat',[.07,.08,.13],[-1.35+i*.39,.08,side*1.58],steel);
+    }
+    box(THREE,g,'hopper-side-rail',[.1,.3,1.8],[-.62,1.88,side*.98],armor);
+    cylinder(THREE,g,'hydraulic-line',.035,.035,1.35,[.25,.72,side*1.02],steel,8).rotation.z=-.24;
+  }
+  box(THREE,g,'operator-cabin',[1.18,1.25,1.05],[.88,1.05,.56],armor);
+  box(THREE,g,'windscreen',[.92,.62,.045],[.9,1.26,1.1],glass);
+  box(THREE,g,'cabin-roof',[1.35,.15,1.2],[.88,1.76,.55],paint);
+  cylinder(THREE,g,'exhaust-stack',.09,.12,.68,[-1.05,1.42,-.92],dark,8);
+  // Front collection assembly with roller drum and replaceable teeth.
+  box(THREE,g,'scoop-frame',[.32,.62,2.8],[1.55,.48,0],steel);
+  const drum=cylinder(THREE,g,'ore-collection-drum',.34,.34,2.45,[1.78,.42,0],dark,14);drum.rotation.x=Math.PI/2;
+  for(let i=0;i<12;i++){
+    const a=i*Math.PI/6;
+    const tooth=box(THREE,g,'scoop-tooth',[.32,.11,.1],[1.78+Math.cos(a)*.34,.42+Math.sin(a)*.34,0],ore);
+    tooth.rotation.z=a;
+  }
+  for(const z of [-.86,-.43,0,.43,.86])box(THREE,g,'scoop-divider',[.28,.48,.055],[1.58,.52,z],steel);
+  addMarking(THREE,g,.05,.83,-1.77,team);
+  g.userData={kind:'vehicle',unitType:'harvester',team,facingAxis:'+X',collectionDrum:drum};
+  g.scale.setScalar(scale);return g;
+}
+
+export function createCitadel(THREE, options={}) {
+  const {team='red',scale=1}=options;
+  const g=new THREE.Group();g.name='BA_Citadel';
+  const faction=teamColor(THREE,team), dark=mat(THREE,0x252a2c,.5,.72), stone=mat(THREE,0x686c69,.92,.12), steel=mat(THREE,0x9ba19b,.4,.72);
+  const glowColor=team==='red'?0xff4c43:0x43c8ff;
+  cylinder(THREE,g,'citadel-foundation',5.1,5.4,.42,[0,.21,0],dark,24);
+  cylinder(THREE,g,'outer-fortress-ring',4.45,4.8,.82,[0,.78,0],stone,20);
+  cylinder(THREE,g,'armored-ring',3.85,4.0,.28,[0,1.32,0],faction,20);
+  cylinder(THREE,g,'inner-command-base',2.8,3.2,1.25,[0,1.9,0],dark,18);
+  cylinder(THREE,g,'core-platform',2.15,2.35,.24,[0,2.64,0],steel,18);
+  const coreMat=new THREE.MeshStandardMaterial({color:glowColor,emissive:glowColor,emissiveIntensity:1.15,metalness:.35,roughness:.22});
+  const core=new THREE.Mesh(new THREE.IcosahedronGeometry(1.55,1),coreMat);
+  core.name='citadel-reactor-core';core.position.set(0,3.95,0);core.castShadow=true;g.add(core);
+  const cage=new THREE.Group();cage.name='reactor-cage';g.add(cage);
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4,x=Math.cos(a)*2.1,z=Math.sin(a)*2.1;
+    const pylon=cylinder(THREE,cage,'reactor-pylon',.16,.22,2.5,[x,3.6,z],steel,8);
+    pylon.rotation.z=Math.cos(a)*-.12;pylon.rotation.x=Math.sin(a)*.12;
+    box(THREE,cage,'pylon-light',[.12,.18,.12],[x,4.25,z],mat(THREE,glowColor,.25,.5));
+  }
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(2.05,.075,8,32),new THREE.MeshStandardMaterial({color:glowColor,emissive:glowColor,emissiveIntensity:.65,metalness:.45,roughness:.3}));
+  ring.name='reactor-energy-ring';ring.rotation.x=Math.PI/2;ring.position.y=3.85;g.add(ring);
+  for(let i=0;i<4;i++){
+    const a=i*Math.PI/2;
+    const bastion=cylinder(THREE,g,'outer-bastion',.68,.9,2.3,[Math.cos(a)*4.05,1.45,Math.sin(a)*4.05],dark,10);
+    cylinder(THREE,g,'bastion-cap',.72,.72,.16,[Math.cos(a)*4.05,2.68,Math.sin(a)*4.05],faction,10);
+    const slit=box(THREE,g,'bastion-slit',[.12,.55,.08],[Math.cos(a)*4.05,1.6,Math.sin(a)*4.05],mat(THREE,glowColor,.25,.45));
+    slit.rotation.y=a;
+  }
+  box(THREE,g,'command-antenna-base',[.38,.18,.38],[-2.4,2.1,-1.8],steel);
+  cylinder(THREE,g,'command-antenna',.035,.035,1.6,[-2.4,2.95,-1.8],steel,8);
+  g.userData={kind:'building',buildingType:'citadel',team,core,reactorRing:ring};
+  g.scale.setScalar(scale);return g;
+}
+
+export function createRelay(THREE, options={}) {
+  const {team='neutral',scale=1}=options;
+  const g=new THREE.Group();g.name='BA_Relay';
+  const dark=mat(THREE,0x28343a,.55,.68), metal=mat(THREE,0x89968f,.42,.65), faction=team==='red'?mat(THREE,0xb64a43):team==='blue'?mat(THREE,0x438fb1):mat(THREE,0x9b9a81);
+  const beaconColor=team==='red'?0xff554d:team==='blue'?0x4bc9ff:0xf3d36b;
+  cylinder(THREE,g,'relay-foundation',1.7,1.9,.32,[0,.16,0],dark,16);
+  cylinder(THREE,g,'relay-base',1.1,1.35,.62,[0,.56,0],faction,12);
+  cylinder(THREE,g,'relay-mast',.12,.18,3.2,[0,2.4,0],metal,10);
+  for(const y of [1.35,2.05,2.75])cylinder(THREE,g,'mast-collar',.28,.28,.12,[0,y,0],dark,12);
+  for(let i=0;i<3;i++){
+    const a=i*Math.PI*2/3;
+    const arm=box(THREE,g,'relay-antenna-arm',[.12,.1,1.55],[0,3.05,0],metal);
+    arm.rotation.y=a;
+  }
+  const beaconMat=new THREE.MeshStandardMaterial({color:beaconColor,emissive:beaconColor,emissiveIntensity:1.2,roughness:.25,metalness:.35});
+  sphere(THREE,g,'relay-beacon',.32,[0,3.95,0],beaconMat,[1,1.2,1]);
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(1.15,.045,8,32),new THREE.MeshBasicMaterial({color:beaconColor,transparent:true,opacity:.72}));
+  halo.name='capture-halo';halo.rotation.x=Math.PI/2;halo.position.y=.12;g.add(halo);
+  g.userData={kind:'objective',objectiveType:'relay',team,beacon:g.children.find(o=>o.name==='relay-beacon'),captureHalo:halo};
+  g.scale.setScalar(scale);return g;
+}
+
+export function createOreNode(THREE, options={}) {
+  const {scale=1,seed=31}=options;
+  const g=new THREE.Group();g.name='BA_OreNode';
+  const stone=mat(THREE,0x514e43,.98,.05), ore=mat(THREE,0xb38a3b,.42,.48), bright=mat(THREE,0xe2bf67,.32,.5);
+  let state=seed>>>0;const rand=()=>{state=(1664525*state+1013904223)>>>0;return state/4294967296;};
+  for(let i=0;i<7;i++){
+    const a=rand()*Math.PI*2,r=.25+rand()*1.15,h=.22+rand()*.32;
+    const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.48+rand()*.3,0),stone);
+    rock.name='ore-rock';rock.position.set(Math.cos(a)*r,h,Math.sin(a)*r);rock.rotation.set(rand(),rand()*Math.PI,rand());rock.scale.set(1,.72,1.15);rock.castShadow=true;g.add(rock);
+  }
+  for(let i=0;i<5;i++){
+    const a=i*Math.PI*2/5,r=.38+rand()*.65;
+    const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(.32+rand()*.22,0),i%2?ore:bright);
+    crystal.name='ore-crystal';crystal.position.set(Math.cos(a)*r,.48+rand()*.22,Math.sin(a)*r);crystal.rotation.set(rand(),rand()*Math.PI,rand());crystal.castShadow=true;g.add(crystal);
+  }
+  const disk=new THREE.Mesh(new THREE.CircleGeometry(2.25,20),new THREE.MeshBasicMaterial({color:0xc0a020,transparent:true,opacity:.12,side:THREE.DoubleSide}));
+  disk.name='ore-field-glow';disk.rotation.x=-Math.PI/2;disk.position.y=.025;g.add(disk);
+  g.userData={kind:'resource',resourceType:'ore',seed};
+  g.scale.setScalar(scale);return g;
+}

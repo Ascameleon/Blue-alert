@@ -38,11 +38,23 @@ wait_for_marker() {
     sleep 1
   done
   echo "Timed out waiting for marker: $marker"
+  import -window root "$SCREEN" 2>/dev/null || true
+  echo "Failure screenshot: $SCREEN"
+  echo "Pointer at failure: $(xdotool getmouselocation --shell 2>/dev/null || true)"
+  echo "Focused window at failure: $(xdotool getwindowfocus 2>/dev/null || true)"
   cat "$LOG"
   return 1
 }
 
 wait_for_marker "BLUE ALERTS INTERACTIVE READY" 60
+
+# Match the exact xdotool click sequence from the previously passing native
+# interaction run. Keep the real JME input and model-state assertions intact.
+send_native_click() {
+  local button="$1"
+  xdotool click "$button"
+  echo "Native XTest click button=$button pointer=$(xdotool getmouselocation --shell)"
+}
 
 window_id=""
 for _ in $(seq 1 20); do
@@ -67,6 +79,15 @@ if [ -z "$window_x" ] || [ -z "$window_y" ]; then
   exit 1
 fi
 echo "Interactive test window: id=$window_id origin=$window_x,$window_y"
+xdotool windowraise "$window_id" || true
+xdotool windowfocus --sync "$window_id"
+active_window="$(xdotool getwindowfocus || true)"
+echo "Focused X11 window: $active_window"
+if [ "$active_window" != "$window_id" ]; then
+  echo "Could not focus the BLUE ALERTS interactive test window."
+  cat "$LOG"
+  exit 1
+fi
 
 ready_line="$(grep -F "BLUE ALERTS INTERACTIVE READY" "$LOG" | tail -n1)"
 target_pair="$(sed -E 's/.*target=([0-9]+,[0-9]+).*/\1/' <<<"$ready_line")"
@@ -85,13 +106,13 @@ IFS=, read -r move_x move_y <<<"$move_pair"
 xdotool mousemove --sync --window "$window_id" "$target_x" "$target_y"
 echo "Pointer after selection move: $(xdotool getmouselocation --shell)"
 sleep 1
-xdotool click 1
+send_native_click 1
 wait_for_marker "BLUE ALERTS INTERACTIVE SELECTED" 10
 
 xdotool mousemove --sync --window "$window_id" "$move_x" "$move_y"
 echo "Pointer after ground move: $(xdotool getmouselocation --shell)"
 sleep 1
-xdotool click 3
+send_native_click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED" 8
 wait_for_marker "BLUE ALERTS INTERACTIVE MOVED" 28
 wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_READY" 5
@@ -107,7 +128,7 @@ IFS=, read -r enemy_x enemy_y <<<"$enemy_pair"
 xdotool mousemove --sync --window "$window_id" "$enemy_x" "$enemy_y"
 echo "Pointer before attack click: $(xdotool getmouselocation --shell)"
 sleep 1
-xdotool click 3
+send_native_click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_CLICK_RECEIVED" 8
 wait_for_marker "BLUE ALERTS INTERACTIVE PASS selection+move+attack" 35
 

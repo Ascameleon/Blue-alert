@@ -32,3 +32,21 @@ Open `preview.html` through a local static server (module imports are commonly b
 
 ## Current scope and limits
 These are usable procedural meshes, not sculpted GLB/FBX files. They are designed for immediate use in the existing Three.js renderer. They do not replace game logic, collision, unit pathfinding, animation rigs, or production PBR texture maps. Preview and game integration should be verified in the target browser before describing the assets as fully integrated.
+
+
+## Version 0.95 — expanded combat asset kit
+
+The original v94 kit remains intact and gains additional procedural Three.js models:
+- strike aircraft with fuselage, cockpit, wings, tail, twin engines, landing gear and weapon pylons;
+- attack helicopter with cabin, tail boom, main/tail rotor groups, skids and rocket pods;
+- reconnaissance quadcopter with four motor/propeller groups and a camera gimbal;
+- ballistic projectile with nose, stabilizer fins and tracer;
+- explosion effect with hot core, shockwave rings, sparks and smoke puffs;
+- short-lived muzzle-flash effect with a hot core and directional flare;
+- tracked ore harvester with collection drum, cargo hopper, cabin and drivetrain;
+- command citadel with four bastions and a visible energy core;
+- capture relay tower and ore-field cluster assets;
+- the v94 browser prototype now uses the dedicated harvester, citadel and ore-node models while retaining the original gameplay health, movement and harvesting logic.
+- extra reactive armour, side skirts, optics and antennae on the tank; plate carrier, pouches, knee pads and goggles on infantry; exterior lights and service vents on buildings.
+
+The interactive preview exposes all five new asset types. The assets remain original procedural geometry, deliberately avoiding paid generation APIs and unlicensed downloads. They are not AI-sculpted GLB models; rotor spin, projectile travel and explosion lifetime require the game runtime to animate the returned groups. The relay model is an asset for the existing OpenRTS capture-point design; the OpenRTS scenario XML is still not loaded by the browser prototype. Validate scale, hitboxes, animation timing and frame rate in the actual game before gameplay integration.
