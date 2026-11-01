@@ -114,8 +114,17 @@ jobs:
           done
           import -window root "$GITHUB_WORKSPACE/artifacts/openrts-screen.png"
           test -s "$GITHUB_WORKSPACE/artifacts/openrts-screen.png"
+          test "$(stat -c%s "$GITHUB_WORKSPACE/artifacts/openrts-screen.png")" -gt 10000
           test -s "$GITHUB_WORKSPACE/artifacts/blue-alerts-scenario-report.json"
-          echo "BLUE ALERTS skirmish remained alive for 30 seconds; screenshot captured."
+          grep -q "switching controller to BattlefieldController" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
+          grep -q "battlefield controller online" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
+          grep -q "BLUE ALERTS runtime loaded 12 units" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
+          if grep -Eq "SEVERE: Uncaught exception|Uncaught exception thrown in Thread|Exception: java.lang" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"; then
+            echo "BLUE ALERTS runtime exception detected."
+            cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
+            exit 1
+          fi
+          echo "BLUE ALERTS battlefield controller loaded 12 units and ran without an uncaught exception; graphical evidence captured."
           SCRIPT
           chmod +x /tmp/openrts-smoke.sh
           xvfb-run -a -s "-screen 0 1280x720x24" /tmp/openrts-smoke.sh
