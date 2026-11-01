@@ -102,5 +102,35 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     canvasHeight:renderer.domElement.height
   };
 };
-let previewClock=0;renderer.setAnimationLoop(()=>{previewClock+=.016;if(current?.userData?.rotatingGun)current.userData.rotatingGun.rotation.y+=.006;if(current?.userData?.rotatingGun?.name==='rotating-radar')current.userData.rotatingGun.rotation.y+=.018;current?.traverse(o=>{if(o.userData?.emissivePulse&&o.material?.emissiveIntensity!==undefined)o.material.emissiveIntensity=.55+Math.sin(previewClock*3.2)*.45;});if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;if(current?.userData?.collectionDrum)current.userData.collectionDrum.rotation.x+=.08;if(current?.userData?.reactorRing)current.userData.reactorRing.rotation.z+=.008;if(current?.userData?.core)current.userData.core.rotation.y+=.012;if(current?.userData?.captureHalo)current.userData.captureHalo.rotation.z+=.008;controls.update();renderer.render(scene,camera);});
-</script></body></html>
+const previewClock=new THREE.Clock();let elapsed=0;
+renderer.setAnimationLoop(()=>{
+  const delta=Math.min(previewClock.getDelta(),.05);elapsed+=delta;
+  const pulse=.5+.5*Math.sin(elapsed*5.5);
+  if(current?.userData?.rotatingGun)current.userData.rotatingGun.rotation.y+=delta*(current.userData.rotatingGun.name==='rotating-radar'?1.35:.42);
+  current?.traverse(o=>{
+    if(o.userData?.emissivePulse&&o.material?.emissiveIntensity!==undefined)o.material.emissiveIntensity=.35+pulse*.9;
+    if(o.name==='main-rotor')o.rotation.y+=delta*17;
+    if(o.name==='tail-rotor')o.rotation.x+=delta*23;
+    if(o.name==='propeller-rotor')o.rotation.y+=delta*22;
+    if(o.name==='ore-collection-drum')o.rotation.x+=delta*4.8;
+    if(o.name==='reactor-energy-ring')o.rotation.z+=delta*.5;
+    if(o.name==='citadel-reactor-core')o.rotation.y+=delta*.75;
+    if(o.name==='capture-halo')o.rotation.z+=delta*.5;
+    if(o.name==='fireball-core'){const s=1+pulse*.13;o.scale.set(s,s*.82,s);}
+    if(o.name==='hot-core'){const s=.88+pulse*.22;o.scale.set(s,s*.9,s);}
+    if(o.name==='shockwave-ring'){
+      const s=1+((elapsed*1.15)%1.2);o.scale.setScalar(s);
+      if(o.material?.opacity!==undefined)o.material.opacity=Math.max(.08,.72-((s-1)/1.2)*.62);
+    }
+    if(o.name==='smoke-puff'){o.position.y+=delta*.16;o.material.opacity=.45+pulse*.12;}
+    if(o.name==='explosion-spark'){o.position.y+=delta*.55;o.rotation.z+=delta*2.4;}
+    if(o.name==='flash-core'||o.name==='flash-flare'||o.name==='flash-ray'){
+      const s=.78+pulse*.42;o.scale.set(s,s,s);
+      if(o.material?.opacity!==undefined)o.material.opacity=.35+pulse*.6;
+    }
+  });
+  if(current?.userData?.kind==='aircraft'){current.rotation.z=Math.sin(elapsed*1.1)*.025;current.position.y=Math.sin(elapsed*2)*.035;}
+  if(current?.userData?.kind==='helicopter')current.position.y=.08+Math.sin(elapsed*3)*.035;
+  if(current?.userData?.kind==='drone')current.rotation.y+=delta*.22;
+  controls.update();renderer.render(scene,camera);
+});</script></body></html>
