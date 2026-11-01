@@ -1,0 +1,7 @@
+gradle.projectsEvaluated {
+    def coreProject = gradle.rootProject.project(':core')
+    coreProject.tasks.named('run') {
+        mainClass.set('app.BlueAlertsInteractiveSmoke')
+        workingDir = coreProject.projectDir
+    }
+}
