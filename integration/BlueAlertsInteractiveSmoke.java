@@ -25,6 +25,8 @@ import view.math.TranslateUtil;
  */
 public class BlueAlertsInteractiveSmoke extends MainRTS {
     private Vector3f moveDestination;
+    private Vector3f testCameraTarget;
+    private float testCameraBack;
 
     private Unit selectedUnit;
     private Unit enemyUnit;
@@ -86,6 +88,11 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Blue target tank is missing"));
         Vector3f initial = TranslateUtil.toVector3f(selectedUnit.pos);
+        Vector3f enemyInitial = TranslateUtil.toVector3f(enemyUnit.pos);
+        testCameraTarget = new Vector3f((initial.x + enemyInitial.x) * 0.5f,
+                (initial.y + enemyInitial.y) * 0.5f, 0f);
+        float separation = (float) Math.hypot(initial.x - enemyInitial.x, initial.y - enemyInitial.y);
+        testCameraBack = Math.max(18f, separation * 0.9f + 8f);
         float destinationX = Math.max(6f, Math.min(74f, initial.x + (initial.x < 40f ? 7f : -7f)));
         float destinationY = Math.max(6f, Math.min(74f, initial.y + (initial.y < 40f ? 5f : -5f)));
         moveDestination = new Vector3f(destinationX, destinationY, 0f);
@@ -193,10 +200,14 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
     }
 
     private void setTestCamera() {
-        Vector3f target = TranslateUtil.toVector3f(selectedUnit.pos);
+        // Keep the camera fixed on the midpoint between both test tanks. A
+        // follow-camera made the post-move enemy projection drift relative to
+        // the native SpatialSelector ray, producing false ground clicks.
         cam.setFrustumPerspective(50f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
-        cam.setLocation(new Vector3f(target.x, target.y - 14f, target.z + 16f));
-        cam.lookAt(target, Vector3f.UNIT_Z);
+        cam.setLocation(new Vector3f(testCameraTarget.x,
+                testCameraTarget.y - testCameraBack,
+                testCameraTarget.z + testCameraBack * 0.78f));
+        cam.lookAt(testCameraTarget, Vector3f.UNIT_Z);
         cam.update();
     }
 
