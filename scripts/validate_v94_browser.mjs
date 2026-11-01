@@ -122,7 +122,7 @@ try {
 
   // Real mouse input: place a power station on the pad, then prove invalid ground
   // clicks do not spend credits or create structures.
-  const buildPoint = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-12, -20));
+  const buildPoint = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-24, -12));
   assert.ok(buildPoint.visible, 'valid construction test point must be visible on desktop');
   await desktop.locator('#cards .card').first().click();
   await desktop.mouse.move(buildPoint.x, buildPoint.y);
@@ -274,7 +274,7 @@ try {
   await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
 
   // Real touch placement on the 390x844 mobile viewport.
-  const mobileBuildPoint = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-12, -20));
+  const mobileBuildPoint = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-24, -12));
   assert.ok(mobileBuildPoint.visible, 'mobile construction target must be visible above the bottom HUD');
   await mobile.locator('#cards .card').first().tap();
   await mobile.touchscreen.tap(mobileBuildPoint.x, mobileBuildPoint.y);
