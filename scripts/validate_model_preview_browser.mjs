@@ -64,6 +64,7 @@ try {
   await page.waitForTimeout(500);
   const turret=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.ok(turret.physicalMaterialCount>0 && turret.drawCalls>0,'turret must render with PBR materials');
+  assert.equal(turret.genericDecorationCount,0,'turret must not have detached rectangular-building details');
   await page.screenshot({path:output+'/desktop-turret.png',fullPage:true});
 
   await page.selectOption('#asset','controlTower');
@@ -71,6 +72,7 @@ try {
   await page.waitForTimeout(500);
   const tower=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.ok(tower.physicalMaterialCount>0 && tower.drawCalls>0,'control tower must render with PBR materials');
+  assert.equal(tower.genericDecorationCount,0,'control tower must not have detached rectangular-building details');
   await page.screenshot({path:output+'/desktop-control-tower.png',fullPage:true});
 
   await page.setViewportSize({width:390,height:844});
@@ -90,6 +92,7 @@ try {
   await page.screenshot({path:output+'/mobile-control-tower-390x844.png',fullPage:true});
   console.log('MOBILE_LAYOUT '+JSON.stringify(mobile));
   assert.ok(mobile.documentWidth<=mobile.viewportWidth+1,'mobile preview must not overflow horizontally');
+  assert.ok(mobile.viewWidth<=mobile.viewportWidth+1 && mobile.canvasWidth<=mobile.viewportWidth+1,'mobile 3D viewport and canvas must fit the device width');
   assert.ok(mobile.canvasWidth>=300 && mobile.canvasHeight>=400,'mobile WebGL canvas must remain usable');
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
