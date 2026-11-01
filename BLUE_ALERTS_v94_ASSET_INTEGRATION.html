@@ -2331,10 +2331,14 @@ resize();
 
 /* ─── Main loop ──────────────────────────────────────────── */
 const clock = new THREE.Clock();
+let qaFrameCount = 0;
+let qaLastFrameDelta = 0;
 
 function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
+  qaFrameCount++;
+  qaLastFrameDelta = dt;
 
   // Camera pan: ZQSD/WASD + flèches + edge scroll (standard RTS web)
   if (started) {
@@ -2894,6 +2898,9 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     started,
     gameOver,
     time,
+    frameCount: qaFrameCount,
+    lastFrameDelta: qaLastFrameDelta,
+    hasFocus: document.hasFocus(),
     visibilityState: document.visibilityState,
     kills,
     credits,
