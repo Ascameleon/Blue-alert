@@ -24,6 +24,10 @@ map_data = data.get("map", {})
 DEFAULT_CLIFF_SHAPE_ID = "StdRockyVegyDug"
 cliff_shape_defaults_applied = 0
 map_tiles = map_data.get("tiles", [])
+# Preserve the source cliff markers before filling missing IDs for engine compatibility.
+original_cliff_tile_indices = {
+    int(tile["index"]) for tile in map_tiles if tile.get("cliffShapeID")
+}
 for tile in map_tiles:
     if not tile.get("cliffShapeID"):
         tile["cliffShapeID"] = DEFAULT_CLIFF_SHAPE_ID
@@ -87,18 +91,20 @@ template = templates[0]
 
 # OpenRTS default factions: 1 = red, 2 = blue.
 placements = [
-    ("rollerTank", "1", 35, 36, 0.0),
-    ("rollerTank", "1", 35, 44, 0.0),
-    ("Marine", "1", 32, 37, 0.0),
-    ("Marine", "1", 32, 40, 0.0),
-    ("Marine", "1", 32, 43, 0.0),
-    ("Marine", "1", 34, 40, 0.0),
-    ("rollerTank", "2", 45, 36, math.pi),
-    ("rollerTank", "2", 45, 44, math.pi),
-    ("Marine", "2", 48, 37, math.pi),
-    ("Marine", "2", 48, 40, math.pi),
-    ("Marine", "2", 48, 43, math.pi),
-    ("Marine", "2", 46, 40, math.pi),
+    # Keep every unit on level-0 terrain. The previous spawn set put four
+    # units on elevated/cliff tiles; those units loaded but could not move.
+    ("rollerTank", "1", 32, 34, 0.0),
+    ("rollerTank", "1", 34, 34, 0.0),
+    ("Marine", "1", 32, 36, 0.0),
+    ("Marine", "1", 35, 36, 0.0),
+    ("Marine", "1", 31, 43, 0.0),
+    ("Marine", "1", 33, 44, 0.0),
+    ("rollerTank", "2", 49, 37, math.pi),
+    ("rollerTank", "2", 51, 38, math.pi),
+    ("Marine", "2", 49, 40, math.pi),
+    ("Marine", "2", 51, 42, math.pi),
+    ("Marine", "2", 49, 44, math.pi),
+    ("Marine", "2", 48, 46, math.pi),
 ]
 
 units = []
@@ -110,6 +116,17 @@ for builder_id, faction_name, x, y, orientation in placements:
         raise RuntimeError(f"Unit position is outside the map: {(x, y)}")
     if (x, y) in seen_positions:
         raise RuntimeError(f"Duplicate unit position: {(x, y)}")
+    tile_index = y * width + x
+    terrain_tile = map_tiles[tile_index]
+    if (
+        int(terrain_tile.get("level", 0)) != 0
+        or abs(float(terrain_tile.get("elevation", 0.0))) > 0.01
+        or tile_index in original_cliff_tile_indices
+    ):
+        raise RuntimeError(
+            f"Unit spawn must be on flat, non-cliff terrain: {(x, y)} "
+            f"(level={terrain_tile.get('level')}, elevation={terrain_tile.get('elevation')})"
+        )
     seen_positions.add((x, y))
     unit = copy.deepcopy(template)
     unit["builderID"] = builder_id
@@ -144,6 +161,16 @@ if len(verified_units) != 12:
     raise RuntimeError(f"Expected 12 initial units, found {len(verified_units)}")
 if {unit["factionName"] for unit in verified_units} != {"1", "2"}:
     raise RuntimeError("Scenario must contain both OpenRTS factions")
+for unit in verified_units:
+    x, y = int(unit["pos"]["x"]), int(unit["pos"]["y"])
+    tile_index = y * width + x
+    terrain_tile = map_tiles[tile_index]
+    if (
+        int(terrain_tile.get("level", 0)) != 0
+        or abs(float(terrain_tile.get("elevation", 0.0))) > 0.01
+        or tile_index in original_cliff_tile_indices
+    ):
+        raise RuntimeError(f"Serialized unit is not on flat terrain: {(x, y)}")
 verified_ramps = verified["map"].get("ramps", [])
 if len(verified_ramps) != ramp_count:
     raise RuntimeError("Ramp count changed during serialization")
@@ -156,6 +183,7 @@ report = {
     "unit_count": len(verified_units),
     "factions": {"1": "red", "2": "blue"},
     "unit_composition": {"rollerTank": 4, "Marine": 8},
+    "spawn_terrain": "all 12 units validated on level-0, elevation-0, non-cliff tiles",
     "cliff_shape_id": DEFAULT_CLIFF_SHAPE_ID,
     "cliff_shape_defaults_applied": cliff_shape_defaults_applied,
     "ramp_count": ramp_count,
