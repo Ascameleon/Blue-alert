@@ -24,7 +24,7 @@ import view.math.TranslateUtil;
  * state changes, not merely successful mouse injection.
  */
 public class BlueAlertsInteractiveSmoke extends MainRTS {
-    private static final Vector3f MOVE_DESTINATION = new Vector3f(23f, 42f, 0f);
+    private static final Vector3f MOVE_DESTINATION = new Vector3f(18f, 48f, 0f);
 
     private Unit selectedUnit;
     private Unit enemyUnit;
@@ -37,6 +37,7 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
     private boolean attackVerified;
     private boolean moveClickSeen;
     private boolean moveCommandAccepted;
+    private float moveClickElapsed;
     private boolean attackClickSeen;
     private boolean failed;
     private int enemyHealthAtAttack;
@@ -50,11 +51,7 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         long entityId = fieldCtrl.spatialSelector.getEntityId();
         if (!movementVerified && !moveClickSeen) {
             moveClickSeen = true;
-            moveCommandAccepted = selectedUnit.getMover().hasDestination();
-            moveActionDiagnostic = "coord=" + actionCoord + " entity=" + entityId
-                    + " hasDestination=" + moveCommandAccepted
-                    + " destination=" + selectedUnit.getMover().getDestination()
-                    + " holdPosition=" + selectedUnit.getMover().holdPosition;
+            moveActionDiagnostic = "coord=" + actionCoord + " entity=" + entityId;
             System.out.println("BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED " + moveActionDiagnostic);
         } else if (movementVerified && !attackClickSeen) {
             attackClickSeen = true;
@@ -123,6 +120,14 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                     + " target=" + projectUnit(selectedUnit)
                     + " destination=" + project(MOVE_DESTINATION));
         }
+        if (ready) {
+            // The native camera manager updates before simpleUpdate. Reapply
+            // the test camera every frame so projected click coordinates and
+            // the SpatialSelector ray use the same view matrix.
+            cam.setLocation(new Vector3f(23f, 31f, 12f));
+            cam.lookAt(new Vector3f(23f, 42f, 0f), Vector3f.UNIT_Z);
+            cam.update();
+        }
 
         if (ready && !selectionVerified) {
             if (CommandManager.selection.contains(selectedUnit)) {
@@ -138,20 +143,35 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
 
         if (selectionVerified && !movementVerified) {
             phaseElapsed += tpf;
-            if (moveClickSeen && !moveCommandAccepted && phaseElapsed > 2f) {
-                fail("native right-click was received but no move destination was assigned: " + moveActionDiagnostic);
+            if (moveClickSeen && !moveCommandAccepted) {
+                moveClickElapsed += tpf;
+                if (moveClickElapsed >= 1f) {
+                    moveCommandAccepted = selectedUnit.getMover().hasDestination();
+                    if (moveCommandAccepted) {
+                        System.out.println("BLUE ALERTS INTERACTIVE MOVE_ORDER_ACCEPTED destination="
+                                + selectedUnit.getMover().getDestination()
+                                + " holdPosition=" + selectedUnit.getMover().holdPosition);
+                    } else if (moveClickElapsed > 4f) {
+                        fail("native right-click did not assign a move destination: " + moveActionDiagnostic
+                                + " holdPosition=" + selectedUnit.getMover().holdPosition);
+                        return;
+                    }
+                }
+            }
+            if (!moveClickSeen && phaseElapsed > 25f) {
+                fail("native ground right-click was not received");
                 return;
             }
             double distance = selectedUnit.pos.getDistance(moveStart);
-            if (distance > 2.0) {
+            if (moveCommandAccepted && distance > 2.0) {
                 movementVerified = true;
                 phaseElapsed = 0f;
                 System.out.println("BLUE ALERTS INTERACTIVE MOVED distance=" + distance
                         + " start=" + moveStart + " end=" + selectedUnit.pos);
                 System.out.println("BLUE ALERTS INTERACTIVE ENEMY_SCREEN " + projectUnit(enemyUnit));
                 System.out.println("BLUE ALERTS INTERACTIVE ATTACK_READY");
-            } else if (phaseElapsed > 25f) {
-                fail("real right-click ground order did not move the selected tank");
+            } else if (moveCommandAccepted && phaseElapsed > 25f) {
+                fail("native ground order was accepted but the selected tank did not move");
             }
         }
 
