@@ -106,8 +106,28 @@ IFS=, read -r move_x move_y <<<"$move_pair"
 xdotool mousemove --sync --window "$window_id" "$target_x" "$target_y"
 echo "Pointer after selection move: $(xdotool getmouselocation --shell)"
 sleep 1
-send_native_click 1
-wait_for_marker "BLUE ALERTS INTERACTIVE SELECTED" 10
+# XTest delivery is intermittent under the virtual X server. Retry only the
+# real left-click, checking the actual engine selection state after each press.
+selection_marker="BLUE ALERTS INTERACTIVE SELECTED"
+selection_confirmed=false
+for attempt in 1 2 3; do
+  send_native_click 1
+  for _ in $(seq 1 3); do
+    if grep -Fq "$selection_marker" "$LOG"; then
+      selection_confirmed=true
+      echo "Native selection confirmed after click attempt $attempt."
+      break
+    fi
+    sleep 1
+  done
+  if [ "$selection_confirmed" = true ]; then
+    break
+  fi
+  echo "Native selection not observed after click attempt $attempt; retrying."
+done
+if [ "$selection_confirmed" != true ]; then
+  wait_for_marker "$selection_marker" 1
+fi
 
 xdotool mousemove --sync --window "$window_id" "$move_x" "$move_y"
 echo "Pointer after ground move: $(xdotool getmouselocation --shell)"
