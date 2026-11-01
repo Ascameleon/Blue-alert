@@ -62,6 +62,16 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         }
     };
 
+    private final ActionListener selectDiagnosticListener = (name, pressed, tpf) -> {
+        long entityId = fieldCtrl.spatialSelector.getEntityId();
+        Point2D coord = fieldCtrl.spatialSelector.getCoord(rootNode);
+        System.out.println("BLUE ALERTS INTERACTIVE RAW_SELECT pressed=" + pressed
+                + " cursor=" + inputManager.getCursorPosition()
+                + " entity=" + entityId
+                + " coord=" + coord
+                + " selected=" + CommandManager.selection.contains(selectedUnit));
+    };
+
     @Override
     public void simpleInitApp() {
         super.simpleInitApp();
@@ -111,15 +121,18 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
 
         if (!ready && elapsed >= 3f) {
             if (!movementVerified) setTestCamera();
-            if (!inputManager.hasMapping("action")) {
-                fail("native Battlefield ACTION mapping is not registered");
+            if (!inputManager.hasMapping("action") || !inputManager.hasMapping("select")) {
+                fail("native Battlefield ACTION/SELECT mappings are not registered");
                 return;
             }
             inputManager.addListener(nativeActionListener, "action");
+            inputManager.addListener(selectDiagnosticListener, "select");
             ready = true;
             System.out.println("BLUE ALERTS INTERACTIVE READY"
                     + " target=" + projectUnit(selectedUnit)
-                    + " destination=" + project(moveDestination));
+                    + " destination=" + project(moveDestination)
+                    + " viewport=" + cam.getWidth() + "x" + cam.getHeight()
+                    + " cursor=" + inputManager.getCursorPosition());
         }
         if (ready && !movementVerified) {
             // Follow only until the unit reaches its destination. Freeze the
