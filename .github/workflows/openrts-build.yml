@@ -63,7 +63,7 @@ jobs:
             artifacts/blue-alerts-scenario-report.json
           cp integration/BlueAlertsSkirmish.java engine/OpenRTS/core/src/app/BlueAlertsSkirmish.java
           test -s engine/OpenRTS/core/assets/maps/blue-alerts-skirmish.btf
-          test -s engine/OpenRTS/core/src/app/example/BlueAlertsSkirmish.java
+          test -s engine/OpenRTS/core/src/app/BlueAlertsSkirmish.java
 
       - name: Build OpenRTS
         working-directory: engine/OpenRTS
