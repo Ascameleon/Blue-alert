@@ -300,15 +300,18 @@ const THREE = await (async () => {
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.js'
   ];
   const failures = [];
-  for (const url of sources) {
-    try {
-      return await Promise.race([
-        import(url),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500))
-      ]);
-    } catch (error) {
-      failures.push(url + ': ' + (error?.message || 'chargement impossible'));
-    }
+  // Start mirrors concurrently: a slow first CDN must not force a false 2D fallback.
+  const attempts = sources.map(url => import(url).catch(error => {
+    failures.push(url + ': ' + (error?.message || 'chargement impossible'));
+    throw error;
+  }));
+  try {
+    return await Promise.race([
+      Promise.any(attempts),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('délai global Three.js dépassé (15000 ms)')), 15000))
+    ]);
+  } catch (error) {
+    if (!(error instanceof AggregateError)) failures.push('timeout global: ' + (error?.message || 'chargement impossible'));
   }
   const viewport = document.getElementById('viewport');
   if (viewport) {
