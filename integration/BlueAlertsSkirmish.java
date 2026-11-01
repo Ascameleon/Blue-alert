@@ -11,6 +11,7 @@ import model.battlefield.army.components.Unit;
 import event.ControllerChangeEvent;
 import event.EventManager;
 import com.jme3.math.Vector3f;
+import com.jme3.scene.Spatial.CullHint;
 
 /**
  * BLUE ALERTS first playable OpenRTS skirmish.
@@ -25,8 +26,9 @@ public class BlueAlertsSkirmish extends MainRTS {
     @Override
     public void simpleInitApp() {
         super.simpleInitApp();
-        setDisplayStatView(false);
-        setDisplayFps(false);
+        fpsText.setCullHint(CullHint.Always);
+        statsView.setCullHint(CullHint.Always);
+        debugger.getNode().setCullHint(CullHint.Always);
         ModelManager.loadBattlefield("assets/maps/blue-alerts-skirmish.btf");
         int loadedUnits = ArmyManager.getUnits().size();
         if (loadedUnits != 12) {
