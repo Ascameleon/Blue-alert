@@ -79,12 +79,17 @@ fi
 IFS=, read -r target_x target_y <<<"$target_pair"
 IFS=, read -r move_x move_y <<<"$move_pair"
 
-# The coordinates are camera-local; xwininfo supplies the client-window
-# origin so the injected events land on the rendered game viewport.
-xdotool mousemove --sync "$((window_x + target_x))" "$((window_y + target_y))" click 1
+# Use xdotool's window-relative coordinates so the X11 frame/titlebar
+# cannot shift the camera-local positions. Log the root pointer position
+# after each move to make coordinate failures diagnosable.
+xdotool mousemove --sync --window "$window_id" "$target_x" "$target_y"
+echo "Pointer after selection move: $(xdotool getmouselocation --shell)"
+xdotool click 1
 wait_for_marker "BLUE ALERTS INTERACTIVE SELECTED" 10
 
-xdotool mousemove --sync "$((window_x + move_x))" "$((window_y + move_y))" click 3
+xdotool mousemove --sync --window "$window_id" "$move_x" "$move_y"
+echo "Pointer after ground move: $(xdotool getmouselocation --shell)"
+xdotool click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED" 8
 wait_for_marker "BLUE ALERTS INTERACTIVE MOVED" 28
 wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_READY" 5
@@ -97,7 +102,9 @@ if [[ ! "$enemy_pair" =~ ^[0-9]+,[0-9]+$ ]]; then
   exit 1
 fi
 IFS=, read -r enemy_x enemy_y <<<"$enemy_pair"
-xdotool mousemove --sync "$((window_x + enemy_x))" "$((window_y + enemy_y))" click 3
+xdotool mousemove --sync --window "$window_id" "$enemy_x" "$enemy_y"
+echo "Pointer before attack click: $(xdotool getmouselocation --shell)"
+xdotool click 3
 wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_CLICK_RECEIVED" 8
 wait_for_marker "BLUE ALERTS INTERACTIVE PASS selection+move+attack" 35
 
