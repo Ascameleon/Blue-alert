@@ -85,6 +85,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Render 3D model preview at desktop and mobile sizes
         run: node scripts/validate_model_preview_browser.mjs
+      - name: Render playable v94 game at desktop and mobile sizes
+        run: node scripts/validate_v94_browser.mjs
       - name: Build OpenRTS
         working-directory: engine/OpenRTS
         run: ./gradlew --no-daemon build
