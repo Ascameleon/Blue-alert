@@ -6,15 +6,19 @@ import tempfile
 
 MODEL = Path("game-data/models/blue-alert-models.js")
 PREVIEW = Path("game-data/models/preview.html")
+GAME = Path("BLUE_ALERTS_v94_ASSET_INTEGRATION.html")
 REQUIRED_EXPORTS = (
     "createTank", "createInfantry", "createBuilding", "createLandscape",
     "createTree", "createRock", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion", "createMuzzleFlash",
+    "createHarvester", "createCitadel", "createRelay", "createOreNode",
 )
 REQUIRED_PREVIEW = (
     "Avion d’attaque", "Hélicoptère d’assaut", "Drone de reconnaissance",
     "Projectile", "Explosion", "Flash de bouche", "createMuzzleFlash", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion",
+    "Moissonneuse", "Citadelle", "Relais de capture", "Gisement de minerai",
+    "createHarvester", "createCitadel", "createRelay", "createOreNode",
     "a==='aircraft'", "a==='helicopter'", "a==='drone'",
     "a==='projectile'", "a==='explosion'", "a==='muzzleFlash'",
 )
@@ -31,17 +35,21 @@ def node_check(source: str, label: str) -> None:
         path.unlink(missing_ok=True)
 
 def main():
-    for path in (MODEL, PREVIEW):
+    for path in (MODEL, PREVIEW, GAME):
         if not path.is_file():
             raise SystemExit(f"FAIL: missing {path}")
     model = MODEL.read_text(encoding="utf-8")
     preview = PREVIEW.read_text(encoding="utf-8")
+    game = GAME.read_text(encoding="utf-8")
     missing = [name for name in REQUIRED_EXPORTS if f"export function {name}" not in model]
     if missing:
         raise SystemExit("FAIL: missing model exports: " + ", ".join(missing))
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
+    for token in ("blue-alert-models.js?v=3", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode"):
+        if token not in game:
+            raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")
     scripts = preview.split("<script type=\"module\">")
     if len(scripts) < 2:
