@@ -188,6 +188,10 @@ try {
   assert.ok(muzzleError < 0.05,
     'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
 
+  // Release the desktop WebGL context before starting the mobile WebGL run.
+  // This prevents two simultaneous SwiftShader contexts from starving the mobile RAF loop.
+  await desktop.close();
+
   const mobile = await browser.newPage({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 1,
