@@ -140,12 +140,46 @@ export function createBuilding(THREE, type='barracks', options={}) {
       cylinder(THREE,g,'pipe',.075,.075,1.2,[x,.78,.65],roof,8);
     }
     box(THREE,g,'loading-bay',[.65,.5,.45],[.65,.36,.75],dark);
+  } else if(type==='controlTower' || type==='tower') {
+    // Elevated octagonal air-traffic/control tower: tapered shaft, buttresses and panoramic glazed cab.
+    const shaft=mat(THREE,0x68777a,.72,.28), trim=mat(THREE,0x303d42,.42,.55), warning=mat(THREE,0xe2ad45,.48,.28);
+    cylinder(THREE,g,'tower-foundation',1.18,1.35,.34,[0,.28,0],dark,12);
+    cylinder(THREE,g,'tower-pedestal',.72,.95,.62,[0,.72,0],concrete,10);
+    cylinder(THREE,g,'tapered-control-shaft',.48,.72,3.05,[0,2.48,0],shaft,10);
+    for(let i=0;i<4;i++){const a=i*Math.PI/2;const brace=box(THREE,g,'tower-buttress',[.2,1.65,.22],[Math.cos(a)*.57,1.15,Math.sin(a)*.57],trim);brace.rotation.z=Math.cos(a)*-.18;brace.rotation.x=Math.sin(a)*.18;}
+    cylinder(THREE,g,'lower-service-ring',.78,.78,.16,[0,1.2,0],trim,12);
+    cylinder(THREE,g,'upper-platform',1.15,1.15,.22,[0,4.12,0],trim,12);
+    cylinder(THREE,g,'observation-deck',1.03,1.03,.12,[0,4.28,0],warning,12);
+    const cab=new THREE.Group();cab.name='panoramic-control-cabin';cab.position.y=4.55;g.add(cab);
+    cylinder(THREE,cab,'cabin-glass-band',.92,.92,.72,[0,0,0],glass,12);
+    cylinder(THREE,cab,'cabin-roof',.98,.98,.16,[0,.43,0],faction,12);
+    cylinder(THREE,cab,'cabin-sill',.98,.98,.12,[0,-.42,0],trim,12);
+    for(let i=0;i<12;i++){const a=i*Math.PI/6;const mullion=box(THREE,cab,'window-mullion',[.045,.68,.045],[Math.cos(a)*.91,0,Math.sin(a)*.91],trim);mullion.rotation.y=-a;}
+    cylinder(THREE,g,'radar-pedestal',.12,.16,.36,[0,5.05,0],metal,10);
+    const radar=new THREE.Group();radar.name='rotating-radar';radar.position.set(0,5.3,0);g.add(radar);
+    cylinder(THREE,radar,'radar-hub',.12,.12,.18,[0,0,0],metal,10);
+    box(THREE,radar,'radar-dish-arm',[1.35,.055,.08],[0,.08,0],trim);
+    sphere(THREE,radar,'radar-dish',.42,[.7,.08,0],glass,[.22,1,.78]);
+    cylinder(THREE,g,'lightning-mast',.025,.025,.72,[0,5.78,0],dark,8);
+    for(let i=0;i<4;i++){const a=i*Math.PI/2;sphere(THREE,g,'aviation-beacon',.075,[Math.cos(a)*.88,4.6,Math.sin(a)*.88],warning,[1,.7,1]);}
+    rotatingGun=radar;
   } else if(type==='turret') {
-    cylinder(THREE,g,'armored-base',.9,1.05,.65,[0,.53,0],concrete,12);
-    cylinder(THREE,g,'rotating-platform',.63,.68,.18,[0,.95,0],faction,12);
-    const head=new THREE.Group(); head.name='rotating-gun'; head.position.y=1.08; g.add(head);
-    box(THREE,head,'turret-head',[1.05,.48,.8],[0,.18,0],faction);
-    cylinder(THREE,head,'defense-cannon',.09,.13,1.25,[.7,.22,0],dark,10).rotation.z=-Math.PI/2;
+    // Circular armored barbette with a faceted rotating cupola, twin barrels and optics.
+    const armor=mat(THREE,0x59666a,.58,.48), edge=mat(THREE,0x252f34,.42,.62), optic=mat(THREE,0x69d4ec,.16,.72);
+    cylinder(THREE,g,'armored-base',1.02,1.18,.72,[0,.55,0],concrete,16);
+    cylinder(THREE,g,'base-rim',1.08,1.08,.12,[0,.91,0],edge,16);
+    cylinder(THREE,g,'rotating-platform',.82,.9,.2,[0,1.08,0],faction,16);
+    const head=new THREE.Group();head.name='rotating-gun';head.position.y=1.18;g.add(head);
+    cylinder(THREE,head,'cupola-lower-ring',.72,.78,.2,[0,.08,0],edge,16);
+    const dome=new THREE.Mesh(new THREE.SphereGeometry(.68,16,10,0,Math.PI*2,0,Math.PI*.58),armor);dome.name='armored-cupola';dome.position.y=.34;dome.scale.y=.82;dome.castShadow=true;dome.receiveShadow=true;head.add(dome);
+    cylinder(THREE,head,'roof-hatch',.2,.24,.1,[-.2,.82,0],edge,12);
+    sphere(THREE,head,'targeting-optic',.13,[.3,.66,.43],optic,[1,.65,.65]);
+    for(const side of [-1,1]){
+      const barrel=cylinder(THREE,head,'autocannon-barrel',.075,.105,1.35,[.76,.42,side*.23],edge,12);barrel.rotation.z=-Math.PI/2;
+      cylinder(THREE,head,'barrel-muzzle',.11,.11,.12,[1.43,.42,side*.23],metal,12).rotation.z=-Math.PI/2;
+      box(THREE,head,'barrel-recoil-sleeve',[.34,.16,.15],[.38,.42,side*.23],armor);
+    }
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;const bolt=cylinder(THREE,g,'ring-bolt',.035,.035,.035,[Math.cos(a)*.96,.99,Math.sin(a)*.96],metal,8);bolt.rotation.x=Math.PI/2;}
     rotatingGun=head;
   } else {
     box(THREE,g,'utility-building',[2.5,1.15,2],[0,.68,0],concrete);
