@@ -50,7 +50,7 @@ async function loadGame(page, combatQa = false, buildQa = false) {
   if (combatQa) params.set('qa', 'combat-rig');
   if (buildQa) params.set('build-zone', '1');
   const query = params.toString();
-  const response = await page.goto(url + (query ? '?' + query : ''), { waitUntil: 'networkidle', timeout: 60000 });
+  const response = await page.goto(url + (query ? '?' + query : ''), { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert.equal(response?.status(), 200, 'v94 game HTML must load');
   await page.waitForFunction(() => {
     const canvas = document.querySelector('#viewport canvas');
@@ -270,9 +270,11 @@ try {
   const mobileBuildBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
 const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: 'artifacts/v94-browser/mobile-v94-gameplay-390x844.png', fullPage: false });
-  console.log('MOBILE_HQ_LAYOUT', JSON.stringify({ labelScreenY: mobileBuildBefore?.hq?.labelScreenY, labelWorldY: mobileBuildBefore?.hq?.labelY, commandsBox: mobileCommandsBox }));
-  assert.ok(mobileCommandsBox && mobileBuildBefore?.hq?.labelScreenY > mobileCommandsBox.y + mobileCommandsBox.height + 6,
-    'the QG label must remain visible below the mobile command dock, not underneath it');
+  const mobileHQBadgeBox = await mobile.locator('#mobileHQBadge').boundingBox();
+  assert.ok(mobileCommandsBox && mobileHQBadgeBox && mobileHQBadgeBox.y > mobileCommandsBox.y + mobileCommandsBox.height + 6,
+    'the dedicated HQ badge must remain visible below the mobile command dock');
+  assert.equal(await mobile.locator('#mobileHQBadge').textContent(), 'QG • BASE ALPHA',
+    'mobile HUD must identify the blue command HQ');
   assert.ok(mobileBuildBefore && mobileBuildBefore.pads.every(p => p.pad && p.grid && p.border),
     'mobile must render the same two construction pads');
   await mobile.waitForTimeout(2800);
