@@ -21,6 +21,7 @@ REQUIRED_PREVIEW = (
     "createHarvester", "createCitadel", "createRelay", "createOreNode",
     "a==='aircraft'", "a==='helicopter'", "a==='drone'",
     "a==='projectile'", "a==='explosion'", "a==='muzzleFlash'",
+    "a==='harvester'", "a==='citadel'", "a==='relay'", "a==='ore'",
 )
 
 def node_check(source: str, label: str) -> None:
