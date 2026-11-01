@@ -18,29 +18,42 @@ base_path, output_path, army_dir, report_path = map(Path, sys.argv[1:])
 data = json.loads(base_path.read_text())
 map_data = data.get("map", {})
 
-# The pinned OpenRTS test map leaves cliffShapeID empty on many elevated tiles.
-# Any level transition then asks BuilderManager for CliffShape/ and aborts.
-# StdRockyVegyDug is defined in the pinned engine's cliffshapes.xml and is
-# already linked by StdMapStyle, so use it as the deterministic default.
+# OpenRTS resolves cliffs by builder ID; the test map leaves many blank.
+# This ID exists in the pinned engine's cliffshapes.xml and is linked by StdMapStyle.
 DEFAULT_CLIFF_SHAPE_ID = "StdRockyVegyDug"
 cliff_shape_defaults_applied = 0
-for tile in map_data.get("tiles", []):
+map_tiles = map_data.get("tiles", [])
+for tile in map_tiles:
     if not tile.get("cliffShapeID"):
         tile["cliffShapeID"] = DEFAULT_CLIFF_SHAPE_ID
         cliff_shape_defaults_applied += 1
-for ramp in map_data.get("ramps", []):
-    for tile in ramp.get("tiles", []):
-        if not tile.get("cliffShapeID"):
-            tile["cliffShapeID"] = DEFAULT_CLIFF_SHAPE_ID
-            cliff_shape_defaults_applied += 1
-if any(not tile.get("cliffShapeID") for tile in map_data.get("tiles", [])):
+if any(not tile.get("cliffShapeID") for tile in map_tiles):
     raise RuntimeError("Map contains tiles without a valid cliff shape ID")
-if any(
-    not tile.get("cliffShapeID")
-    for ramp in map_data.get("ramps", [])
-    for tile in ramp.get("tiles", [])
-):
-    raise RuntimeError("Ramp contains tiles without a valid cliff shape ID")
+
+# The pinned engine stores Ramp tile references as integer indices. The
+# bundled legacy test.btf stores inline Tile objects instead; those deserialize
+# without a Map and crash Ramp.compute(). Normalize them to tilesRef indices.
+ramp_count = 0
+ramp_tile_reference_count = 0
+for ramp in map_data.get("ramps", []):
+    legacy_tiles = ramp.pop("tiles", [])
+    tile_refs = ramp.get("tilesRef") or [
+        int(tile["index"])
+        for tile in legacy_tiles
+        if isinstance(tile, dict) and "index" in tile
+    ]
+    if not tile_refs:
+        raise RuntimeError("Ramp has no tile indices after serialization normalization")
+    if len(set(tile_refs)) != len(tile_refs):
+        raise RuntimeError("Ramp contains duplicate tile indices")
+    for index in tile_refs:
+        if not isinstance(index, int) or index < 0 or index >= len(map_tiles):
+            raise RuntimeError(f"Ramp tile index is outside the map: {index}")
+    ramp["tilesRef"] = tile_refs
+    ramp_count += 1
+    ramp_tile_reference_count += len(tile_refs)
+if any("tiles" in ramp for ramp in map_data.get("ramps", [])):
+    raise RuntimeError("Legacy inline Ramp.tiles objects remain in the runtime map")
 
 width = int(map_data.get("atlas", {}).get("mapWidth", 0))
 height = int(map_data.get("atlas", {}).get("mapHeight", 0))
@@ -115,6 +128,11 @@ if len(verified_units) != 12:
     raise RuntimeError(f"Expected 12 initial units, found {len(verified_units)}")
 if {unit["factionName"] for unit in verified_units} != {"1", "2"}:
     raise RuntimeError("Scenario must contain both OpenRTS factions")
+verified_ramps = verified["map"].get("ramps", [])
+if len(verified_ramps) != ramp_count:
+    raise RuntimeError("Ramp count changed during serialization")
+if any("tiles" in ramp or not ramp.get("tilesRef") for ramp in verified_ramps):
+    raise RuntimeError("Runtime map contains an invalid Ramp serialization")
 
 report = {
     "status": "validated",
@@ -124,6 +142,8 @@ report = {
     "unit_composition": {"humantank": 4, "Marine": 8},
     "cliff_shape_id": DEFAULT_CLIFF_SHAPE_ID,
     "cliff_shape_defaults_applied": cliff_shape_defaults_applied,
+    "ramp_count": ramp_count,
+    "ramp_tile_reference_count": ramp_tile_reference_count,
     "source_map": str(base_path),
     "output_map": str(output_path),
 }

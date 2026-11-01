@@ -37,6 +37,8 @@ jobs:
           test -f engine/OpenRTS/gradlew
           test -x engine/OpenRTS/gradlew
           git -C engine/OpenRTS rev-parse HEAD
+      - name: Patch OpenRTS ramp serialization compatibility
+        run: python3 integration/patch_openrts_ramp_serialization.py engine/OpenRTS/core/src/model/battlefield/map/cliff/Ramp.java
       - name: Validate BLUE ALERTS prototype
         run: python3 scripts/validate_prototype.py
       - name: Validate BLUE ALERTS v94 3D prototype
