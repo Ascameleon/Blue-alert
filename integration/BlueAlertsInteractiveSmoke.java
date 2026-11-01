@@ -95,7 +95,7 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                 selectionVerified = true;
                 moveStart = new Point3D(selectedUnit.pos);
                 phaseElapsed = 0f;
-                System.out.println("BLUE ALERTS INTERACTIVE SELECTED id=" + selectedUnit.getId()
+                System.out.println("BLUE ALERTS INTERACTIVE SELECTED id=" + selectedUnit.builderID
                         + " selection_count=" + CommandManager.selection.size());
             } else if (elapsed > 20f) {
                 fail("real left-click did not select the red test tank");
