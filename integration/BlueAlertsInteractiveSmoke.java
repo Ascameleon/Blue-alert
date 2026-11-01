@@ -62,6 +62,17 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         }
     };
 
+    // Observe native left-click delivery without querying or mutating the
+    // SpatialSelector from a second listener. The engine's own selection
+    // listener remains the sole owner of the selection ray.
+    private final ActionListener selectDiagnosticListener = (name, pressed, tpf) -> {
+        if (pressed) {
+            System.out.println("BLUE ALERTS INTERACTIVE SELECT_EVENT cursor="
+                    + inputManager.getCursorPosition()
+                    + " selected=" + CommandManager.selection.contains(selectedUnit));
+        }
+    };
+
     @Override
     public void simpleInitApp() {
         super.simpleInitApp();
@@ -111,17 +122,19 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
 
         if (!ready && elapsed >= 3f) {
             if (!movementVerified) setTestCamera();
-            if (!inputManager.hasMapping("action")) {
-                fail("native Battlefield ACTION mapping is not registered");
+            if (!inputManager.hasMapping("action") || !inputManager.hasMapping("select")) {
+                fail("native Battlefield ACTION/SELECT mappings are not registered");
                 return;
             }
             inputManager.addListener(nativeActionListener, "action");
+            inputManager.addListener(selectDiagnosticListener, "select");
             ready = true;
             System.out.println("BLUE ALERTS INTERACTIVE READY"
                     + " target=" + projectUnit(selectedUnit)
                     + " destination=" + project(moveDestination)
                     + " viewport=" + cam.getWidth() + "x" + cam.getHeight()
-                    + " cursor=" + inputManager.getCursorPosition());
+                    + " cursor=" + inputManager.getCursorPosition()
+                    + " pickPoint=" + unitPickPoint(selectedUnit));
         }
         if (ready && !movementVerified) {
             // Follow only until the unit reaches its destination. Freeze the
@@ -204,13 +217,18 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         cam.update();
     }
 
+    private Vector3f unitPickPoint(Unit unit) {
+        var spatial = unit.actor.getViewElements().spatial;
+        if (spatial != null && spatial.getWorldBound() != null) {
+            return spatial.getWorldBound().getCenter().clone();
+        }
+        Vector3f fallback = TranslateUtil.toVector3f(unit.pos);
+        fallback.z += 0.8f;
+        return fallback;
+    }
+
     private String projectUnit(Unit unit) {
-        // Keep the proven logical unit pick point used by the passing native
-        // XTest selection run. Visual world-bound centers are not guaranteed
-        // to match the engine's entity-selection collision geometry.
-        Vector3f world = TranslateUtil.toVector3f(unit.pos);
-        world.z += 0.8f;
-        return project(world);
+        return project(unitPickPoint(unit));
     }
 
     private String project(Vector3f world) {
