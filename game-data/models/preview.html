@@ -68,5 +68,5 @@ document.querySelector('#asset').addEventListener('change',build);document.query
 document.querySelector('#reset').addEventListener('click',build);
 function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
 new ResizeObserver(resize).observe(host);resize();build();
-renderer.setAnimationLoop(()=>{if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;controls.update();renderer.render(scene,camera);});
+renderer.setAnimationLoop(()=>{if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;if(current?.userData?.collectionDrum)current.userData.collectionDrum.rotation.x+=.08;if(current?.userData?.reactorRing)current.userData.reactorRing.rotation.z+=.008;if(current?.userData?.core)current.userData.core.rotation.y+=.012;if(current?.userData?.captureHalo)current.userData.captureHalo.rotation.z+=.008;controls.update();renderer.render(scene,camera);});
 </script></body></html>
