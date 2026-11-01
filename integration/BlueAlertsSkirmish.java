@@ -56,11 +56,11 @@ public class BlueAlertsSkirmish extends MainRTS {
                     + redUnits.size() + ", blue=" + blueUnits.size());
         }
         CommandManager.select(redUnits);
-        CommandManager.act(-1L, new Point2D(18, 42));
-        System.out.println("BLUE ALERTS issued red group move order to (18, 42).");
+        CommandManager.act(-1L, new Point2D(10, 50));
+        System.out.println("BLUE ALERTS issued red group move order to (10, 50).");
         CommandManager.select(blueUnits);
-        CommandManager.act(-1L, new Point2D(28, 42));
-        System.out.println("BLUE ALERTS issued blue group move order to (28, 42).");
+        CommandManager.act(-1L, new Point2D(36, 50));
+        System.out.println("BLUE ALERTS issued blue group move order to (36, 50).");
         EventManager.post(new ControllerChangeEvent(0));
     }
 
@@ -68,7 +68,7 @@ public class BlueAlertsSkirmish extends MainRTS {
     public void simpleUpdate(float tpf) {
         super.simpleUpdate(tpf);
         elapsedSinceLoad += tpf;
-        if (!movementVerified && elapsedSinceLoad >= 8f) {
+        if (!movementVerified && elapsedSinceLoad >= 12f) {
             long redMoved = initialPositions.entrySet().stream()
                     .filter(entry -> "1".equals(entry.getKey().faction.getName()))
                     .filter(entry -> entry.getKey().pos.getDistance(entry.getValue()) > 0.5)
@@ -96,9 +96,9 @@ public class BlueAlertsSkirmish extends MainRTS {
             movementVerified = true;
             // Frame the skirmish more tightly so the unit models are legible
             // in CI evidence while retaining both faction groups in view.
-            cam.setFrustumPerspective(50f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
-            cam.setLocation(new Vector3f(23f, 31f, 12f));
-            cam.lookAt(new Vector3f(23f, 42f, 0f), Vector3f.UNIT_Z);
+            cam.setFrustumPerspective(55f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
+            cam.setLocation(new Vector3f(23f, 35f, 16f));
+            cam.lookAt(new Vector3f(23f, 50f, 0f), Vector3f.UNIT_Z);
             System.out.println("BLUE ALERTS close camera frame around skirmish units at " + cam.getLocation());
         }
     }
