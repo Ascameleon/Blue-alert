@@ -363,7 +363,7 @@ export function createExplosion(THREE, options={}) {
   const factor=intensity==='large'?1.45:intensity==='small'?.65:1;
   const coreMat=new THREE.MeshBasicMaterial({color:0xffb347,transparent:true,opacity:.88});
   const hotMat=new THREE.MeshBasicMaterial({color:0xffe4a1,transparent:true,opacity:.82});
-  const smokeMat=mat(THREE,0x4b4b45,.98,0);
+  const smokeMaterial=()=>new THREE.MeshStandardMaterial({color:0x4b4b45,roughness:.98,transparent:true,opacity:.46,depthWrite:false});
   sphere(THREE,g,'fireball-core',.72*factor,[0,.18,0],coreMat,[1,.82,1]);
   sphere(THREE,g,'hot-core',.38*factor,[.05,.2,.02],hotMat,[1,.9,1]);
   for(let i=0;i<3;i++){
@@ -373,14 +373,13 @@ export function createExplosion(THREE, options={}) {
   let state=seed>>>0;const rand=()=>{state=(1664525*state+1013904223)>>>0;return state/4294967296;};
   for(let i=0;i<12;i++){
     const angle=rand()*Math.PI*2,radius=(.5+rand()*1.25)*factor,height=(rand()-.25)*1.2*factor;
-    const spark=new THREE.Mesh(new THREE.ConeGeometry(.045*factor,.28*factor,5),new THREE.MeshBasicMaterial({color:i%3===0?0xffe28a:0xff7838}));
+    const spark=new THREE.Mesh(new THREE.ConeGeometry(.045*factor,.28*factor,5),new THREE.MeshBasicMaterial({color:i%3===0?0xffe28a:0xff7838,transparent:true,opacity:1,depthWrite:false}));
     spark.name='explosion-spark';spark.position.set(Math.cos(angle)*radius,height,Math.sin(angle)*radius);spark.rotation.z=-angle;g.add(spark);
   }
-  for(let i=0;i<5;i++)sphere(THREE,g,'smoke-puff',.28*factor,[((i%3)-1)*.36,.45+(i%2)*.24,((i*2)%3-1)*.28],smokeMat,[1.1,1.25,1]);
+  for(let i=0;i<5;i++)sphere(THREE,g,'smoke-puff',.28*factor,[((i%3)-1)*.36,.45+(i%2)*.24,((i*2)%3-1)*.28],smokeMaterial(),[1.1,1.25,1]);
   g.userData={kind:'effect',effectType:'explosion',intensity,lifetimeSeconds:intensity==='large'?1.8:1.2,requiresRuntimeAnimation:true};
   g.scale.setScalar(scale);return g;
 }
-
 
 export function createMuzzleFlash(THREE, options={}) {
   const {team='blue',scale=1}=options;

@@ -48,7 +48,7 @@ def main():
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
-    for token in ("blue-alert-models.js?v=3", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode"):
+    for token in ("blue-alert-models.js?v=4", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")
