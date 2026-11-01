@@ -12,13 +12,13 @@ aside{padding:16px;background:#182327;border-left:1px solid #35474b}aside h2{fon
 @media(max-width:700px){main{grid-template-columns:1fr}#view{min-height:65vh}aside{border-left:0;border-top:1px solid #35474b}.controls{margin-left:0}}
 </style></head><body>
 <header><h1>BLUE ALERT / Atelier de modèles 3D</h1><small>Kit procédural Three.js · sans API payante</small>
-<div class="controls"><select id="asset"><option value="tank">Char de combat</option><option value="infantry">Fantassin</option><option value="hq">Quartier général</option><option value="barracks">Caserne</option><option value="refinery">Raffinerie</option><option value="turret">Tourelle défensive</option><option value="landscape">Paysage tactique</option></select>
+<div class="controls"><select id="asset"><option value="tank">Char de combat</option><option value="infantry">Fantassin</option><option value="hq">Quartier général</option><option value="barracks">Caserne</option><option value="refinery">Raffinerie</option><option value="turret">Tourelle défensive</option><option value="landscape">Paysage tactique</option><option value="aircraft">Avion d’attaque</option><option value="helicopter">Hélicoptère d’assaut</option><option value="drone">Drone de reconnaissance</option><option value="projectile">Projectile</option><option value="explosion">Explosion</option></select>
 <select id="team"><option value="blue">Équipe bleue</option><option value="red">Équipe rouge</option></select><button id="reset">Réinitialiser la vue</button></div></header>
 <main><section id="view"><div id="hint">Glisser : orbiter · molette : zoom · clic droit : déplacer</div></section><aside><h2 id="title">Char de combat</h2><p id="desc">Maillage 3D original composé de blindage, chenilles, roues, tourelle pivotante, canon, trappes et marquage d'équipe.</p><p><b>État :</b> modèles procéduraux en géométrie Three.js. Le code est conçu pour être appelé depuis le moteur web du jeu.</p><p><b>Commandes :</b><br>Glisser pour tourner<br>Molette pour zoomer<br>Clic droit pour déplacer la caméra</p></aside></main>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-import {createTank,createInfantry,createBuilding,createLandscape,createTree,createRock} from './blue-alert-models.js';
+import {createTank,createInfantry,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion} from './blue-alert-models.js';
 const host=document.querySelector('#view'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9aa9a4);scene.fog=new THREE.Fog(0x9aa9a4,45,125);
 const camera=new THREE.PerspectiveCamera(42,1,.1,300);camera.position.set(9,8,12);
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;host.appendChild(renderer.domElement);
@@ -35,7 +35,7 @@ hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile la
 barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
 refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],
 turret:['Tourelle défensive','Socle blindé, plateforme pivotante et canon orientable.'],
-landscape:['Paysage tactique','Terrain vallonné déterministe, route, marquages, arbres low-poly et rochers.']
+landscape:['Paysage tactique','Terrain vallonné déterministe, route, marquages, arbres low-poly et rochers.'],\naircraft:['Avion d’attaque','Fuselage profilé, cockpit, ailes, empennage, réacteurs, train et pylônes d’armement.'],\nhelicopter:['Hélicoptère d’assaut','Cabine blindée, verrière, poutre de queue, rotor principal et rotor anticouple.'],\ndrone:['Drone de reconnaissance','Châssis quadrirotor, bras carbone, moteurs, hélices et caméra sur nacelle.'],\nprojectile:['Projectile','Corps balistique, ogive, ailettes et traceur lumineux.'],\nexplosion:['Explosion','Noyau incandescent, anneaux de choc, étincelles et fumée.']
 };
 function build(){clear();const a=document.querySelector('#asset').value,t=document.querySelector('#team').value;
 if(a==='tank')current=createTank(THREE,{team:t});
