@@ -299,7 +299,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 <script type="module">
 let BLUE_MODELS = null;
 try {
-  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=3');
+  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=4');
 } catch (assetError) {
   console.warn('BLUE ALERTS: bibliothèque de modèles indisponible, géométries natives conservées.', assetError);
 }
@@ -1751,7 +1751,29 @@ function placeOrderMark(x, z, isAtk) {
 }
 
 /* ─── Combat ─────────────────────────────────────────────── */
+function disposeObject3D(root) {
+  if (!root?.traverse) return;
+  const geometries = new Set(), materials = new Set();
+  root.traverse(object => {
+    if (object.geometry) geometries.add(object.geometry);
+    for (const material of (Array.isArray(object.material) ? object.material : [object.material])) {
+      if (material) materials.add(material);
+    }
+  });
+  for (const geometry of geometries) geometry.dispose();
+  for (const material of materials) material.dispose();
+}
+
 function spawnParticle(pos, color, big) {
+  if (big && BLUE_MODELS?.createExplosion) {
+    const seed = (Math.abs(Math.trunc(pos.x * 73856093 + pos.z * 19349663)) >>> 0) || 23;
+    const mesh = BLUE_MODELS.createExplosion(THREE, { scale: 1, intensity: 'large', seed });
+    mesh.position.copy(pos);
+    scene.add(mesh);
+    const life = mesh.userData?.lifetimeSeconds || 1.8;
+    fx.push({ mesh, life, max: life, kind: 'model-explosion' });
+    return;
+  }
   const geo = new THREE.SphereGeometry(big ? 0.45 : 0.12, 6, 5);
   const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 });
   const mesh = new THREE.Mesh(geo, mat);
@@ -1810,16 +1832,29 @@ function fireProjectile(shooter, target) {
   // Detailed tanks launch from the actual animated muzzle, not from the hull centre.
   const start = muzzle ? from.clone() : from.clone().addScaledVector(dir, 1.3);
 
+  const isBlue = shooter.team === 1;
   if (muzzle) {
     setMuzzleFlashIntensity(muzzle, 1);
     shooter.flashT = 0.12;
   }
+  if ((!muzzle || muzzle.userData?.effectType !== 'muzzle-flash') && BLUE_MODELS?.createMuzzleFlash) {
+    const flash = BLUE_MODELS.createMuzzleFlash(THREE, { team: isBlue ? 'blue' : 'red', scale: 0.95 });
+    flash.position.copy(start);
+    flash.rotation.y = Math.atan2(-dir.z, dir.x);
+    scene.add(flash);
+    fx.push({ mesh: flash, life: 0.18, max: 0.18, kind: 'model-muzzle' });
+  }
 
-  const isBlue = shooter.team === 1;
-  const ball = new THREE.Mesh(
-    new THREE.SphereGeometry(0.1, 6, 5),
-    new THREE.MeshBasicMaterial({ color: isBlue ? 0x60d8ff : 0xff5038 })
-  );
+  let ball;
+  if (BLUE_MODELS?.createProjectile) {
+    ball = BLUE_MODELS.createProjectile(THREE, { team: isBlue ? 'blue' : 'red', scale: 1.0 });
+    ball.rotation.y = Math.atan2(-dir.z, dir.x);
+  } else {
+    ball = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 6, 5),
+      new THREE.MeshBasicMaterial({ color: isBlue ? 0x60d8ff : 0xff5038 })
+    );
+  }
   ball.position.copy(start);
   scene.add(ball);
 
@@ -1897,7 +1932,8 @@ function applyDamage(target, amount, fromTeam) {
 
   if (target.hp <= 0) {
     target.hp = 0;
-    target.dead = true;
+    const unitTarget = target.g && (!target.kind || ['light', 'heavy', 'infantry', 'harvester'].includes(target.kind));
+    if (!unitTarget) target.dead = true;
 
     if (target.kind === 'citadel') {
       gameOver = true;
@@ -2522,10 +2558,14 @@ resize();
 
 /* ─── Main loop ──────────────────────────────────────────── */
 const clock = new THREE.Clock();
+let qaFrameCount = 0;
+let qaLastFrameDelta = 0;
 
 function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
+  qaFrameCount++;
+  qaLastFrameDelta = dt;
 
   // Camera pan: ZQSD/WASD + flèches + edge scroll (standard RTS web)
   if (started) {
@@ -2878,6 +2918,8 @@ function tick() {
       const step = p.speed * dt;
       if (dist <= step || p.life <= 0) {
         scene.remove(p.mesh, p.line);
+        disposeObject3D(p.mesh);
+        disposeObject3D(p.line);
         projectiles.splice(i, 1);
         spawnParticle(p.dest, p.isBlue ? 0x60d8ff : 0xff6030, false);
         if (p.target && !p.target.dead) {
@@ -2895,12 +2937,64 @@ function tick() {
     for (let i = fx.length - 1; i >= 0; i--) {
       const e = fx[i];
       e.life -= dt;
-      e.mesh.scale.multiplyScalar(e.smoke ? 1.015 : 1.06);
-      e.mat.opacity = Math.max(0, (e.life / e.max) * (e.smoke ? 0.4 : 1));
-      if (e.smoke) e.mesh.position.y += dt * 0.55;
+      if (e.kind === 'model-explosion') {
+        const progress = Math.min(1, Math.max(0, 1 - e.life / e.max));
+        e.mesh.traverse(object => {
+          if (!object.isMesh) return;
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          if (!object.userData.__fxBase) {
+            object.userData.__fxBase = {
+              position: object.position.clone(),
+              scale: object.scale.clone(),
+              rotationZ: object.rotation.z,
+              opacity: materials[0]?.opacity ?? 1
+            };
+          }
+          const base = object.userData.__fxBase;
+          if (object.name === 'fireball-core') {
+            object.scale.copy(base.scale).multiplyScalar(1 + progress * 0.5);
+            for (const material of materials) if (material.transparent) material.opacity = base.opacity * (1 - progress);
+          } else if (object.name === 'hot-core') {
+            object.scale.copy(base.scale).multiplyScalar(1 - progress * 0.35);
+            for (const material of materials) if (material.transparent) material.opacity = base.opacity * (1 - progress);
+          } else if (object.name === 'shockwave-ring') {
+            object.scale.setScalar(1 + progress * 2.4);
+            for (const material of materials) if (material.transparent) material.opacity = base.opacity * (1 - progress);
+          } else if (object.name === 'smoke-puff') {
+            object.position.set(base.position.x, base.position.y + progress * 0.85, base.position.z);
+            object.scale.copy(base.scale).multiplyScalar(1 + progress * 1.3);
+            for (const material of materials) if (material.transparent) material.opacity = base.opacity * (1 - progress);
+          } else if (object.name === 'explosion-spark') {
+            const direction = base.position.clone().setY(0);
+            if (direction.lengthSq() < 0.001) direction.set(0, 0, 1);
+            direction.normalize();
+            object.position.set(
+              base.position.x + direction.x * progress * 0.65,
+              base.position.y + progress * 0.75,
+              base.position.z + direction.z * progress * 0.65
+            );
+            object.rotation.z = base.rotationZ + progress * 3.5;
+            for (const material of materials) if (material.transparent) material.opacity = 1 - progress;
+          }
+        });
+      } else if (e.kind === 'model-muzzle') {
+        const progress = Math.min(1, Math.max(0, 1 - e.life / e.max));
+        e.mesh.scale.setScalar(0.95 + progress * 0.35);
+        e.mesh.traverse(object => {
+          if (!object.isMesh) return;
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          if (object.userData.__fxBaseOpacity === undefined) object.userData.__fxBaseOpacity = materials[0]?.opacity ?? 1;
+          for (const material of materials) if (material.transparent) material.opacity = object.userData.__fxBaseOpacity * (1 - progress);
+        });
+      } else {
+        e.mesh.scale.multiplyScalar(e.smoke ? 1.015 : 1.06);
+        e.mat.opacity = Math.max(0, (e.life / e.max) * (e.smoke ? 0.4 : 1));
+        if (e.smoke) e.mesh.position.y += dt * 0.55;
+      }
       if (e.life <= 0) {
         scene.remove(e.mesh);
-        e.geo.dispose(); e.mat.dispose();
+        if (e.kind === 'model-explosion' || e.kind === 'model-muzzle') disposeObject3D(e.mesh);
+        else { e.geo.dispose(); e.mat.dispose(); }
         fx.splice(i, 1);
       }
     }
@@ -3005,6 +3099,125 @@ if (new URLSearchParams(location.search).get('qa') === 'combat-rig') {
       };
     }
   };
+}
+
+if (new URLSearchParams(location.search).get('combat-rig') === '1' || new URLSearchParams(location.search).get('qa') === 'combat-rig') {
+  let probeShooter = null;
+  let probeTarget = null;
+  window.__BLUE_ALERTS_COMBAT_QA = {
+    arm() {
+      probeShooter = units.find(u => !u.dead && u.team === 1 && u.kind === 'light' &&
+        u.g.userData.turret && u.g.userData.flash);
+      probeTarget = units.find(u => !u.dead && u.team === 2 && u.kind === 'light');
+      if (!probeShooter || !probeTarget) throw new Error('Combat rig probe units are unavailable');
+      probeShooter.g.position.set(0, 0.04, 0);
+      probeShooter.g.rotation.y = 0.65;
+      probeShooter.path = null;
+      probeShooter.pathIdx = 0;
+      probeShooter.dest = null;
+      probeShooter.combatRouteGoal = null;
+      probeShooter.atkTarget = probeTarget;
+      probeShooter.cd = 0;
+      probeTarget.g.position.set(0, 0.04, 8);
+      probeTarget.g.rotation.y = 0;
+      probeTarget.speed = 0;
+      probeTarget.dmg = 0;
+      probeTarget.path = null;
+      probeTarget.dest = null;
+      probeTarget.atkTarget = null;
+      return { shooterId: probeShooter.id, targetId: probeTarget.id };
+    },
+    snapshot() {
+      if (!probeShooter || !probeTarget) return null;
+      probeShooter.g.updateMatrixWorld(true);
+      const turret = probeShooter.g.userData.turret;
+      const direction = new THREE.Vector3(1, 0, 0)
+        .applyQuaternion(turret.getWorldQuaternion(new THREE.Quaternion())).normalize();
+      const targetDirection = new THREE.Vector3(
+        probeTarget.g.position.x - probeShooter.g.position.x,
+        0,
+        probeTarget.g.position.z - probeShooter.g.position.z
+      ).normalize();
+      const flash = probeShooter.g.userData.flash;
+      const muzzleWorld = new THREE.Vector3();
+      flash.getWorldPosition(muzzleWorld);
+      let flashOpacity = 0;
+      flash.traverse(part => {
+        if (part.material && Number.isFinite(part.material.opacity)) {
+          flashOpacity = Math.max(flashOpacity, part.material.opacity);
+        }
+      });
+      const projectile = projectiles.find(p => p.shooter === probeShooter);
+      return {
+        turretAvailable: !!turret,
+        flashVisible: flash.visible,
+        flashOpacity,
+        alignment: direction.dot(targetDirection),
+        muzzleWorld: muzzleWorld.toArray(),
+        projectileStart: projectile?.start?.toArray() || null
+      };
+    }
+  };
+}
+
+if (new URLSearchParams(location.search).get('qa') === '1') {
+  const visibleModelMuzzleFlashCount = () => {
+    let count = 0;
+    for (const unit of units) {
+      const flash = unit.g?.userData?.flash;
+      if (flash?.userData?.effectType !== 'muzzle-flash' || !flash.visible) continue;
+      let opacity = 0;
+      flash.traverse(part => {
+        const materials = Array.isArray(part.material) ? part.material : [part.material];
+        for (const material of materials) if (material && Number.isFinite(material.opacity)) opacity = Math.max(opacity, material.opacity);
+      });
+      if (opacity > 0.05) count++;
+    }
+    return count;
+  };
+  const combatState = () => ({
+    activeProjectiles: projectiles.length,
+    modelProjectiles: projectiles.filter(p => p.mesh?.userData?.kind === 'projectile').length,
+    modelMuzzleFlashes: fx.filter(e => e.kind === 'model-muzzle').length + visibleModelMuzzleFlashCount(),
+    modelExplosions: fx.filter(e => e.kind === 'model-explosion').length,
+    modelExplosionLives: fx.filter(e => e.kind === 'model-explosion').map(e => e.life),
+    started,
+    gameOver,
+    time,
+    frameCount: qaFrameCount,
+    lastFrameDelta: qaLastFrameDelta,
+    hasFocus: document.hasFocus(),
+    visibilityState: document.visibilityState,
+    kills,
+    credits,
+    livingBlueCombatUnits: units.filter(u => !u.dead && u.team === 1 && u.dmg > 0).length,
+    livingRedCombatUnits: units.filter(u => !u.dead && u.team === 2 && u.dmg > 0).length
+  });
+  window.__BLUE_ALERTS_COMBAT_QA__ = Object.freeze({
+    state: combatState,
+    fire() {
+      const shooter = units.find(u => !u.dead && u.team === 1 && u.dmg > 0);
+      const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);
+      if (!shooter || !target) throw new Error('Combat QA requires living blue and red combat units.');
+      camTarget.set(shooter.g.position.x, 0, shooter.g.position.z);
+      camDist = Math.min(camDist, 26);
+      fireProjectile(shooter, target);
+      return { shooterKind: shooter.kind, targetKind: target.kind, ...combatState() };
+    },
+    destroyEnemyUnit() {
+      const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);
+      if (!target) throw new Error('Combat QA requires a living red combat unit.');
+      const targetKind = target.kind, hpBefore = target.hp, killsBefore = kills, creditsBefore = credits;
+      camTarget.set(target.g.position.x, 0, target.g.position.z);
+      camDist = Math.min(camDist, 26);
+      applyDamage(target, hpBefore, 1);
+      return {
+        targetKind, targetDead: target.dead, targetRemoved: !scene.children.includes(target.g),
+        killsDelta: kills - killsBefore, creditsDelta: credits - creditsBefore,
+        ...combatState()
+      };
+    }
+  });
 }
 
 tick();
