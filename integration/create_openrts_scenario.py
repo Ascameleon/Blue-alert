@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import shutil
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -121,6 +122,15 @@ engagement["initialEngagement"] = units
 output_path.parent.mkdir(parents=True, exist_ok=True)
 output_path.write_text(json.dumps(data, separators=(",", ":")))
 
+# OpenRTS loads a same-basename .btfatlas sidecar for every .btf map.
+source_atlas_path = base_path.with_name(base_path.name + "atlas")
+output_atlas_path = output_path.with_name(output_path.name + "atlas")
+if not source_atlas_path.is_file():
+    raise RuntimeError(f"Source map atlas is missing: {source_atlas_path}")
+shutil.copyfile(source_atlas_path, output_atlas_path)
+if not output_atlas_path.is_file() or output_atlas_path.stat().st_size != source_atlas_path.stat().st_size:
+    raise RuntimeError("Generated map atlas sidecar is missing or incomplete")
+
 # Re-open the written file to prove the runtime input is valid JSON and complete.
 verified = json.loads(output_path.read_text())
 verified_units = verified["engagement"]["initialEngagement"]
@@ -146,6 +156,9 @@ report = {
     "ramp_tile_reference_count": ramp_tile_reference_count,
     "source_map": str(base_path),
     "output_map": str(output_path),
+    "source_atlas": str(source_atlas_path),
+    "output_atlas": str(output_atlas_path),
+    "atlas_bytes": output_atlas_path.stat().st_size,
 }
 report_path.parent.mkdir(parents=True, exist_ok=True)
 report_path.write_text(json.dumps(report, indent=2) + "\n")
