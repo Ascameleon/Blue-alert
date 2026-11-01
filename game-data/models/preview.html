@@ -35,12 +35,22 @@ hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile la
 barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
 refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],
 turret:['Tourelle défensive','Socle blindé, plateforme pivotante et canon orientable.'],
-landscape:['Paysage tactique','Terrain vallonné déterministe, route, marquages, arbres low-poly et rochers.'],\naircraft:['Avion d’attaque','Fuselage profilé, cockpit, ailes, empennage, réacteurs, train et pylônes d’armement.'],\nhelicopter:['Hélicoptère d’assaut','Cabine blindée, verrière, poutre de queue, rotor principal et rotor anticouple.'],\ndrone:['Drone de reconnaissance','Châssis quadrirotor, bras carbone, moteurs, hélices et caméra sur nacelle.'],\nprojectile:['Projectile','Corps balistique, ogive, ailettes et traceur lumineux.'],\nexplosion:['Explosion','Noyau incandescent, anneaux de choc, étincelles et fumée.']
+landscape:['Paysage tactique','Terrain vallonné déterministe, route, marquages, arbres low-poly et rochers.'],
+aircraft:['Avion d’attaque','Fuselage profilé, cockpit, ailes, empennage, réacteurs, train et pylônes d’armement.'],
+helicopter:['Hélicoptère d’assaut','Cabine blindée, verrière, poutre de queue, rotor principal et rotor anticouple.'],
+drone:['Drone de reconnaissance','Châssis quadrirotor, bras carbone, moteurs, hélices et caméra sur nacelle.'],
+projectile:['Projectile','Corps balistique, ogive, ailettes et traceur lumineux.'],
+explosion:['Explosion','Noyau incandescent, anneaux de choc, étincelles et fumée.']
 };
 function build(){clear();const a=document.querySelector('#asset').value,t=document.querySelector('#team').value;
 if(a==='tank')current=createTank(THREE,{team:t});
 else if(a==='infantry')current=createInfantry(THREE,{team:t});
 else if(a==='landscape'){current=createLandscape(THREE,{size:80});}
+else if(a==='aircraft')current=createAircraft(THREE,{team:t});
+else if(a==='helicopter')current=createHelicopter(THREE,{team:t});
+else if(a==='drone')current=createDrone(THREE,{team:t});
+else if(a==='projectile')current=createProjectile(THREE,{team:t});
+else if(a==='explosion')current=createExplosion(THREE);
 else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
 scene.add(current);document.querySelector('#title').textContent=desc[a][0];document.querySelector('#desc').textContent=desc[a][1];
 controls.target.set(0,a==='infantry'?.7:1,0);camera.position.set(a==='landscape'?22:8,a==='landscape'?25:7,a==='landscape'?24:11);controls.update();}
@@ -48,5 +58,5 @@ document.querySelector('#asset').addEventListener('change',build);document.query
 document.querySelector('#reset').addEventListener('click',build);
 function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
 new ResizeObserver(resize).observe(host);resize();build();
-renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+renderer.setAnimationLoop(()=>{if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;controls.update();renderer.render(scene,camera);});
 </script></body></html>
