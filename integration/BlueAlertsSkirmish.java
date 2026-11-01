@@ -10,6 +10,7 @@ import model.battlefield.army.ArmyManager;
 import model.battlefield.army.components.Unit;
 import event.ControllerChangeEvent;
 import event.EventManager;
+import com.jme3.math.Vector3f;
 
 /**
  * BLUE ALERTS first playable OpenRTS skirmish.
@@ -64,6 +65,12 @@ public class BlueAlertsSkirmish extends MainRTS {
                 throw new IllegalStateException("No BLUE ALERTS units moved after the group move order.");
             }
             movementVerified = true;
+            // The stock editor camera starts near map origin; explicitly frame
+            // the skirmish cluster so CI screenshots prove that the units render.
+            cam.setFrustumPerspective(55f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
+            cam.setLocation(new Vector3f(40f, 18f, 34f));
+            cam.lookAt(new Vector3f(40f, 44f, 0f), Vector3f.UNIT_Z);
+            System.out.println("BLUE ALERTS camera framed around skirmish units at " + cam.getLocation());
         }
     }
 
