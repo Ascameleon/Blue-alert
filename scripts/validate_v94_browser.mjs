@@ -1,0 +1,165 @@
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { readFile, mkdir, stat } from 'node:fs/promises';
+import { extname, resolve, sep } from 'node:path';
+import { chromium } from 'playwright';
+
+const root = process.cwd();
+const allowed = new Set([
+  '/BLUE_ALERTS_v94_ASSET_INTEGRATION.html',
+  '/game-data/models/blue-alert-models.js'
+]);
+const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
+const server = createServer(async (req, res) => {
+  try {
+    const pathname = decodeURIComponent(new URL(req.url, 'http://127.0.0.1').pathname);
+    if (!allowed.has(pathname)) { res.writeHead(404); res.end('not found'); return; }
+    const file = resolve(root, '.' + pathname);
+    if (!file.startsWith(root + sep)) { res.writeHead(403); res.end('forbidden'); return; }
+    const data = await readFile(file);
+    res.writeHead(200, { 'content-type': mime[extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
+    res.end(data);
+  } catch (error) {
+    res.writeHead(500); res.end(String(error));
+  }
+});
+await new Promise((resolveListen, reject) => {
+  server.once('error', reject);
+  server.listen(0, '127.0.0.1', resolveListen);
+});
+const address = server.address();
+const url = 'http://127.0.0.1:' + address.port + '/BLUE_ALERTS_v94_ASSET_INTEGRATION.html';
+const output = resolve(root, 'artifacts/v94-browser');
+await mkdir(output, { recursive: true });
+let browser;
+const failures = [];
+const successfulThree = [];
+const successfulModel = [];
+function watch(page) {
+  page.on('pageerror', error => failures.push('pageerror: ' + error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') failures.push('console: ' + message.text());
+  });
+  page.on('response', response => {
+    if (response.status() >= 200 && response.status() < 300) {
+      if (response.url().includes('three.module.js')) successfulThree.push(response.url());
+      if (response.url().includes('blue-alert-models.js')) successfulModel.push(response.url());
+    }
+  });
+}
+async function loadGame(page) {
+  watch(page);
+  const response = await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+  assert.equal(response?.status(), 200, 'v94 game HTML must load');
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('#viewport canvas');
+    return canvas && canvas.width > 0 && canvas.height > 0 &&
+      !document.getElementById('blue2dFallback') &&
+      !document.getElementById('blueRuntimeError') &&
+      !document.getElementById('blueStartupError');
+  }, null, { timeout: 30000 });
+  await page.locator('#btnStart').click();
+  await page.waitForFunction(() => document.getElementById('startOverlay')?.classList.contains('hidden'));
+  await page.waitForTimeout(1200);
+}
+async function metrics(page) {
+  return page.evaluate(() => {
+    const viewport = document.querySelector('#viewport');
+    const canvas = viewport?.querySelector('canvas');
+    const vr = viewport?.getBoundingClientRect();
+    const cr = canvas?.getBoundingClientRect();
+    const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
+    return {
+      viewportWidth: innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportRect: { width: vr?.width || 0, height: vr?.height || 0 },
+      canvasRect: { width: cr?.width || 0, height: cr?.height || 0 },
+      canvasBacking: { width: canvas?.width || 0, height: canvas?.height || 0 },
+      webgl: !!gl,
+      contextLost: gl ? gl.isContextLost() : true,
+      renderer: gl ? gl.getParameter(gl.RENDERER) : 'unavailable',
+      startOverlayHidden: document.getElementById('startOverlay')?.classList.contains('hidden'),
+      fallback: !!document.getElementById('blue2dFallback'),
+      runtimeError: !!document.getElementById('blueRuntimeError'),
+      startupError: !!document.getElementById('blueStartupError')
+    };
+  });
+}
+try {
+  browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--enable-webgl', '--ignore-gpu-blocklist',
+      '--use-gl=angle', '--use-angle=swiftshader',
+      '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'
+    ]
+  });
+
+  const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+  await loadGame(desktop);
+  const desktopMetrics = await metrics(desktop);
+  assert.ok(desktopMetrics.webgl && !desktopMetrics.contextLost, 'desktop must render with a live WebGL context');
+  assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
+  assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
+  await desktop.screenshot({ path: output + '/desktop-v94-gameplay.png', fullPage: true });
+  await desktop.locator('#btnSound').click();
+  await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : OFF', 'desktop sound toggle must respond');
+  await desktop.locator('#btnSound').click();
+  await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : ON', 'desktop sound toggle must restore');
+
+  const mobile = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 1,
+    isMobile: true,
+    hasTouch: true
+  });
+  await loadGame(mobile);
+  const mobileMetrics = await metrics(mobile);
+  const touchTargets = await mobile.evaluate(() => {
+    const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
+      const r = el.getBoundingClientRect();
+      return { width: r.width, height: r.height, text: el.textContent.trim() };
+    });
+    const card = document.querySelector('#cards .card');
+    const r = card?.getBoundingClientRect();
+    return {
+      tabs,
+      firstCard: r ? { width: r.width, height: r.height } : null,
+      sidebarHeight: document.querySelector('#sidebar').getBoundingClientRect().height
+    };
+  });
+  assert.ok(mobileMetrics.webgl && !mobileMetrics.contextLost, 'mobile viewport must render with a live WebGL context');
+  assert.ok(mobileMetrics.documentWidth <= mobileMetrics.viewportWidth + 1, 'mobile game must not overflow horizontally');
+  assert.ok(mobileMetrics.canvasRect.width >= 380 && mobileMetrics.canvasRect.height >= 600, 'mobile battlefield must retain a usable touch area');
+  assert.ok(mobileMetrics.startOverlayHidden && !mobileMetrics.fallback && !mobileMetrics.runtimeError && !mobileMetrics.startupError, 'mobile game must start in the 3D runtime without fallback/errors');
+  assert.equal(touchTargets.tabs.length, 3, 'all three mobile sidebar tabs must be present');
+  assert.ok(touchTargets.tabs.every(t => t.width >= 44 && t.height >= 44), 'every mobile tab must meet the 44px touch-target minimum');
+  assert.ok(touchTargets.firstCard && touchTargets.firstCard.width >= 60 && touchTargets.firstCard.height >= 44, 'mobile build cards must remain tappable');
+  const tabBox = await mobile.locator('#sidebar .tab[data-t="units"]').boundingBox();
+  await mobile.touchscreen.tap(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2);
+  await assert.ok(await mobile.locator('#sidebar .tab[data-t="units"]').evaluate(el => el.classList.contains('active')), 'mobile touch must switch the unit tab');
+  await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
+
+  assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
+  assert.ok(successfulModel.length > 0, 'the local BLUE ALERTS model module must load successfully');
+  assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']) {
+    assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
+  }
+  console.log(JSON.stringify({
+    status: 'PASS',
+    desktop: desktopMetrics,
+    mobile: mobileMetrics,
+    touchTargets,
+    successfulThree,
+    successfulModel,
+    screenshots: ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']
+  }, null, 2));
+} catch (error) {
+  console.error(error);
+  if (failures.length) console.error('Browser errors:', failures);
+  process.exitCode = 1;
+} finally {
+  if (browser) await browser.close();
+  await new Promise(resolveClose => server.close(resolveClose));
+}

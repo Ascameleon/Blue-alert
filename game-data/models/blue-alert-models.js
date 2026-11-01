@@ -12,7 +12,13 @@ const PALETTE = {
   concrete: 0x777a72, sand: 0x9b8c68, grass: 0x53634b
 };
 const mat = (THREE, color, roughness=0.82, metalness=0.12) =>
-  new THREE.MeshStandardMaterial({ color, roughness, metalness });
+  new THREE.MeshPhysicalMaterial({
+    color, roughness, metalness,
+    clearcoat: metalness > 0.35 ? 0.32 : 0.12,
+    clearcoatRoughness: 0.38,
+    reflectivity: 0.62,
+    envMapIntensity: metalness > 0.35 ? 1.25 : 0.8
+  });
 const box = (THREE, parent, name, size, position, material, rotation) => {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
   mesh.name = name; mesh.position.set(...position);
@@ -91,7 +97,7 @@ export function createInfantry(THREE, options={}) {
     box(THREE,g,'knee-pad',[.16,.12,.17],[side*.1,.31,.08],armorPlate);
     sphere(THREE,g,'helmet-goggle-lens',.045,[side*.075,1.17,.12],lens,[1,.7,.45]);
   }
-  box(THREE,g,'radio-antenna',[.025,.42,.025],[-.13,1.12,-.2],dark);
+  box(THREE,g,'radio-antenna',[.025,.42,.025],[-.13,1.12,-.2],boots);
   box(THREE,g,'backpack',[.22,.3,.13],[-.02,.78,-.17],cloth);
   for (const side of [-1,1]) {
     box(THREE,g,'upper-arm',[.12,.32,.13],[side*.23,.79,0],uniform,[0,0,side*-.18]);
@@ -115,9 +121,14 @@ export function createBuilding(THREE, type='barracks', options={}) {
     box(THREE,g,'command-core',[2.35,1.55,1.7],[0,1,0],concrete);
     box(THREE,g,'command-roof',[2.55,.2,1.9],[0,1.83,0],faction);
     box(THREE,g,'front-window',[1.45,.38,.035],[0,1.3,.87],glass);
-    box(THREE,g,'comms-tower',[.42,1.1,.42],[-.72,2.45,-.42],roof);
-    cylinder(THREE,g,'radar-mast',.035,.035,.9,[-.72,3.38,-.42],dark,8);
-    sphere(THREE,g,'radar-dish',.24,[ -.72,3.85,-.42],glass,[1,.25,.55]);
+    // Sculpted communications tower replacing the old square mast.
+    cylinder(THREE,g,'comms-tower-shaft',.2,.34,1.25,[-.72,2.48,-.42],roof,10);
+    cylinder(THREE,g,'comms-platform',.58,.58,.12,[-.72,3.12,-.42],metal,12);
+    cylinder(THREE,g,'radar-cabin',.43,.43,.46,[-.72,3.42,-.42],glass,12);
+    cylinder(THREE,g,'radar-roof',.48,.48,.1,[-.72,3.7,-.42],faction,12);
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;const mullion=box(THREE,g,'radar-cabin-mullion',[.035,.4,.035],[-.72+Math.cos(a)*.42,3.42,-.42+Math.sin(a)*.42],dark);mullion.rotation.y=-a;}
+    cylinder(THREE,g,'radar-mast',.025,.025,.58,[-.72,4.02,-.42],dark,8);
+    const dish=cylinder(THREE,g,'radar-dish',.28,.28,.045,[-.72,4.26,-.42],glass,16);dish.rotation.x=Math.PI/2.7;
     box(THREE,g,'side-wing',[.65,.85,1.25],[1.35,.6,-.28],roof);
   } else if(type==='barracks') {
     box(THREE,g,'main-hall',[2.85,1.25,2.05],[0,.76,0],concrete);
@@ -134,12 +145,46 @@ export function createBuilding(THREE, type='barracks', options={}) {
       cylinder(THREE,g,'pipe',.075,.075,1.2,[x,.78,.65],roof,8);
     }
     box(THREE,g,'loading-bay',[.65,.5,.45],[.65,.36,.75],dark);
+  } else if(type==='controlTower' || type==='tower') {
+    // Elevated octagonal air-traffic/control tower: tapered shaft, buttresses and panoramic glazed cab.
+    const shaft=mat(THREE,0x68777a,.72,.28), trim=mat(THREE,0x303d42,.42,.55), warning=mat(THREE,0xe2ad45,.48,.28);
+    cylinder(THREE,g,'tower-foundation',1.18,1.35,.34,[0,.28,0],dark,12);
+    cylinder(THREE,g,'tower-pedestal',.72,.95,.62,[0,.72,0],concrete,10);
+    cylinder(THREE,g,'tapered-control-shaft',.48,.72,3.05,[0,2.48,0],shaft,10);
+    for(let i=0;i<4;i++){const a=i*Math.PI/2;const brace=box(THREE,g,'tower-buttress',[.2,1.65,.22],[Math.cos(a)*.57,1.15,Math.sin(a)*.57],trim);brace.rotation.z=Math.cos(a)*-.18;brace.rotation.x=Math.sin(a)*.18;}
+    cylinder(THREE,g,'lower-service-ring',.78,.78,.16,[0,1.2,0],trim,12);
+    cylinder(THREE,g,'upper-platform',1.15,1.15,.22,[0,4.12,0],trim,12);
+    cylinder(THREE,g,'observation-deck',1.03,1.03,.12,[0,4.28,0],warning,12);
+    const cab=new THREE.Group();cab.name='panoramic-control-cabin';cab.position.y=4.55;g.add(cab);
+    cylinder(THREE,cab,'cabin-glass-band',.92,.92,.72,[0,0,0],glass,12);
+    cylinder(THREE,cab,'cabin-roof',.98,.98,.16,[0,.43,0],faction,12);
+    cylinder(THREE,cab,'cabin-sill',.98,.98,.12,[0,-.42,0],trim,12);
+    for(let i=0;i<12;i++){const a=i*Math.PI/6;const mullion=box(THREE,cab,'window-mullion',[.045,.68,.045],[Math.cos(a)*.91,0,Math.sin(a)*.91],trim);mullion.rotation.y=-a;}
+    cylinder(THREE,g,'radar-pedestal',.12,.16,.36,[0,5.05,0],metal,10);
+    const radar=new THREE.Group();radar.name='rotating-radar';radar.position.set(0,5.3,0);g.add(radar);
+    cylinder(THREE,radar,'radar-hub',.12,.12,.18,[0,0,0],metal,10);
+    box(THREE,radar,'radar-dish-arm',[1.35,.055,.08],[0,.08,0],trim);
+    sphere(THREE,radar,'radar-dish',.42,[.7,.08,0],glass,[.22,1,.78]);
+    cylinder(THREE,g,'lightning-mast',.025,.025,.72,[0,5.78,0],dark,8);
+    for(let i=0;i<4;i++){const a=i*Math.PI/2;sphere(THREE,g,'aviation-beacon',.075,[Math.cos(a)*.88,4.6,Math.sin(a)*.88],warning,[1,.7,1]);}
+    rotatingGun=radar;
   } else if(type==='turret') {
-    cylinder(THREE,g,'armored-base',.9,1.05,.65,[0,.53,0],concrete,12);
-    cylinder(THREE,g,'rotating-platform',.63,.68,.18,[0,.95,0],faction,12);
-    const head=new THREE.Group(); head.name='rotating-gun'; head.position.y=1.08; g.add(head);
-    box(THREE,head,'turret-head',[1.05,.48,.8],[0,.18,0],faction);
-    cylinder(THREE,head,'defense-cannon',.09,.13,1.25,[.7,.22,0],dark,10).rotation.z=-Math.PI/2;
+    // Circular armored barbette with a faceted rotating cupola, twin barrels and optics.
+    const armor=mat(THREE,0x59666a,.58,.48), edge=mat(THREE,0x252f34,.42,.62), optic=mat(THREE,0x69d4ec,.16,.72);
+    cylinder(THREE,g,'armored-base',1.02,1.18,.72,[0,.55,0],concrete,16);
+    cylinder(THREE,g,'base-rim',1.08,1.08,.12,[0,.91,0],edge,16);
+    cylinder(THREE,g,'rotating-platform',.82,.9,.2,[0,1.08,0],faction,16);
+    const head=new THREE.Group();head.name='rotating-gun';head.position.y=1.18;g.add(head);
+    cylinder(THREE,head,'cupola-lower-ring',.72,.78,.2,[0,.08,0],edge,16);
+    const dome=new THREE.Mesh(new THREE.SphereGeometry(.68,16,10,0,Math.PI*2,0,Math.PI*.58),armor);dome.name='armored-cupola';dome.position.y=.34;dome.scale.y=.82;dome.castShadow=true;dome.receiveShadow=true;head.add(dome);
+    cylinder(THREE,head,'roof-hatch',.2,.24,.1,[-.2,.82,0],edge,12);
+    sphere(THREE,head,'targeting-optic',.13,[.3,.66,.43],optic,[1,.65,.65]);
+    for(const side of [-1,1]){
+      const barrel=cylinder(THREE,head,'autocannon-barrel',.075,.105,1.35,[.76,.42,side*.23],edge,12);barrel.rotation.z=-Math.PI/2;
+      cylinder(THREE,head,'barrel-muzzle',.11,.11,.12,[1.43,.42,side*.23],metal,12).rotation.z=-Math.PI/2;
+      box(THREE,head,'barrel-recoil-sleeve',[.34,.16,.15],[.38,.42,side*.23],armor);
+    }
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;const bolt=cylinder(THREE,g,'ring-bolt',.035,.035,.035,[Math.cos(a)*.96,.99,Math.sin(a)*.96],metal,8);bolt.rotation.x=Math.PI/2;}
     rotatingGun=head;
   } else {
     box(THREE,g,'utility-building',[2.5,1.15,2],[0,.68,0],concrete);
@@ -147,12 +192,15 @@ export function createBuilding(THREE, type='barracks', options={}) {
     box(THREE,g,'door',[.5,.75,.04],[0,.49,1.02],dark);
     box(THREE,g,'utility-window',[.45,.3,.04],[.75,.95,1.02],glass);
   }
-  // faction banner and readable silhouette details
-  box(THREE,g,'faction-panel',[.5,.22,.045],[-1.25,1.25,1.04],faction);
-  for(const x of [-.85,.85]){
-    box(THREE,g,'exterior-light',[.18,.12,.06],[x,1.08,1.42],glass);
-    box(THREE,g,'service-vent',[.42,.26,.07],[x,1.52,-1.42],roof);
-    for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
+  // Rectangular-building details are not reused on curved towers or turrets:
+  // their fixed offsets would leave detached panels and vents outside the silhouette.
+  if(type!=='controlTower' && type!=='tower' && type!=='turret') {
+    box(THREE,g,'faction-panel',[.5,.22,.045],[-1.25,1.25,1.04],faction);
+    for(const x of [-.85,.85]){
+      box(THREE,g,'exterior-light',[.18,.12,.06],[x,1.08,1.42],glass);
+      box(THREE,g,'service-vent',[.42,.26,.07],[x,1.52,-1.42],roof);
+      for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
+    }
   }
   g.userData={kind:'building',buildingType:type,team,rotatingGun}; g.scale.setScalar(scale); return g;
 }

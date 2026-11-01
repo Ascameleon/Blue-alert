@@ -151,12 +151,13 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 
 /* Mobile */
 @media(max-width:800px){
-  #viewport{right:0;bottom:130px}
-  #sidebar{top:auto;left:0;right:0;bottom:0;width:100%;height:130px;flex-direction:row;
+  #viewport{right:0;bottom:150px}
+  #sidebar{top:auto;left:0;right:0;bottom:0;width:100%;height:150px;flex-direction:row;
     border-left:none;border-top:2px solid #1e4060}
   .sb-head,.mission,.queue,.sb-btns{display:none}
   .res-row{display:none}
   .tabs{flex-direction:column;width:52px;border-bottom:none;border-right:1px solid #1a3048}
+  .tab{min-height:44px;display:flex;align-items:center;justify-content:center}
   #cards{grid-template-columns:repeat(4,1fr);flex:1}
   #topbar{right:0}
   #minimap{right:8px;bottom:140px;width:110px;height:82px}
@@ -299,15 +300,18 @@ const THREE = await (async () => {
     'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.module.js'
   ];
   const failures = [];
-  for (const url of sources) {
-    try {
-      return await Promise.race([
-        import(url),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3500))
-      ]);
-    } catch (error) {
-      failures.push(url + ': ' + (error?.message || 'chargement impossible'));
-    }
+  // Start mirrors concurrently: a slow first CDN must not force a false 2D fallback.
+  const attempts = sources.map(url => import(url).catch(error => {
+    failures.push(url + ': ' + (error?.message || 'chargement impossible'));
+    throw error;
+  }));
+  try {
+    return await Promise.race([
+      Promise.any(attempts),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('délai global Three.js dépassé (15000 ms)')), 15000))
+    ]);
+  } catch (error) {
+    if (!(error instanceof AggregateError)) failures.push('timeout global: ' + (error?.message || 'chargement impossible'));
   }
   const viewport = document.getElementById('viewport');
   if (viewport) {
@@ -395,7 +399,31 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.12;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.physicallyCorrectLights = true;
+// Procedural studio environment: adds real reflections to metallic PBR surfaces
+// without downloading HDRIs, textures or using a paid service.
+const envCanvas = document.createElement('canvas');
+envCanvas.width = 1024; envCanvas.height = 512;
+const envCtx = envCanvas.getContext('2d');
+const envGradient = envCtx.createLinearGradient(0, 0, 0, 512);
+envGradient.addColorStop(0, '#9bb7c9');
+envGradient.addColorStop(0.38, '#536b78');
+envGradient.addColorStop(0.58, '#283943');
+envGradient.addColorStop(1, '#111a20');
+envCtx.fillStyle = envGradient; envCtx.fillRect(0, 0, 1024, 512);
+for (const panel of [
+  [105,105,155,42,'#e8f1ff'],[410,78,90,28,'#fff0d1'],
+  [690,125,190,36,'#b8dfff'],[300,320,250,18,'#526c7b'],
+  [820,300,110,24,'#d5e6ef']
+]) { envCtx.fillStyle = panel[4]; envCtx.globalAlpha = .78; envCtx.fillRect(...panel.slice(0,4)); }
+envCtx.globalAlpha = 1;
+const studioEnvironment = new THREE.CanvasTexture(envCanvas);
+studioEnvironment.mapping = THREE.EquirectangularReflectionMapping;
+studioEnvironment.colorSpace = THREE.SRGBColorSpace;
+studioEnvironment.needsUpdate = true;
+scene.environment = studioEnvironment;
 viewport.appendChild(renderer.domElement);
 renderer.domElement.addEventListener('webglcontextlost', event => {
   event.preventDefault();

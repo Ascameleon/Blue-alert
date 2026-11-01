@@ -75,6 +75,18 @@ jobs:
           test -s engine/OpenRTS/core/src/app/BlueAlertsInteractiveSmoke.java
           test -s engine/OpenRTS/core/src/app/BlueAlertsSkirmish.java
 
+      - name: Set up Node 22 for browser visual tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Render 3D model preview at desktop and mobile sizes
+        run: node scripts/validate_model_preview_browser.mjs
+      - name: Render playable v94 game at desktop and mobile sizes
+        run: node scripts/validate_v94_browser.mjs
       - name: Build OpenRTS
         working-directory: engine/OpenRTS
         run: ./gradlew --no-daemon build
