@@ -1,6 +1,8 @@
 package app;
 
 import model.ModelManager;
+import event.ControllerChangeEvent;
+import event.EventManager;
 
 /**
  * BLUE ALERTS first playable OpenRTS skirmish.
@@ -12,6 +14,7 @@ public class BlueAlertsSkirmish extends MainRTS {
     public void simpleInitApp() {
         super.simpleInitApp();
         ModelManager.loadBattlefield("assets/maps/blue-alerts-skirmish.btf");
+        EventManager.post(new ControllerChangeEvent(0));
     }
 
     public static void main(String[] args) {
