@@ -52,6 +52,13 @@ public class BlueAlertsSkirmish extends MainRTS {
             long movedUnits = initialPositions.entrySet().stream()
                     .filter(entry -> entry.getKey().pos.getDistance(entry.getValue()) > 0.5)
                     .count();
+            for (Map.Entry<Unit, Point3D> entry : initialPositions.entrySet()) {
+                Unit unit = entry.getKey();
+                System.out.println("BLUE ALERTS unit movement: " + unit.builderID
+                        + " faction=" + unit.faction.getName()
+                        + " distance=" + unit.pos.getDistance(entry.getValue())
+                        + " start=" + entry.getValue() + " end=" + unit.pos);
+            }
             System.out.println("BLUE ALERTS movement smoke test: " + movedUnits + "/12 units moved.");
             if (movedUnits == 0) {
                 throw new IllegalStateException("No BLUE ALERTS units moved after the group move order.");
