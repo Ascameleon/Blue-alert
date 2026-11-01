@@ -109,8 +109,9 @@ try {
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
   const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
   assert.ok(buildBefore, 'build-zone QA diagnostics must be available');
-  assert.ok(buildBefore.hq.team === 1 && buildBefore.hq.labelVisible && buildBefore.hq.perimeterVisible,
-    'the player command HQ must be clearly marked in the live scene');
+  assert.ok(buildBefore.hq.team === 1 && buildBefore.hq.labelVisible && buildBefore.hq.perimeterVisible &&
+    buildBefore.hq.labelY < 6.5 && buildBefore.hq.modelScale >= 1.3,
+    'the player command HQ must be enlarged and its label kept below the mobile HUD');
   assert.ok(buildBefore.pads.every(p => p.pad && p.grid && p.border),
     'both construction pads must have visible ground, grid and perimeter');
   assert.ok(buildBefore.placement.clearNorth.ok,
@@ -183,7 +184,7 @@ try {
     isMobile: true,
     hasTouch: true
   });
-  await loadGame(mobile);
+  await loadGame(mobile, false, true);
   const mobileMetrics = await metrics(mobile);
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
@@ -266,7 +267,26 @@ try {
     'mobile sound toggle must restore the desktop sound control');
 
   await mobile.locator('#mobileCenter').tap();
+  await mobile.locator('.tab[data-t="struct"]').tap();
+  const mobileBuildBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
+  assert.ok(mobileBuildBefore && mobileBuildBefore.pads.every(p => p.pad && p.grid && p.border),
+    'mobile must render the same two construction pads');
+  await mobile.waitForTimeout(2800);
   await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
+
+  // Real touch placement on the 390x844 mobile viewport.
+  const mobileBuildPoint = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-12, -20));
+  assert.ok(mobileBuildPoint.visible, 'mobile construction target must be visible above the bottom HUD');
+  await mobile.locator('#cards .card').first().tap();
+  await mobile.touchscreen.tap(mobileBuildPoint.x, mobileBuildPoint.y);
+  await mobile.waitForFunction(
+    count => window.__BLUE_ALERTS_BUILD_QA.snapshot().playerBuildingCount === count + 1,
+    mobileBuildBefore.playerBuildingCount,
+    { timeout: 5000 }
+  );
+  const mobileBuildAfter = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
+  assert.equal(mobileBuildAfter.credits, mobileBuildBefore.credits - 350,
+    'a real mobile touch placement must deduct the configured power-station cost');
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.ok(successfulModel.length > 0, 'the local BLUE ALERTS model module must load successfully');

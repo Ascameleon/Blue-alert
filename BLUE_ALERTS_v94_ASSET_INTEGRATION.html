@@ -587,7 +587,7 @@ function addBuildPadVisual(name, zMin, zMax) {
   const pad = new THREE.Mesh(
     new THREE.PlaneGeometry(BUILD_ZONE.maxX - BUILD_ZONE.minX, zMax - zMin),
     new THREE.MeshBasicMaterial({
-      color: 0x174e69, transparent: true, opacity: 0.16,
+      color: 0x174e69, transparent: true, opacity: 0.12,
       depthWrite: false, side: THREE.DoubleSide
     })
   );
@@ -607,7 +607,7 @@ function addBuildPadVisual(name, zMin, zMax) {
   gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(gridVertices, 3));
   const grid = new THREE.LineSegments(
     gridGeometry,
-    new THREE.LineBasicMaterial({ color: 0x62c8ed, transparent: true, opacity: 0.26, depthWrite: false })
+    new THREE.LineBasicMaterial({ color: 0x62c8ed, transparent: true, opacity: 0.20, depthWrite: false })
   );
   grid.name = 'player-build-grid-' + name;
   scene.add(grid);
@@ -959,7 +959,7 @@ spawnOre(44, 20, 2800);
 spawnOre(52, 26, 2200);
 
 /* ─── Buildings ──────────────────────────────────────────── */
-function createBuilding(x, z, team, kind) {
+function createBuilding(x, z, team, kind, visualScale = 1) {
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
   const col = team === 1 ? MAT.blue : MAT.red;
   const trim = team === 1 ? MAT.blueG : MAT.gold;
@@ -972,13 +972,13 @@ function createBuilding(x, z, team, kind) {
     hp = 2500; radius = 5.5;
   } else if (BLUE_MODELS && kind !== 'citadel') {
     const modelType = ({ hq: 'headquarters', power: 'utility', factory: 'utility', barracks: 'barracks', refinery: 'refinery', turret: 'turret' })[kind] || 'utility';
-    const model = BLUE_MODELS.createBuilding(THREE, modelType, { team: team === 1 ? 'blue' : 'red' });
+    const model = BLUE_MODELS.createBuilding(THREE, modelType, { team: team === 1 ? 'blue' : 'red', scale: visualScale });
     // Keep the original gameplay footprint/health; swap only the visual mesh.
     g.add(model);
     g.userData.head = model.userData.rotatingGun || null;
-    if (kind === 'hq') { hp = 1000; radius = 3.5; }
-    else if (kind === 'power') { hp = 350; radius = 2.6; }
-    else if (kind === 'refinery') { hp = 550; radius = 3.3; }
+    if (kind === 'hq') { hp = 1000; radius = 3.5 * visualScale; }
+    else if (kind === 'power') { hp = 350; radius = 2.6 * visualScale; }
+    else if (kind === 'refinery') { hp = 550; radius = 3.3 * visualScale; }
     else if (kind === 'turret') { hp = 300; radius = 1.8; }
     else if (kind === 'factory') { hp = 600; radius = 3.0; }
     else { hp = 450; radius = 3.0; }
@@ -1051,7 +1051,7 @@ function createBuilding(x, z, team, kind) {
 // Player base — clustered around the command HQ on the two clear build pads.
 function createHQMarker(hq) {
   const perimeter = new THREE.Mesh(
-    new THREE.RingGeometry(4.35, 4.52, 64),
+    new THREE.RingGeometry(hq.r + 0.55, hq.r + 0.72, 64),
     new THREE.MeshBasicMaterial({
       color: 0x65d8ff, transparent: true, opacity: 0.82,
       side: THREE.DoubleSide, depthWrite: false
@@ -1078,16 +1078,16 @@ function createHQMarker(hq) {
     map: texture, transparent: true, depthTest: false, depthWrite: false
   }));
   label.name = 'player-hq-label';
-  label.position.set(hq.x, 8.1, hq.z);
-  label.scale.set(10.5, 2.65, 1);
+  label.position.set(hq.x, 5.8, hq.z + 4.4);
+  label.scale.set(9.8, 2.45, 1);
   scene.add(label);
   hq.g.userData.hqMarker = label;
 }
-const playerHQ = createBuilding(-32, -16, 1, 'hq');
-createBuilding(-22, 12, 1, 'power');
-createBuilding(-42, 12, 1, 'refinery');
-createBuilding(-20, -26, 1, 'turret');
-createBuilding(-44, 26, 1, 'turret');
+const playerHQ = createBuilding(-32, -16, 1, 'hq', 1.35);
+createBuilding(-20, -22, 1, 'power', 0.9);
+createBuilding(-46, -22, 1, 'refinery', 0.9);
+createBuilding(-20, -32, 1, 'turret', 0.95);
+createBuilding(-46, -32, 1, 'turret', 0.95);
 createHQMarker(playerHQ);
 
 // Enemy base
@@ -1543,6 +1543,8 @@ if (new URLSearchParams(location.search).get('build-zone') === '1') {
         hq: {
           x: playerHQ.x, z: playerHQ.z, team: playerHQ.team,
           labelVisible: !!scene.getObjectByName('player-hq-label'),
+          labelY: scene.getObjectByName('player-hq-label')?.position.y ?? null,
+          modelScale: playerHQ.g.children[0]?.scale.x ?? null,
           perimeterVisible: !!scene.getObjectByName('player-hq-perimeter')
         },
         pads: ['north', 'south'].map(name => ({
