@@ -956,7 +956,7 @@ function createBuilding(x, z, team, kind) {
     id: Math.random().toString(36).slice(2),
     g, x, z, team, kind, hp, maxHp: hp, r: radius,
     dead: false, cd: Math.random(),
-    damageFxCd: 0.25, hitFlashT: 0,
+    damageFxCd: 0.25,
     head: g.userData.head || null,
     core: g.userData.core || null,
     dmg: kind === 'turret' ? 22 : 0,
@@ -1668,7 +1668,6 @@ function applyDamage(target, amount, fromTeam) {
   if (!target || target.dead) return;
   target.hp -= amount;
   if (target.g && target.kind !== 'light' && target.kind !== 'heavy' && target.kind !== 'infantry' && target.kind !== 'harvester') {
-    target.hitFlashT = 0.14;
     target.damageFxCd = Math.min(target.damageFxCd || 0, 0.12);
   }
   const pos = target.g
@@ -2634,7 +2633,6 @@ function tick() {
     // ── Building damage states: intermittent smoke and critical fire ──
     for (const b of buildings) {
       if (b.dead || !b.g) continue;
-      b.hitFlashT = Math.max(0, (b.hitFlashT || 0) - dt);
       if (b.damageFxCd === undefined) b.damageFxCd = 0.25;
       if (b.hp < b.maxHp * 0.55) {
         b.damageFxCd -= dt;
