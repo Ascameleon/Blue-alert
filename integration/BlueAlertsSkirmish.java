@@ -87,7 +87,7 @@ public class BlueAlertsSkirmish extends MainRTS {
             // The stock editor camera starts near map origin; explicitly frame
             // the skirmish cluster so CI screenshots prove that the units render.
             cam.setFrustumPerspective(55f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
-            cam.setLocation(new Vector3f(23f, 10f, 30f));
+            cam.setLocation(new Vector3f(23f, 18f, 20f));
             cam.lookAt(new Vector3f(23f, 40f, 0f), Vector3f.UNIT_Z);
             System.out.println("BLUE ALERTS camera framed around skirmish units at " + cam.getLocation());
         }
