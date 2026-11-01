@@ -147,7 +147,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
     box(THREE,g,'loading-bay',[.65,.5,.45],[.65,.36,.75],dark);
   } else if(type==='controlTower' || type==='tower') {
     // Elevated octagonal air-traffic/control tower: tapered shaft, buttresses and panoramic glazed cab.
-    const shaft=mat(THREE,0x68777a,.72,.28), trim=mat(THREE,0x303d42,.42,.55), warning=mat(THREE,0xe2ad45,.48,.28);
+    const shaft=mat(THREE,0x68777a,.72,.28), trim=mat(THREE,0x303d42,.42,.55), warning=mat(THREE,0xe2ad45,.48,.28);\n    const beaconMat=new THREE.MeshStandardMaterial({color:0xffc75a,emissive:0xff9e36,emissiveIntensity:.8,roughness:.28,metalness:.18});
     cylinder(THREE,g,'tower-foundation',1.18,1.35,.34,[0,.28,0],dark,12);
     cylinder(THREE,g,'tower-pedestal',.72,.95,.62,[0,.72,0],concrete,10);
     cylinder(THREE,g,'tapered-control-shaft',.48,.72,3.05,[0,2.48,0],shaft,10);
@@ -166,7 +166,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
     cylinder(THREE,cab,'cabin-roof',.98,.98,.16,[0,.43,0],faction,12);
     cylinder(THREE,cab,'cabin-sill',.98,.98,.12,[0,-.42,0],trim,12);
     for(let i=0;i<12;i++){const a=i*Math.PI/6;const mullion=box(THREE,cab,'window-mullion',[.045,.68,.045],[Math.cos(a)*.91,0,Math.sin(a)*.91],trim);mullion.rotation.y=-a;}
-    for(let i=0;i<4;i++){const a=i*Math.PI/2;const lamp=sphere(THREE,cab,'cabin-navigation-light',.055,[Math.cos(a)*.99,.12,Math.sin(a)*.99],warning,[1,.8,1]);lamp.userData.emissivePulse=true;}
+    for(let i=0;i<4;i++){const a=i*Math.PI/2;const lamp=sphere(THREE,cab,'cabin-navigation-light',.055,[Math.cos(a)*.99,.12,Math.sin(a)*.99],beaconMat,[1,.8,1]);lamp.userData.emissivePulse=true;}
     cylinder(THREE,g,'radar-pedestal',.12,.16,.36,[0,5.05,0],metal,10);
     const radar=new THREE.Group();radar.name='rotating-radar';radar.position.set(0,5.3,0);g.add(radar);
     cylinder(THREE,radar,'radar-hub',.12,.12,.18,[0,0,0],metal,10);
