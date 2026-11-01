@@ -91,24 +91,26 @@ template = templates[0]
 
 # OpenRTS default factions: 1 = red, 2 = blue.
 placements = [
-    # Keep every unit on level-0 terrain. The previous spawn set put four
-    # units on elevated/cliff tiles; those units loaded but could not move.
-    ("rollerTank", "1", 32, 34, 0.0),
-    ("rollerTank", "1", 34, 34, 0.0),
-    ("Marine", "1", 32, 36, 0.0),
-    ("Marine", "1", 35, 36, 0.0),
-    ("Marine", "1", 31, 43, 0.0),
-    ("Marine", "1", 33, 44, 0.0),
-    ("rollerTank", "2", 49, 37, math.pi),
-    ("rollerTank", "2", 51, 38, math.pi),
-    ("Marine", "2", 49, 40, math.pi),
-    ("Marine", "2", 51, 42, math.pi),
-    ("Marine", "2", 49, 44, math.pi),
-    ("Marine", "2", 48, 46, math.pi),
+    # Keep both factions in the western flat lane, clear of the central
+    # cliff cluster. This prevents the cliff from occluding units in the
+    # camera view while preserving the two-faction group-movement test.
+    ("rollerTank", "1", 18, 35, 0.0),
+    ("rollerTank", "1", 18, 40, 0.0),
+    ("Marine", "1", 19, 36, 0.0),
+    ("Marine", "1", 20, 37, 0.0),
+    ("Marine", "1", 19, 39, 0.0),
+    ("Marine", "1", 20, 41, 0.0),
+    ("rollerTank", "2", 28, 35, math.pi),
+    ("rollerTank", "2", 28, 40, math.pi),
+    ("Marine", "2", 27, 36, math.pi),
+    ("Marine", "2", 26, 37, math.pi),
+    ("Marine", "2", 27, 39, math.pi),
+    ("Marine", "2", 26, 41, math.pi),
 ]
 
 units = []
 seen_positions = set()
+minimum_cliff_clearance = float('inf')
 for builder_id, faction_name, x, y, orientation in placements:
     if builder_id not in required:
         raise RuntimeError(f"Unexpected unit builder: {builder_id}")
@@ -117,6 +119,13 @@ for builder_id, faction_name, x, y, orientation in placements:
     if (x, y) in seen_positions:
         raise RuntimeError(f"Duplicate unit position: {(x, y)}")
     tile_index = y * width + x
+    cliff_clearance = min(
+        (abs(x - (index % width)) + abs(y - (index // width)) for index in original_cliff_tile_indices),
+        default=999,
+    )
+    minimum_cliff_clearance = min(minimum_cliff_clearance, cliff_clearance)
+    if cliff_clearance < 5:
+        raise RuntimeError(f"Unit spawn is too close to the central cliff: {(x, y)} (clearance={cliff_clearance})")
     terrain_tile = map_tiles[tile_index]
     if (
         int(terrain_tile.get("level", 0)) != 0
@@ -183,7 +192,8 @@ report = {
     "unit_count": len(verified_units),
     "factions": {"1": "red", "2": "blue"},
     "unit_composition": {"rollerTank": 4, "Marine": 8},
-    "spawn_terrain": "all 12 units validated on level-0, elevation-0, non-cliff tiles",
+    "spawn_terrain": "all 12 units validated on level-0, elevation-0, non-cliff tiles in the western flat lane",
+    "minimum_manhattan_clearance_from_cliff": minimum_cliff_clearance,
     "cliff_shape_id": DEFAULT_CLIFF_SHAPE_ID,
     "cliff_shape_defaults_applied": cliff_shape_defaults_applied,
     "ramp_count": ramp_count,
