@@ -65,11 +65,20 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
     private final ActionListener selectDiagnosticListener = (name, pressed, tpf) -> {
         long entityId = fieldCtrl.spatialSelector.getEntityId();
         Point2D coord = fieldCtrl.spatialSelector.getCoord(rootNode);
+        Vector3f pickPoint = unitPickPoint(selectedUnit);
+        Vector3f projected = cam.getScreenCoordinates(pickPoint);
         System.out.println("BLUE ALERTS INTERACTIVE RAW_SELECT pressed=" + pressed
                 + " cursor=" + inputManager.getCursorPosition()
                 + " entity=" + entityId
+                + " expectedEntity=" + selectedUnit.getId()
                 + " coord=" + coord
+                + " unitPos=" + selectedUnit.pos
+                + " pickPoint=" + pickPoint
+                + " projected=" + projected
                 + " selected=" + CommandManager.selection.contains(selectedUnit));
+        if (pressed && entityId == selectedUnit.getId()) {
+            System.out.println("BLUE ALERTS INTERACTIVE RAW_SELECT_TARGET_HIT");
+        }
     };
 
     @Override
@@ -215,10 +224,20 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         cam.update();
     }
 
+    private Vector3f unitPickPoint(Unit unit) {
+        // Pick the visible model itself, not an arbitrary height above the
+        // logical unit origin. This keeps the native ray on the actual mesh.
+        var spatial = unit.actor.getViewElements().spatial;
+        if (spatial != null && spatial.getWorldBound() != null) {
+            return spatial.getWorldBound().getCenter().clone();
+        }
+        Vector3f fallback = TranslateUtil.toVector3f(unit.pos);
+        fallback.z += 0.8f;
+        return fallback;
+    }
+
     private String projectUnit(Unit unit) {
-        Vector3f world = TranslateUtil.toVector3f(unit.pos);
-        world.z += 0.8f;
-        return project(world);
+        return project(unitPickPoint(unit));
     }
 
     private String project(Vector3f world) {
