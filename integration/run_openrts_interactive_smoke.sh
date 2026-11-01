@@ -38,18 +38,21 @@ wait_for_marker() {
     sleep 1
   done
   echo "Timed out waiting for marker: $marker"
+  import -window root "$SCREEN" 2>/dev/null || true
+  echo "Failure screenshot: $SCREEN"
+  echo "Pointer at failure: $(xdotool getmouselocation --shell 2>/dev/null || true)"
+  echo "Focused window at failure: $(xdotool getwindowfocus 2>/dev/null || true)"
   cat "$LOG"
   return 1
 }
 
 wait_for_marker "BLUE ALERTS INTERACTIVE READY" 60
 
-# Use xdotool's XTest click sequence. The prior known-good harness used
-# xdotool click; separate mousedown/mouseup calls did not reach JME's listener
-# reliably in this Xvfb run. Keep a 150 ms hold and retain model-state assertions.
+# Match the exact xdotool click sequence from the previously passing native
+# interaction run. Keep the real JME input and model-state assertions intact.
 send_native_click() {
   local button="$1"
-  xdotool click --clearmodifiers --delay 150 "$button"
+  xdotool click "$button"
   echo "Native XTest click button=$button pointer=$(xdotool getmouselocation --shell)"
 }
 
