@@ -520,6 +520,19 @@ function createSeededTerrainRandom(seed = 0x424c5545) {
   };
 }
 const terrainRandom = createSeededTerrainRandom();
+
+// The player base has two build pads separated by the main supply road.
+const BUILD_ZONE = Object.freeze({
+  minX: -60, maxX: -8, minZ: -36, maxZ: 36,
+  roadHalfWidth: 8, gridStep: 4
+});
+function insideBuildZone(x, z, radius = 0) {
+  if (x - radius < BUILD_ZONE.minX || x + radius > BUILD_ZONE.maxX) return false;
+  if (z - radius < BUILD_ZONE.minZ || z + radius > BUILD_ZONE.maxZ) return false;
+  const northPad = z + radius <= -BUILD_ZONE.roadHalfWidth;
+  const southPad = z - radius >= BUILD_ZONE.roadHalfWidth;
+  return northPad || southPad;
+}
 const terrainGeometry = new THREE.PlaneGeometry(200, 160, 60, 48);
 const terrainPositions = terrainGeometry.attributes.position;
 const terrainColors = new Float32Array(terrainPositions.count * 3);
@@ -567,12 +580,81 @@ addBox(scene, 0, 0.015, 0, 200, 0.03, 5.0, MAT.concrete);
 addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
 for (let x = -95; x < 95; x += 6) addBox(scene, x, 0.055, 0, 2.4, 0.01, 0.12, MAT.line);
 
+// Visible construction pads: the grid is deliberately absent from the road corridor.
+function addBuildPadVisual(name, zMin, zMax) {
+  const centerX = (BUILD_ZONE.minX + BUILD_ZONE.maxX) * 0.5;
+  const centerZ = (zMin + zMax) * 0.5;
+  const pad = new THREE.Mesh(
+    new THREE.PlaneGeometry(BUILD_ZONE.maxX - BUILD_ZONE.minX, zMax - zMin),
+    new THREE.MeshBasicMaterial({
+      color: 0x174e69, transparent: true, opacity: 0.16,
+      depthWrite: false, side: THREE.DoubleSide
+    })
+  );
+  pad.name = 'player-build-pad-' + name;
+  pad.rotation.x = -Math.PI / 2;
+  pad.position.set(centerX, 0.028, centerZ);
+  scene.add(pad);
+
+  const gridVertices = [];
+  for (let x = BUILD_ZONE.minX; x <= BUILD_ZONE.maxX + 0.01; x += BUILD_ZONE.gridStep) {
+    gridVertices.push(x, 0.052, zMin, x, 0.052, zMax);
+  }
+  for (let z = zMin; z <= zMax + 0.01; z += BUILD_ZONE.gridStep) {
+    gridVertices.push(BUILD_ZONE.minX, 0.052, z, BUILD_ZONE.maxX, 0.052, z);
+  }
+  const gridGeometry = new THREE.BufferGeometry();
+  gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(gridVertices, 3));
+  const grid = new THREE.LineSegments(
+    gridGeometry,
+    new THREE.LineBasicMaterial({ color: 0x62c8ed, transparent: true, opacity: 0.26, depthWrite: false })
+  );
+  grid.name = 'player-build-grid-' + name;
+  scene.add(grid);
+
+  const corners = [
+    [BUILD_ZONE.minX, zMin], [BUILD_ZONE.maxX, zMin],
+    [BUILD_ZONE.maxX, zMax], [BUILD_ZONE.minX, zMax]
+  ];
+  const borderVertices = [];
+  for (let i = 0; i < corners.length; i++) {
+    const a = corners[i], b = corners[(i + 1) % corners.length];
+    borderVertices.push(a[0], 0.075, a[1], b[0], 0.075, b[1]);
+  }
+  const borderGeometry = new THREE.BufferGeometry();
+  borderGeometry.setAttribute('position', new THREE.Float32BufferAttribute(borderVertices, 3));
+  const border = new THREE.LineSegments(
+    borderGeometry,
+    new THREE.LineBasicMaterial({ color: 0x72d8ff, transparent: true, opacity: 0.78, depthWrite: false })
+  );
+  border.name = 'player-build-border-' + name;
+  scene.add(border);
+
+  for (const [x, z] of corners) {
+    const beacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.16, 0.42, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0x46bce8, emissive: 0x0b3b58, emissiveIntensity: 0.55,
+        metalness: 0.35, roughness: 0.42
+      })
+    );
+    beacon.position.set(x, 0.23, z);
+    beacon.name = 'player-build-beacon-' + name;
+    scene.add(beacon);
+  }
+}
+function createBuildZoneVisual() {
+  addBuildPadVisual('north', BUILD_ZONE.minZ, -BUILD_ZONE.roadHalfWidth);
+  addBuildPadVisual('south', BUILD_ZONE.roadHalfWidth, BUILD_ZONE.maxZ);
+}
+createBuildZoneVisual();
+
 // Trees — deterministic placement keeps every match and visual test reproducible.
 for (let i = 0; i < (isMobile ? 100 : 160); i++) {
   const x = (terrainRandom() - 0.5) * 185;
   const z = (terrainRandom() - 0.5) * 145;
   if (Math.abs(z) < 7) continue;
-  if (Math.abs(x) < 55 && Math.abs(z) < 35) continue;
+  if (insideBuildZone(x, z, 0) || (Math.abs(x) < 55 && Math.abs(z) < 35)) continue;
   const sc = 0.5 + terrainRandom() * 1.4;
   addCyl(scene, x, 0.4 * sc, z, 0.1 * sc, 0.16 * sc, 0.85 * sc, mkMat(0x4a3820), 6);
   const crown = new THREE.Mesh(new THREE.ConeGeometry(sc * 0.85, 2.3 * sc, 6), i % 3 ? MAT.tree : MAT.tree2);
@@ -584,7 +666,7 @@ for (let i = 0; i < (isMobile ? 100 : 160); i++) {
 for (let i = 0; i < (isMobile ? 48 : 80); i++) {
   const x = (terrainRandom() - 0.5) * 180;
   const z = (terrainRandom() - 0.5) * 140;
-  if (Math.abs(z) < 6) continue;
+  if (Math.abs(z) < 6 || insideBuildZone(x, z, 0)) continue;
   const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15 + terrainRandom() * 0.45, 0), MAT.rock);
   r.position.set(x, 0.1, z);
   r.scale.y = 0.4 + terrainRandom() * 0.5;
@@ -966,12 +1048,47 @@ function createBuilding(x, z, team, kind) {
   return b;
 }
 
-// Player base
-const playerHQ = createBuilding(-32, -6, 1, 'hq');
-createBuilding(-24, 4, 1, 'power');
-createBuilding(-38, 3, 1, 'refinery');
-createBuilding(-20, -4, 1, 'turret');
-createBuilding(-20, 8, 1, 'turret');
+// Player base — clustered around the command HQ on the two clear build pads.
+function createHQMarker(hq) {
+  const perimeter = new THREE.Mesh(
+    new THREE.RingGeometry(4.35, 4.52, 64),
+    new THREE.MeshBasicMaterial({
+      color: 0x65d8ff, transparent: true, opacity: 0.82,
+      side: THREE.DoubleSide, depthWrite: false
+    })
+  );
+  perimeter.name = 'player-hq-perimeter';
+  perimeter.rotation.x = -Math.PI / 2;
+  perimeter.position.set(hq.x, 0.085, hq.z);
+  scene.add(perimeter);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(5,18,30,0.9)';
+  ctx.fillRect(4, 4, 504, 120);
+  ctx.strokeStyle = '#65d8ff'; ctx.lineWidth = 5;
+  ctx.strokeRect(4, 4, 504, 120);
+  ctx.fillStyle = '#e1f7ff'; ctx.font = 'bold 42px Arial, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('QG  •  BASE ALPHA', 256, 66);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const label = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: texture, transparent: true, depthTest: false, depthWrite: false
+  }));
+  label.name = 'player-hq-label';
+  label.position.set(hq.x, 8.1, hq.z);
+  label.scale.set(10.5, 2.65, 1);
+  scene.add(label);
+  hq.g.userData.hqMarker = label;
+}
+const playerHQ = createBuilding(-32, -16, 1, 'hq');
+createBuilding(-22, 12, 1, 'power');
+createBuilding(-42, 12, 1, 'refinery');
+createBuilding(-20, -26, 1, 'turret');
+createBuilding(-44, 26, 1, 'turret');
+createHQMarker(playerHQ);
 
 // Enemy base
 const enemyHQ = createBuilding(34, -6, 2, 'hq');
@@ -1352,11 +1469,47 @@ function onCardClick(it) {
 }
 
 /* ─── Ghost building ─────────────────────────────────────── */
+/* ─── Build placement rules ───────────────────────────────── */
+const BUILDING_RADII = Object.freeze({
+  power: 2.6, refinery: 3.3, barracks: 3.0, factory: 3.0, turret: 1.8
+});
+function placementRadius(kind) {
+  return BUILDING_RADII[kind] || 3.0;
+}
+function validateBuildPlacement(x, z, kind) {
+  const radius = placementRadius(kind);
+  if (z - radius < BUILD_ZONE.roadHalfWidth && z + radius > -BUILD_ZONE.roadHalfWidth) {
+    return { ok: false, reason: 'Route interdite — gardez le couloir logistique libre' };
+  }
+  if (!insideBuildZone(x, z, radius + 0.25)) {
+    return { ok: false, reason: 'Hors du secteur constructible de la base bleue' };
+  }
+  for (const b of buildings) {
+    if (b.dead) continue;
+    if (Math.hypot(b.x - x, b.z - z) < radius + b.r + 0.9) {
+      return { ok: false, reason: 'Emplacement occupé par un bâtiment' };
+    }
+  }
+  for (const u of units) {
+    if (u.dead) continue;
+    const unitRadius = u.kind === 'infantry' ? 0.9 : u.kind === 'harvester' ? 2.6 : 2.1;
+    if (Math.hypot(u.g.position.x - x, u.g.position.z - z) < radius + unitRadius + 0.7) {
+      return { ok: false, reason: 'Déplacez les unités hors de cet emplacement' };
+    }
+  }
+  for (const ore of ores) {
+    if (ore.amount > 0 && Math.hypot(ore.x - x, ore.z - z) < radius + ore.r + 0.8) {
+      return { ok: false, reason: 'Zone de ressource protégée' };
+    }
+  }
+  return { ok: true, reason: 'Emplacement valide' };
+}
+
 function createGhost(kind) {
   clearGhost();
   ghostMesh = new THREE.Group();
   const mat = new THREE.MeshBasicMaterial({ color: 0x40a0e0, transparent: true, opacity: 0.35, depth: true });
-  const footprint = kind === 'turret' ? 2.5 : kind === 'refinery' ? 5 : 4.5;
+  const footprint = placementRadius(kind) * 2;
   const m = new THREE.Mesh(new THREE.BoxGeometry(footprint, 0.15, footprint * 0.85), mat);
   m.position.y = 0.08;
   ghostMesh.add(m);
@@ -1372,12 +1525,55 @@ function clearGhost() {
   if (ghostMesh) { scene.remove(ghostMesh); ghostMesh = null; }
 }
 function updateGhost(wx, wz) {
-  if (!ghostMesh) return;
+  if (!ghostMesh || !placeKind) return;
   ghostMesh.position.set(wx, 0, wz);
-  const ok = wx < 8;
+  const verdict = validateBuildPlacement(wx, wz, placeKind);
+  ghostMesh.userData.buildValid = verdict.ok;
+  ghostMesh.userData.buildReason = verdict.reason;
   ghostMesh.traverse(c => {
-    if (c.material) c.material.color.setHex(ok ? 0x40a0e0 : 0xe04040);
+    if (c.material) c.material.color.setHex(verdict.ok ? 0x35d88b : 0xe04040);
   });
+}
+
+if (new URLSearchParams(location.search).get('build-zone') === '1') {
+  window.__BLUE_ALERTS_BUILD_QA = {
+    snapshot() {
+      return {
+        buildZone: BUILD_ZONE,
+        hq: {
+          x: playerHQ.x, z: playerHQ.z, team: playerHQ.team,
+          labelVisible: !!scene.getObjectByName('player-hq-label'),
+          perimeterVisible: !!scene.getObjectByName('player-hq-perimeter')
+        },
+        pads: ['north', 'south'].map(name => ({
+          pad: !!scene.getObjectByName('player-build-pad-' + name),
+          grid: !!scene.getObjectByName('player-build-grid-' + name),
+          border: !!scene.getObjectByName('player-build-border-' + name)
+        })),
+        placement: {
+          clearNorth: validateBuildPlacement(-12, -20, 'power'),
+          outside: validateBuildPlacement(0, 12, 'power'),
+          road: validateBuildPlacement(-12, 0, 'power'),
+          overlap: validateBuildPlacement(playerHQ.x, playerHQ.z, 'power'),
+          ore: validateBuildPlacement(-18, 30, 'power')
+        },
+        playerBuildingCount: buildings.filter(b => b.team === 1 && !b.dead).length,
+        credits
+      };
+    },
+    projectWorld(x, z) {
+      camera.updateMatrixWorld(true);
+      scene.updateMatrixWorld(true);
+      const point = new THREE.Vector3(x, 0, z).project(camera);
+      const rect = viewport.getBoundingClientRect();
+      return {
+        x: rect.left + (point.x * 0.5 + 0.5) * rect.width,
+        y: rect.top + (-point.y * 0.5 + 0.5) * rect.height,
+        visible: point.z > -1 && point.z < 1 &&
+          point.x >= -1 && point.x <= 1 && point.y >= -1 && point.y <= 1
+      };
+    }
+  };
 }
 
 /* ─── Selection ──────────────────────────────────────────── */
@@ -1998,16 +2194,10 @@ function onPointerUp(e) {
   const world = screenToWorld(e.clientX, e.clientY);
   if (!world) return;
 
-  // Place building
+  // Place building only on the marked base pads; keep roads, units, resources and structures clear.
   if (mode === 'place' && placeKind && !wasRight) {
-    if (world.x > 10) { toast('Zone alliée uniquement (côté ouest)'); return; }
-    // check overlap
-    let blocked = false;
-    for (const b of buildings) {
-      if (b.dead) continue;
-      if (Math.hypot(b.x - world.x, b.z - world.z) < b.r + 3) { blocked = true; break; }
-    }
-    if (blocked) { toast('Emplacement occupé'); return; }
+    const verdict = validateBuildPlacement(world.x, world.z, placeKind);
+    if (!verdict.ok) { toast(verdict.reason); return; }
     if (credits < CFG.costs[placeKind]) { toast('Crédits insuffisants'); return; }
     credits -= CFG.costs[placeKind];
     createBuilding(world.x, world.z, 1, placeKind);

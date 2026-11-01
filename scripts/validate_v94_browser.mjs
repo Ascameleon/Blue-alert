@@ -47,9 +47,13 @@ function watch(page) {
     }
   });
 }
-async function loadGame(page, combatQa = false) {
+async function loadGame(page, combatQa = false, buildQa = false) {
   watch(page);
-  const response = await page.goto(url + (combatQa ? '?qa=combat-rig' : ''), { waitUntil: 'networkidle', timeout: 60000 });
+  const params = new URLSearchParams();
+  if (combatQa) params.set('qa', 'combat-rig');
+  if (buildQa) params.set('build-zone', '1');
+  const query = params.toString();
+  const response = await page.goto(url + (query ? '?' + query : ''), { waitUntil: 'networkidle', timeout: 60000 });
   assert.equal(response?.status(), 200, 'v94 game HTML must load');
   await page.waitForFunction(() => {
     const canvas = document.querySelector('#viewport canvas');
@@ -97,13 +101,58 @@ try {
   });
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  await loadGame(desktop, true);
+  await loadGame(desktop, true, true);
   const desktopMetrics = await metrics(desktop);
   assert.ok(desktopMetrics.webgl && !desktopMetrics.contextLost, 'desktop must render with a live WebGL context');
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
+  const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
+  assert.ok(buildBefore, 'build-zone QA diagnostics must be available');
+  assert.ok(buildBefore.hq.team === 1 && buildBefore.hq.labelVisible && buildBefore.hq.perimeterVisible,
+    'the player command HQ must be clearly marked in the live scene');
+  assert.ok(buildBefore.pads.every(p => p.pad && p.grid && p.border),
+    'both construction pads must have visible ground, grid and perimeter');
+  assert.ok(buildBefore.placement.clearNorth.ok,
+    'an empty position inside the marked base pads must be buildable');
+  assert.ok(!buildBefore.placement.outside.ok && !buildBefore.placement.road.ok &&
+    !buildBefore.placement.overlap.ok && !buildBefore.placement.ore.ok,
+    'enemy territory, road, occupied structures and ore deposits must reject construction');
   await desktop.screenshot({ path: output + '/desktop-v94-gameplay.png', fullPage: true });
+
+  // Real mouse input: place a power station on the pad, then prove invalid ground
+  // clicks do not spend credits or create structures.
+  const buildPoint = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-12, -20));
+  assert.ok(buildPoint.visible, 'valid construction test point must be visible on desktop');
+  await desktop.locator('#cards .card').first().click();
+  await desktop.mouse.move(buildPoint.x, buildPoint.y);
+  await desktop.mouse.click(buildPoint.x, buildPoint.y);
+  await desktop.waitForFunction(
+    count => window.__BLUE_ALERTS_BUILD_QA.snapshot().playerBuildingCount === count + 1,
+    buildBefore.playerBuildingCount,
+    { timeout: 5000 }
+  );
+  const buildAfter = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
+  assert.equal(buildAfter.credits, buildBefore.credits - 350,
+    'a successful power-station placement must deduct exactly its configured cost');
+
+  const afterValidCount = buildAfter.playerBuildingCount;
+  const afterValidCredits = buildAfter.credits;
+  const roadPoint = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-12, 0));
+  const outsidePoint = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(0, 12));
+  assert.ok(roadPoint.visible && outsidePoint.visible,
+    'road and enemy-side rejection points must be visible on desktop');
+  for (const point of [roadPoint, outsidePoint]) {
+    await desktop.mouse.move(point.x, point.y);
+    await desktop.mouse.click(point.x, point.y);
+    await desktop.waitForTimeout(80);
+    const rejected = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
+    assert.equal(rejected.playerBuildingCount, afterValidCount,
+      'an invalid placement must not create a structure');
+    assert.equal(rejected.credits, afterValidCredits,
+      'an invalid placement must not consume credits');
+  }
+
   await desktop.locator('#btnSound').click();
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : OFF', 'desktop sound toggle must respond');
   await desktop.locator('#btnSound').click();
