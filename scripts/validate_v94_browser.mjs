@@ -6,8 +6,7 @@ import { chromium } from 'playwright';
 
 const root = process.cwd();
 const allowed = new Set([
-  '/BLUE_ALERTS_v94_ASSET_INTEGRATION.html',
-  '/game-data/models/blue-alert-models.js'
+  '/dist/BLUE_ALERTS_V94_BUILD_ZONE_JOUABLE.html'
 ]);
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
 const server = createServer(async (req, res) => {
@@ -28,13 +27,12 @@ await new Promise((resolveListen, reject) => {
   server.listen(0, '127.0.0.1', resolveListen);
 });
 const address = server.address();
-const url = 'http://127.0.0.1:' + address.port + '/BLUE_ALERTS_v94_ASSET_INTEGRATION.html';
+const url = 'http://127.0.0.1:' + address.port + '/dist/BLUE_ALERTS_V94_BUILD_ZONE_JOUABLE.html';
 const output = resolve(root, 'artifacts/v94-browser');
 await mkdir(output, { recursive: true });
 let browser;
 const failures = [];
 const successfulThree = [];
-const successfulModel = [];
 function watch(page) {
   page.on('pageerror', error => failures.push('pageerror: ' + error.message));
   page.on('console', message => {
@@ -43,7 +41,6 @@ function watch(page) {
   page.on('response', response => {
     if (response.status() >= 200 && response.status() < 300) {
       if (response.url().includes('three.module.js')) successfulThree.push(response.url());
-      if (response.url().includes('blue-alert-models.js')) successfulModel.push(response.url());
     }
   });
 }
@@ -109,6 +106,7 @@ try {
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
   const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
   assert.ok(buildBefore, 'build-zone QA diagnostics must be available');
+  assert.ok(buildBefore.modelsLoaded, 'the procedural model library must load from inside the single HTML file');
   assert.ok(buildBefore.hq.team === 1 && buildBefore.hq.labelVisible && buildBefore.hq.perimeterVisible &&
     buildBefore.hq.labelY < 6.5 && buildBefore.hq.modelScale >= 1.3,
     'the player command HQ must be enlarged and its label kept below the mobile HUD');
@@ -290,7 +288,6 @@ try {
     'a real mobile touch placement must deduct the configured power-station cost');
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
-  assert.ok(successfulModel.length > 0, 'the local BLUE ALERTS model module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
   for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
@@ -304,7 +301,6 @@ try {
     combatRig,
     muzzleError,
     successfulThree,
-    successfulModel,
     screenshots: ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']
   }, null, 2));
 } catch (error) {

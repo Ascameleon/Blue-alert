@@ -1542,6 +1542,7 @@ if (new URLSearchParams(location.search).get('build-zone') === '1') {
         buildZone: BUILD_ZONE,
         hq: {
           x: playerHQ.x, z: playerHQ.z, team: playerHQ.team,
+          modelsLoaded: !!BLUE_MODELS,
           labelVisible: !!scene.getObjectByName('player-hq-label'),
           labelY: scene.getObjectByName('player-hq-label')?.position.y ?? null,
           modelScale: playerHQ.g.children[0]?.scale.x ?? null,

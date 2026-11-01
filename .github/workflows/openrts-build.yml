@@ -83,10 +83,21 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright
           npx playwright install --with-deps chromium
+      - name: Build standalone playable V94 HTML
+        run: node scripts/build_single_html.mjs
       - name: Render 3D model preview at desktop and mobile sizes
         run: node scripts/validate_model_preview_browser.mjs
       - name: Render playable v94 game at desktop and mobile sizes
         run: node scripts/validate_v94_browser.mjs
+      - name: Upload playable single-file V94 HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: blue-alerts-v94-build-zone-playable
+          path: |
+            dist/BLUE_ALERTS_V94_BUILD_ZONE_JOUABLE.html
+            dist/manifest.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Build OpenRTS
         working-directory: engine/OpenRTS
         run: ./gradlew --no-daemon build
