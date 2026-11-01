@@ -121,9 +121,14 @@ export function createBuilding(THREE, type='barracks', options={}) {
     box(THREE,g,'command-core',[2.35,1.55,1.7],[0,1,0],concrete);
     box(THREE,g,'command-roof',[2.55,.2,1.9],[0,1.83,0],faction);
     box(THREE,g,'front-window',[1.45,.38,.035],[0,1.3,.87],glass);
-    box(THREE,g,'comms-tower',[.42,1.1,.42],[-.72,2.45,-.42],roof);
-    cylinder(THREE,g,'radar-mast',.035,.035,.9,[-.72,3.38,-.42],dark,8);
-    sphere(THREE,g,'radar-dish',.24,[ -.72,3.85,-.42],glass,[1,.25,.55]);
+    // Sculpted communications tower replacing the old square mast.
+    cylinder(THREE,g,'comms-tower-shaft',.2,.34,1.25,[-.72,2.48,-.42],roof,10);
+    cylinder(THREE,g,'comms-platform',.58,.58,.12,[-.72,3.12,-.42],metal,12);
+    cylinder(THREE,g,'radar-cabin',.43,.43,.46,[-.72,3.42,-.42],glass,12);
+    cylinder(THREE,g,'radar-roof',.48,.48,.1,[-.72,3.7,-.42],faction,12);
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;const mullion=box(THREE,g,'radar-cabin-mullion',[.035,.4,.035],[-.72+Math.cos(a)*.42,3.42,-.42+Math.sin(a)*.42],dark);mullion.rotation.y=-a;}
+    cylinder(THREE,g,'radar-mast',.025,.025,.58,[-.72,4.02,-.42],dark,8);
+    const dish=cylinder(THREE,g,'radar-dish',.28,.28,.045,[-.72,4.26,-.42],glass,16);dish.rotation.x=Math.PI/2.7;
     box(THREE,g,'side-wing',[.65,.85,1.25],[1.35,.6,-.28],roof);
   } else if(type==='barracks') {
     box(THREE,g,'main-hall',[2.85,1.25,2.05],[0,.76,0],concrete);
