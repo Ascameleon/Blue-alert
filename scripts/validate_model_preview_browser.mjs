@@ -50,7 +50,7 @@ try {
   });
   const response=await page.goto(baseUrl+'/game-data/models/preview.html',{waitUntil:'networkidle',timeout:60000});
   assert.equal(response?.status(),200,'preview page must load');
-  await page.waitForFunction(()=>typeof window.__BLUE_ALERTS_PREVIEW__==='function' && window.__BLUE_ALERTS_PREVIEW__().drawCalls>0,{timeout:30000});
+  await page.waitForFunction(()=>typeof window.__BLUE_ALERTS_PREVIEW__==='function' && window.__BLUE_ALERTS_PREVIEW__().drawCalls>0,null,{timeout:30000});
   const initial=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(initial.asset,'tank');
   assert.ok(initial.meshCount>0 && initial.triangleCount>0,'default tank must render real geometry');
@@ -60,14 +60,14 @@ try {
   await page.screenshot({path:output+'/desktop-tank.png',fullPage:true});
 
   await page.selectOption('#asset','turret');
-  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='turret' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=20,{timeout:10000});
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='turret' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=20,null,{timeout:10000});
   await page.waitForTimeout(500);
   const turret=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.ok(turret.physicalMaterialCount>0 && turret.drawCalls>0,'turret must render with PBR materials');
   await page.screenshot({path:output+'/desktop-turret.png',fullPage:true});
 
   await page.selectOption('#asset','controlTower');
-  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='controlTower' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=30,{timeout:10000});
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='controlTower' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=30,null,{timeout:10000});
   await page.waitForTimeout(500);
   const tower=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.ok(tower.physicalMaterialCount>0 && tower.drawCalls>0,'control tower must render with PBR materials');
