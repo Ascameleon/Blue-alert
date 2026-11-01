@@ -38,9 +38,15 @@ function watch(page) {
   page.on('console', message => {
     if (message.type() === 'error') failures.push('console: ' + message.text());
   });
+  page.on('requestfailed', request => {
+    if (request.url().includes('three.module.js')) {
+      failures.push('requestfailed: ' + request.url() + ' ' + (request.failure()?.errorText || 'unknown'));
+    }
+  });
   page.on('response', response => {
-    if (response.status() >= 200 && response.status() < 300) {
-      if (response.url().includes('three.module.js')) successfulThree.push(response.url());
+    if (response.url().includes('three.module.js')) {
+      if (response.status() >= 200 && response.status() < 300) successfulThree.push(response.url());
+      else failures.push('CDN response ' + response.status() + ': ' + response.url());
     }
   });
 }
@@ -54,11 +60,30 @@ async function loadGame(page, combatQa = false, buildQa = false) {
   assert.equal(response?.status(), 200, 'v94 game HTML must load');
   await page.waitForFunction(() => {
     const canvas = document.querySelector('#viewport canvas');
-    return canvas && canvas.width > 0 && canvas.height > 0 &&
-      !document.getElementById('blue2dFallback') &&
-      !document.getElementById('blueRuntimeError') &&
-      !document.getElementById('blueStartupError');
+    const fallback = document.getElementById('blue2dFallback');
+    const runtimeError = document.getElementById('blueRuntimeError');
+    const startupError = document.getElementById('blueStartupError');
+    return (canvas && canvas.width > 0 && canvas.height > 0) || fallback || runtimeError || startupError;
   }, null, { timeout: 30000 });
+  const startupState = await page.evaluate(() => {
+    const canvas = document.querySelector('#viewport canvas');
+    const fallback = document.getElementById('blue2dFallback');
+    const runtimeError = document.getElementById('blueRuntimeError');
+    const startupError = document.getElementById('blueStartupError');
+    return {
+      canvas: !!canvas,
+      canvasWidth: canvas?.width || 0,
+      canvasHeight: canvas?.height || 0,
+      fallback: !!fallback,
+      fallbackText: fallback?.innerText || '',
+      runtimeError: !!runtimeError,
+      runtimeText: runtimeError?.innerText || '',
+      startupError: !!startupError,
+      startupText: startupError?.innerText || ''
+    };
+  });
+  assert.ok(startupState.canvas && !startupState.fallback && !startupState.runtimeError && !startupState.startupError,
+    '3D startup must complete without fallback or error UI: ' + JSON.stringify(startupState));
   await page.locator('#btnStart').click();
   await page.waitForFunction(() => document.getElementById('startOverlay')?.classList.contains('hidden'));
   await page.waitForTimeout(1200);
@@ -177,6 +202,9 @@ try {
   assert.ok(muzzleError < 0.05,
     'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
 
+  // Release the desktop WebGL context before opening the mobile viewport. This
+  // keeps the mobile assertion independent of concurrent GPU/context pressure.
+  await desktop.close();
   const mobile = await browser.newPage({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 1,
