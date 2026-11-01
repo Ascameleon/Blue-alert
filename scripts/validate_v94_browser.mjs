@@ -268,6 +268,9 @@ try {
   await mobile.locator('#mobileCenter').tap();
   await mobile.locator('.tab[data-t="struct"]').tap();
   const mobileBuildBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
+const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
+  assert.ok(mobileCommandsBox && mobileBuildBefore?.hq?.labelScreenY > mobileCommandsBox.y + mobileCommandsBox.height + 6,
+    'the QG label must remain visible below the mobile command dock, not underneath it');
   assert.ok(mobileBuildBefore && mobileBuildBefore.pads.every(p => p.pad && p.grid && p.border),
     'mobile must render the same two construction pads');
   await mobile.waitForTimeout(2800);
