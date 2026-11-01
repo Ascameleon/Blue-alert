@@ -66,7 +66,7 @@ try {
   const baselinePage=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
   baselinePage.on('pageerror',error=>failures.push('baseline pageerror: '+error.message));
   baselinePage.on('console',message=>{if(message.type()==='error')failures.push('baseline console: '+message.text());});
-  const baselineResponse=await baselinePage.goto(baseUrl+'/baseline/game-data/models/preview.html',{waitUntil:'networkidle',timeout:60000});
+  const baselineResponse=await baselinePage.goto(baseUrl+'/baseline/game-data/models/preview.html',{waitUntil:'domcontentloaded',timeout:60000});
   assert.equal(baselineResponse?.status(),200,'base-branch model preview must load');
   await baselinePage.waitForSelector('#view canvas',{timeout:30000});
   await baselinePage.selectOption('#asset','turret');
@@ -85,7 +85,7 @@ try {
   page.on('requestfailed',request=>{
     if(!request.url().includes('favicon'))failures.push('request failed: '+request.url()+' '+(request.failure()?.errorText||''));
   });
-  const response=await page.goto(baseUrl+'/game-data/models/preview.html',{waitUntil:'networkidle',timeout:60000});
+  const response=await page.goto(baseUrl+'/game-data/models/preview.html',{waitUntil:'domcontentloaded',timeout:60000});
   assert.equal(response?.status(),200,'preview page must load');
   await page.waitForFunction(()=>typeof window.__BLUE_ALERTS_PREVIEW__==='function' && window.__BLUE_ALERTS_PREVIEW__().drawCalls>0,null,{timeout:30000});
   const initial=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());

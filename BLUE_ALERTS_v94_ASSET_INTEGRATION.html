@@ -103,6 +103,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 #mobileCommands{display:none;position:absolute;top:42px;left:8px;right:8px;z-index:35;gap:5px;justify-content:center;pointer-events:auto}
 #mobileCommands button{flex:1;min-width:0;min-height:44px;padding:8px 5px;border:1px solid #315b78;border-radius:6px;background:#0b1926ef;color:#d8eafa;font-size:10px;font-weight:800;touch-action:manipulation}
 #mobileCommands button[aria-pressed="true"]{border-color:#e8c040;color:#ffe17a;background:#26301f}
+#mobileHQBadge{display:none;position:absolute;top:92px;left:8px;z-index:36;pointer-events:none;padding:4px 8px;border:1px solid #65d8ff;border-radius:4px;background:rgba(5,18,30,.92);color:#e1f7ff;font:800 10px/1.2 Arial,sans-serif;letter-spacing:.04em;box-shadow:0 2px 8px #0008}
 #minimap{
   position:absolute;right:210px;bottom:10px;width:160px;height:120px;z-index:15;
   border:2px solid #1e4060;border-radius:4px;background:#0a1810;
@@ -164,6 +165,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
   #cards{grid-template-columns:repeat(4,1fr);flex:1}
   #topbar{right:0}
   #mobileCommands{display:flex}
+  #mobileHQBadge{display:block}
   #minimap{right:8px;bottom:140px;width:110px;height:82px}
   #selinfo{bottom:140px}
   #dmglayer,#hbarlayer{right:0;bottom:130px}
@@ -186,6 +188,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 <div id="mobileCommands" aria-label="Commandes tactiles">
   <button type="button" id="mobileSelect">Tout</button><button type="button" id="mobileAttack" aria-pressed="false">Attaque-move</button><button type="button" id="mobileStop">Stop</button><button type="button" id="mobileCenter">Centrer</button><button type="button" id="mobileSound" aria-pressed="true">Son ON</button>
 </div>
+<div id="mobileHQBadge" aria-label="Quartier général de la base bleue">QG • BASE ALPHA</div>
 
 <div id="selinfo">
   <div class="stitle" id="selTitle">—</div>
@@ -520,6 +523,19 @@ function createSeededTerrainRandom(seed = 0x424c5545) {
   };
 }
 const terrainRandom = createSeededTerrainRandom();
+
+// The player base has two build pads separated by the main supply road.
+const BUILD_ZONE = Object.freeze({
+  minX: -60, maxX: -8, minZ: -36, maxZ: 36,
+  roadHalfWidth: 8, gridStep: 4
+});
+function insideBuildZone(x, z, radius = 0) {
+  if (x - radius < BUILD_ZONE.minX || x + radius > BUILD_ZONE.maxX) return false;
+  if (z - radius < BUILD_ZONE.minZ || z + radius > BUILD_ZONE.maxZ) return false;
+  const northPad = z + radius <= -BUILD_ZONE.roadHalfWidth;
+  const southPad = z - radius >= BUILD_ZONE.roadHalfWidth;
+  return northPad || southPad;
+}
 const terrainGeometry = new THREE.PlaneGeometry(200, 160, 60, 48);
 const terrainPositions = terrainGeometry.attributes.position;
 const terrainColors = new Float32Array(terrainPositions.count * 3);
@@ -567,12 +583,81 @@ addBox(scene, 0, 0.015, 0, 200, 0.03, 5.0, MAT.concrete);
 addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
 for (let x = -95; x < 95; x += 6) addBox(scene, x, 0.055, 0, 2.4, 0.01, 0.12, MAT.line);
 
+// Visible construction pads: the grid is deliberately absent from the road corridor.
+function addBuildPadVisual(name, zMin, zMax) {
+  const centerX = (BUILD_ZONE.minX + BUILD_ZONE.maxX) * 0.5;
+  const centerZ = (zMin + zMax) * 0.5;
+  const pad = new THREE.Mesh(
+    new THREE.PlaneGeometry(BUILD_ZONE.maxX - BUILD_ZONE.minX, zMax - zMin),
+    new THREE.MeshBasicMaterial({
+      color: 0x174e69, transparent: true, opacity: 0.12,
+      depthWrite: false, side: THREE.DoubleSide
+    })
+  );
+  pad.name = 'player-build-pad-' + name;
+  pad.rotation.x = -Math.PI / 2;
+  pad.position.set(centerX, 0.028, centerZ);
+  scene.add(pad);
+
+  const gridVertices = [];
+  for (let x = BUILD_ZONE.minX; x <= BUILD_ZONE.maxX + 0.01; x += BUILD_ZONE.gridStep) {
+    gridVertices.push(x, 0.052, zMin, x, 0.052, zMax);
+  }
+  for (let z = zMin; z <= zMax + 0.01; z += BUILD_ZONE.gridStep) {
+    gridVertices.push(BUILD_ZONE.minX, 0.052, z, BUILD_ZONE.maxX, 0.052, z);
+  }
+  const gridGeometry = new THREE.BufferGeometry();
+  gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(gridVertices, 3));
+  const grid = new THREE.LineSegments(
+    gridGeometry,
+    new THREE.LineBasicMaterial({ color: 0x62c8ed, transparent: true, opacity: 0.20, depthWrite: false })
+  );
+  grid.name = 'player-build-grid-' + name;
+  scene.add(grid);
+
+  const corners = [
+    [BUILD_ZONE.minX, zMin], [BUILD_ZONE.maxX, zMin],
+    [BUILD_ZONE.maxX, zMax], [BUILD_ZONE.minX, zMax]
+  ];
+  const borderVertices = [];
+  for (let i = 0; i < corners.length; i++) {
+    const a = corners[i], b = corners[(i + 1) % corners.length];
+    borderVertices.push(a[0], 0.075, a[1], b[0], 0.075, b[1]);
+  }
+  const borderGeometry = new THREE.BufferGeometry();
+  borderGeometry.setAttribute('position', new THREE.Float32BufferAttribute(borderVertices, 3));
+  const border = new THREE.LineSegments(
+    borderGeometry,
+    new THREE.LineBasicMaterial({ color: 0x72d8ff, transparent: true, opacity: 0.78, depthWrite: false })
+  );
+  border.name = 'player-build-border-' + name;
+  scene.add(border);
+
+  for (const [x, z] of corners) {
+    const beacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.16, 0.42, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0x46bce8, emissive: 0x0b3b58, emissiveIntensity: 0.55,
+        metalness: 0.35, roughness: 0.42
+      })
+    );
+    beacon.position.set(x, 0.23, z);
+    beacon.name = 'player-build-beacon-' + name;
+    scene.add(beacon);
+  }
+}
+function createBuildZoneVisual() {
+  addBuildPadVisual('north', BUILD_ZONE.minZ, -BUILD_ZONE.roadHalfWidth);
+  addBuildPadVisual('south', BUILD_ZONE.roadHalfWidth, BUILD_ZONE.maxZ);
+}
+createBuildZoneVisual();
+
 // Trees — deterministic placement keeps every match and visual test reproducible.
 for (let i = 0; i < (isMobile ? 100 : 160); i++) {
   const x = (terrainRandom() - 0.5) * 185;
   const z = (terrainRandom() - 0.5) * 145;
   if (Math.abs(z) < 7) continue;
-  if (Math.abs(x) < 55 && Math.abs(z) < 35) continue;
+  if (insideBuildZone(x, z, 0) || (Math.abs(x) < 55 && Math.abs(z) < 35)) continue;
   const sc = 0.5 + terrainRandom() * 1.4;
   addCyl(scene, x, 0.4 * sc, z, 0.1 * sc, 0.16 * sc, 0.85 * sc, mkMat(0x4a3820), 6);
   const crown = new THREE.Mesh(new THREE.ConeGeometry(sc * 0.85, 2.3 * sc, 6), i % 3 ? MAT.tree : MAT.tree2);
@@ -584,7 +669,7 @@ for (let i = 0; i < (isMobile ? 100 : 160); i++) {
 for (let i = 0; i < (isMobile ? 48 : 80); i++) {
   const x = (terrainRandom() - 0.5) * 180;
   const z = (terrainRandom() - 0.5) * 140;
-  if (Math.abs(z) < 6) continue;
+  if (Math.abs(z) < 6 || insideBuildZone(x, z, 0)) continue;
   const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15 + terrainRandom() * 0.45, 0), MAT.rock);
   r.position.set(x, 0.1, z);
   r.scale.y = 0.4 + terrainRandom() * 0.5;
@@ -877,7 +962,7 @@ spawnOre(44, 20, 2800);
 spawnOre(52, 26, 2200);
 
 /* ─── Buildings ──────────────────────────────────────────── */
-function createBuilding(x, z, team, kind) {
+function createBuilding(x, z, team, kind, visualScale = 1) {
   const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
   const col = team === 1 ? MAT.blue : MAT.red;
   const trim = team === 1 ? MAT.blueG : MAT.gold;
@@ -890,13 +975,13 @@ function createBuilding(x, z, team, kind) {
     hp = 2500; radius = 5.5;
   } else if (BLUE_MODELS && kind !== 'citadel') {
     const modelType = ({ hq: 'headquarters', power: 'utility', factory: 'utility', barracks: 'barracks', refinery: 'refinery', turret: 'turret' })[kind] || 'utility';
-    const model = BLUE_MODELS.createBuilding(THREE, modelType, { team: team === 1 ? 'blue' : 'red' });
+    const model = BLUE_MODELS.createBuilding(THREE, modelType, { team: team === 1 ? 'blue' : 'red', scale: visualScale });
     // Keep the original gameplay footprint/health; swap only the visual mesh.
     g.add(model);
     g.userData.head = model.userData.rotatingGun || null;
-    if (kind === 'hq') { hp = 1000; radius = 3.5; }
-    else if (kind === 'power') { hp = 350; radius = 2.6; }
-    else if (kind === 'refinery') { hp = 550; radius = 3.3; }
+    if (kind === 'hq') { hp = 1000; radius = 3.5 * visualScale; }
+    else if (kind === 'power') { hp = 350; radius = 2.6 * visualScale; }
+    else if (kind === 'refinery') { hp = 550; radius = 3.3 * visualScale; }
     else if (kind === 'turret') { hp = 300; radius = 1.8; }
     else if (kind === 'factory') { hp = 600; radius = 3.0; }
     else { hp = 450; radius = 3.0; }
@@ -966,12 +1051,48 @@ function createBuilding(x, z, team, kind) {
   return b;
 }
 
-// Player base
-const playerHQ = createBuilding(-32, -6, 1, 'hq');
-createBuilding(-24, 4, 1, 'power');
-createBuilding(-38, 3, 1, 'refinery');
-createBuilding(-20, -4, 1, 'turret');
-createBuilding(-20, 8, 1, 'turret');
+// Player base — clustered around the command HQ on the two clear build pads.
+function createHQMarker(hq) {
+  const perimeter = new THREE.Mesh(
+    new THREE.RingGeometry(hq.r + 0.55, hq.r + 0.72, 64),
+    new THREE.MeshBasicMaterial({
+      color: 0x65d8ff, transparent: true, opacity: 0.82,
+      side: THREE.DoubleSide, depthWrite: false
+    })
+  );
+  perimeter.name = 'player-hq-perimeter';
+  perimeter.rotation.x = -Math.PI / 2;
+  perimeter.position.set(hq.x, 0.085, hq.z);
+  scene.add(perimeter);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(5,18,30,0.9)';
+  ctx.fillRect(4, 4, 504, 120);
+  ctx.strokeStyle = '#65d8ff'; ctx.lineWidth = 5;
+  ctx.strokeRect(4, 4, 504, 120);
+  ctx.fillStyle = '#e1f7ff'; ctx.font = 'bold 42px Arial, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('QG  •  BASE ALPHA', 256, 66);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const label = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: texture, transparent: true, depthTest: false, depthWrite: false
+  }));
+  label.name = 'player-hq-label';
+  label.position.set(hq.x, 5.8, hq.z + 4.4);
+  label.visible = !isMobile;
+  label.scale.set(9.8, 2.45, 1);
+  scene.add(label);
+  hq.g.userData.hqMarker = label;
+}
+const playerHQ = createBuilding(-32, -16, 1, 'hq', 1.35);
+createBuilding(-20, -22, 1, 'power', 0.9);
+createBuilding(-46, -22, 1, 'refinery', 0.9);
+createBuilding(-20, -32, 1, 'turret', 0.95);
+createBuilding(-46, -32, 1, 'turret', 0.95);
+createHQMarker(playerHQ);
 
 // Enemy base
 const enemyHQ = createBuilding(34, -6, 2, 'hq');
@@ -1352,11 +1473,47 @@ function onCardClick(it) {
 }
 
 /* ─── Ghost building ─────────────────────────────────────── */
+/* ─── Build placement rules ───────────────────────────────── */
+const BUILDING_RADII = Object.freeze({
+  power: 2.6, refinery: 3.3, barracks: 3.0, factory: 3.0, turret: 1.8
+});
+function placementRadius(kind) {
+  return BUILDING_RADII[kind] || 3.0;
+}
+function validateBuildPlacement(x, z, kind) {
+  const radius = placementRadius(kind);
+  if (z - radius < BUILD_ZONE.roadHalfWidth && z + radius > -BUILD_ZONE.roadHalfWidth) {
+    return { ok: false, reason: 'Route interdite — gardez le couloir logistique libre' };
+  }
+  if (!insideBuildZone(x, z, radius + 0.25)) {
+    return { ok: false, reason: 'Hors du secteur constructible de la base bleue' };
+  }
+  for (const b of buildings) {
+    if (b.dead) continue;
+    if (Math.hypot(b.x - x, b.z - z) < radius + b.r + 0.9) {
+      return { ok: false, reason: 'Emplacement occupé par un bâtiment' };
+    }
+  }
+  for (const u of units) {
+    if (u.dead) continue;
+    const unitRadius = u.kind === 'infantry' ? 0.9 : u.kind === 'harvester' ? 2.6 : 2.1;
+    if (Math.hypot(u.g.position.x - x, u.g.position.z - z) < radius + unitRadius + 0.7) {
+      return { ok: false, reason: 'Déplacez les unités hors de cet emplacement' };
+    }
+  }
+  for (const ore of ores) {
+    if (ore.amount > 0 && Math.hypot(ore.x - x, ore.z - z) < radius + ore.r + 0.8) {
+      return { ok: false, reason: 'Zone de ressource protégée' };
+    }
+  }
+  return { ok: true, reason: 'Emplacement valide' };
+}
+
 function createGhost(kind) {
   clearGhost();
   ghostMesh = new THREE.Group();
   const mat = new THREE.MeshBasicMaterial({ color: 0x40a0e0, transparent: true, opacity: 0.35, depth: true });
-  const footprint = kind === 'turret' ? 2.5 : kind === 'refinery' ? 5 : 4.5;
+  const footprint = placementRadius(kind) * 2;
   const m = new THREE.Mesh(new THREE.BoxGeometry(footprint, 0.15, footprint * 0.85), mat);
   m.position.y = 0.08;
   ghostMesh.add(m);
@@ -1372,12 +1529,58 @@ function clearGhost() {
   if (ghostMesh) { scene.remove(ghostMesh); ghostMesh = null; }
 }
 function updateGhost(wx, wz) {
-  if (!ghostMesh) return;
+  if (!ghostMesh || !placeKind) return;
   ghostMesh.position.set(wx, 0, wz);
-  const ok = wx < 8;
+  const verdict = validateBuildPlacement(wx, wz, placeKind);
+  ghostMesh.userData.buildValid = verdict.ok;
+  ghostMesh.userData.buildReason = verdict.reason;
   ghostMesh.traverse(c => {
-    if (c.material) c.material.color.setHex(ok ? 0x40a0e0 : 0xe04040);
+    if (c.material) c.material.color.setHex(verdict.ok ? 0x35d88b : 0xe04040);
   });
+}
+
+if (new URLSearchParams(location.search).get('build-zone') === '1') {
+  window.__BLUE_ALERTS_BUILD_QA = {
+    snapshot() {
+      return {
+        buildZone: BUILD_ZONE,
+        hq: {
+          x: playerHQ.x, z: playerHQ.z, team: playerHQ.team,
+          modelsLoaded: !!BLUE_MODELS,
+          labelVisible: !!scene.getObjectByName('player-hq-label'),
+          labelY: scene.getObjectByName('player-hq-label')?.position.y ?? null,
+          modelScale: playerHQ.g.children[0]?.scale.x ?? null,
+          perimeterVisible: !!scene.getObjectByName('player-hq-perimeter')
+        },
+        pads: ['north', 'south'].map(name => ({
+          pad: !!scene.getObjectByName('player-build-pad-' + name),
+          grid: !!scene.getObjectByName('player-build-grid-' + name),
+          border: !!scene.getObjectByName('player-build-border-' + name)
+        })),
+        placement: {
+          clearNorth: validateBuildPlacement(-24, -12, 'power'),
+          outside: validateBuildPlacement(0, 12, 'power'),
+          road: validateBuildPlacement(-12, 0, 'power'),
+          overlap: validateBuildPlacement(playerHQ.x, playerHQ.z, 'power'),
+          ore: validateBuildPlacement(-18, 30, 'power')
+        },
+        playerBuildingCount: buildings.filter(b => b.team === 1 && !b.dead).length,
+        credits
+      };
+    },
+    projectWorld(x, z) {
+      camera.updateMatrixWorld(true);
+      scene.updateMatrixWorld(true);
+      const point = new THREE.Vector3(x, 0, z).project(camera);
+      const rect = viewport.getBoundingClientRect();
+      return {
+        x: rect.left + (point.x * 0.5 + 0.5) * rect.width,
+        y: rect.top + (-point.y * 0.5 + 0.5) * rect.height,
+        visible: point.z > -1 && point.z < 1 &&
+          point.x >= -1 && point.x <= 1 && point.y >= -1 && point.y <= 1
+      };
+    }
+  };
 }
 
 /* ─── Selection ──────────────────────────────────────────── */
@@ -1998,16 +2201,10 @@ function onPointerUp(e) {
   const world = screenToWorld(e.clientX, e.clientY);
   if (!world) return;
 
-  // Place building
+  // Place building only on the marked base pads; keep roads, units, resources and structures clear.
   if (mode === 'place' && placeKind && !wasRight) {
-    if (world.x > 10) { toast('Zone alliée uniquement (côté ouest)'); return; }
-    // check overlap
-    let blocked = false;
-    for (const b of buildings) {
-      if (b.dead) continue;
-      if (Math.hypot(b.x - world.x, b.z - world.z) < b.r + 3) { blocked = true; break; }
-    }
-    if (blocked) { toast('Emplacement occupé'); return; }
+    const verdict = validateBuildPlacement(world.x, world.z, placeKind);
+    if (!verdict.ok) { toast(verdict.reason); return; }
     if (credits < CFG.costs[placeKind]) { toast('Crédits insuffisants'); return; }
     credits -= CFG.costs[placeKind];
     createBuilding(world.x, world.z, 1, placeKind);

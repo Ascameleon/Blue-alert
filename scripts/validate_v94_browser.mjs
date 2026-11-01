@@ -6,8 +6,7 @@ import { chromium } from 'playwright';
 
 const root = process.cwd();
 const allowed = new Set([
-  '/BLUE_ALERTS_v94_ASSET_INTEGRATION.html',
-  '/game-data/models/blue-alert-models.js'
+  '/dist/BLUE_ALERTS_V94_BUILD_ZONE_JOUABLE.html'
 ]);
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
 const server = createServer(async (req, res) => {
@@ -28,36 +27,63 @@ await new Promise((resolveListen, reject) => {
   server.listen(0, '127.0.0.1', resolveListen);
 });
 const address = server.address();
-const url = 'http://127.0.0.1:' + address.port + '/BLUE_ALERTS_v94_ASSET_INTEGRATION.html';
+const url = 'http://127.0.0.1:' + address.port + '/dist/BLUE_ALERTS_V94_BUILD_ZONE_JOUABLE.html';
 const output = resolve(root, 'artifacts/v94-browser');
 await mkdir(output, { recursive: true });
 let browser;
 const failures = [];
 const successfulThree = [];
-const successfulModel = [];
 function watch(page) {
   page.on('pageerror', error => failures.push('pageerror: ' + error.message));
   page.on('console', message => {
     if (message.type() === 'error') failures.push('console: ' + message.text());
   });
+  page.on('requestfailed', request => {
+    if (request.url().includes('three.module.js')) {
+      failures.push('requestfailed: ' + request.url() + ' ' + (request.failure()?.errorText || 'unknown'));
+    }
+  });
   page.on('response', response => {
-    if (response.status() >= 200 && response.status() < 300) {
-      if (response.url().includes('three.module.js')) successfulThree.push(response.url());
-      if (response.url().includes('blue-alert-models.js')) successfulModel.push(response.url());
+    if (response.url().includes('three.module.js')) {
+      if (response.status() >= 200 && response.status() < 300) successfulThree.push(response.url());
+      else failures.push('CDN response ' + response.status() + ': ' + response.url());
     }
   });
 }
-async function loadGame(page, combatQa = false) {
+async function loadGame(page, combatQa = false, buildQa = false) {
   watch(page);
-  const response = await page.goto(url + (combatQa ? '?qa=combat-rig' : ''), { waitUntil: 'networkidle', timeout: 60000 });
+  const params = new URLSearchParams();
+  if (combatQa) params.set('qa', 'combat-rig');
+  if (buildQa) params.set('build-zone', '1');
+  const query = params.toString();
+  const response = await page.goto(url + (query ? '?' + query : ''), { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert.equal(response?.status(), 200, 'v94 game HTML must load');
   await page.waitForFunction(() => {
     const canvas = document.querySelector('#viewport canvas');
-    return canvas && canvas.width > 0 && canvas.height > 0 &&
-      !document.getElementById('blue2dFallback') &&
-      !document.getElementById('blueRuntimeError') &&
-      !document.getElementById('blueStartupError');
+    const fallback = document.getElementById('blue2dFallback');
+    const runtimeError = document.getElementById('blueRuntimeError');
+    const startupError = document.getElementById('blueStartupError');
+    return (canvas && canvas.width > 0 && canvas.height > 0) || fallback || runtimeError || startupError;
   }, null, { timeout: 30000 });
+  const startupState = await page.evaluate(() => {
+    const canvas = document.querySelector('#viewport canvas');
+    const fallback = document.getElementById('blue2dFallback');
+    const runtimeError = document.getElementById('blueRuntimeError');
+    const startupError = document.getElementById('blueStartupError');
+    return {
+      canvas: !!canvas,
+      canvasWidth: canvas?.width || 0,
+      canvasHeight: canvas?.height || 0,
+      fallback: !!fallback,
+      fallbackText: fallback?.innerText || '',
+      runtimeError: !!runtimeError,
+      runtimeText: runtimeError?.innerText || '',
+      startupError: !!startupError,
+      startupText: startupError?.innerText || ''
+    };
+  });
+  assert.ok(startupState.canvas && !startupState.fallback && !startupState.runtimeError && !startupState.startupError,
+    '3D startup must complete without fallback or error UI: ' + JSON.stringify(startupState));
   await page.locator('#btnStart').click();
   await page.waitForFunction(() => document.getElementById('startOverlay')?.classList.contains('hidden'));
   await page.waitForTimeout(1200);
@@ -97,13 +123,61 @@ try {
   });
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  await loadGame(desktop, true);
+  await loadGame(desktop, true, true);
   const desktopMetrics = await metrics(desktop);
   assert.ok(desktopMetrics.webgl && !desktopMetrics.contextLost, 'desktop must render with a live WebGL context');
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
+  const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
+  assert.ok(buildBefore, 'build-zone QA diagnostics must be available');
+  assert.ok(buildBefore.hq.modelsLoaded, 'the procedural model library must load from inside the single HTML file');
+  assert.ok(buildBefore.hq.team === 1 && buildBefore.hq.labelVisible && buildBefore.hq.perimeterVisible &&
+    buildBefore.hq.labelY < 6.5 && buildBefore.hq.modelScale >= 1.3,
+    'the player command HQ must be enlarged and its label kept below the mobile HUD');
+  assert.ok(buildBefore.pads.every(p => p.pad && p.grid && p.border),
+    'both construction pads must have visible ground, grid and perimeter');
+  assert.ok(buildBefore.placement.clearNorth.ok,
+    'an empty position inside the marked base pads must be buildable');
+  assert.ok(!buildBefore.placement.outside.ok && !buildBefore.placement.road.ok &&
+    !buildBefore.placement.overlap.ok && !buildBefore.placement.ore.ok,
+    'enemy territory, road, occupied structures and ore deposits must reject construction');
+  await desktop.waitForTimeout(2800);
   await desktop.screenshot({ path: output + '/desktop-v94-gameplay.png', fullPage: true });
+
+  // Real mouse input: place a power station on the pad, then prove invalid ground
+  // clicks do not spend credits or create structures.
+  const buildPoint = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-24, -12));
+  assert.ok(buildPoint.visible, 'valid construction test point must be visible on desktop');
+  await desktop.locator('#cards .card').first().click();
+  await desktop.mouse.move(buildPoint.x, buildPoint.y);
+  await desktop.mouse.click(buildPoint.x, buildPoint.y);
+  await desktop.waitForFunction(
+    count => window.__BLUE_ALERTS_BUILD_QA.snapshot().playerBuildingCount === count + 1,
+    buildBefore.playerBuildingCount,
+    { timeout: 5000 }
+  );
+  const buildAfter = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
+  assert.equal(buildAfter.credits, buildBefore.credits - 350,
+    'a successful power-station placement must deduct exactly its configured cost');
+
+  const afterValidCount = buildAfter.playerBuildingCount;
+  const afterValidCredits = buildAfter.credits;
+  const roadPoint = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-12, 0));
+  const outsidePoint = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(0, 12));
+  assert.ok(roadPoint.visible && outsidePoint.visible,
+    'road and enemy-side rejection points must be visible on desktop');
+  for (const point of [roadPoint, outsidePoint]) {
+    await desktop.mouse.move(point.x, point.y);
+    await desktop.mouse.click(point.x, point.y);
+    await desktop.waitForTimeout(80);
+    const rejected = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
+    assert.equal(rejected.playerBuildingCount, afterValidCount,
+      'an invalid placement must not create a structure');
+    assert.equal(rejected.credits, afterValidCredits,
+      'an invalid placement must not consume credits');
+  }
+
   await desktop.locator('#btnSound').click();
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : OFF', 'desktop sound toggle must respond');
   await desktop.locator('#btnSound').click();
@@ -128,13 +202,16 @@ try {
   assert.ok(muzzleError < 0.05,
     'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
 
+  // Release the desktop WebGL context before opening the mobile viewport. This
+  // keeps the mobile assertion independent of concurrent GPU/context pressure.
+  await desktop.close();
   const mobile = await browser.newPage({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 1,
     isMobile: true,
     hasTouch: true
   });
-  await loadGame(mobile);
+  await loadGame(mobile, false, true);
   const mobileMetrics = await metrics(mobile);
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
@@ -217,10 +294,35 @@ try {
     'mobile sound toggle must restore the desktop sound control');
 
   await mobile.locator('#mobileCenter').tap();
+  await mobile.locator('.tab[data-t="struct"]').tap();
+  const mobileBuildBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
+const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
+  await mobile.screenshot({ path: 'artifacts/v94-browser/mobile-v94-gameplay-390x844.png', fullPage: false });
+  const mobileHQBadgeBox = await mobile.locator('#mobileHQBadge').boundingBox();
+  assert.ok(mobileCommandsBox && mobileHQBadgeBox && mobileHQBadgeBox.y >= mobileCommandsBox.y + mobileCommandsBox.height + 6,
+    'the dedicated HQ badge must remain visible below the mobile command dock');
+  assert.equal(await mobile.locator('#mobileHQBadge').textContent(), 'QG • BASE ALPHA',
+    'mobile HUD must identify the blue command HQ');
+  assert.ok(mobileBuildBefore && mobileBuildBefore.pads.every(p => p.pad && p.grid && p.border),
+    'mobile must render the same two construction pads');
+  await mobile.waitForTimeout(2800);
   await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
 
+  // Real touch placement on the 390x844 mobile viewport.
+  const mobileBuildPoint = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-24, -12));
+  assert.ok(mobileBuildPoint.visible, 'mobile construction target must be visible above the bottom HUD');
+  await mobile.locator('#cards .card').first().tap();
+  await mobile.touchscreen.tap(mobileBuildPoint.x, mobileBuildPoint.y);
+  await mobile.waitForFunction(
+    count => window.__BLUE_ALERTS_BUILD_QA.snapshot().playerBuildingCount === count + 1,
+    mobileBuildBefore.playerBuildingCount,
+    { timeout: 5000 }
+  );
+  const mobileBuildAfter = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
+  assert.equal(mobileBuildAfter.credits, mobileBuildBefore.credits - 350,
+    'a real mobile touch placement must deduct the configured power-station cost');
+
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
-  assert.ok(successfulModel.length > 0, 'the local BLUE ALERTS model module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
   for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
@@ -234,7 +336,6 @@ try {
     combatRig,
     muzzleError,
     successfulThree,
-    successfulModel,
     screenshots: ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']
   }, null, 2));
 } catch (error) {
