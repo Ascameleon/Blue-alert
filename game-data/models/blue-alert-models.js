@@ -39,6 +39,15 @@ export function createTank(THREE, options={}) {
   const hull=teamColor(THREE,team), armor=mat(THREE,PALETTE.olive), dark=mat(THREE,PALETTE.dark), metal=mat(THREE,PALETTE.metal);
   box(THREE,g,'lower-hull',[2.55,.48,1.48],[0,.55,0],hull);
   box(THREE,g,'upper-hull',[1.85,.35,1.22],[-.12,.91,0],armor);
+  const reactiveArmor=mat(THREE,0x858c78,.72,.24), optics=mat(THREE,0x79b6bd,.2,.62);
+  for(const side of [-1,1]){
+    for(let i=0;i<4;i++) box(THREE,g,'reactive-armor-tile',[.3,.19,.1],[-.72+i*.43,.73,side*.68],reactiveArmor);
+    box(THREE,g,'side-skirt-armor',[1.55,.16,.09],[-.05,.56,side*.72],armor);
+    for(let i=0;i<2;i++) cylinder(THREE,g,'smoke-discharger',.045,.055,.16,[.68+i*.15,1.05,side*.48],dark,8).rotation.z=Math.PI/2;
+  }
+  box(THREE,g,'commander-hatch',[.32,.08,.3],[-.62,1.12,.08],dark);
+  sphere(THREE,g,'gunner-optic',.075,[.36,1.18,.28],optics,[1,.55,.7]);
+  cylinder(THREE,g,'radio-antenna',.018,.018,.72,[-.86,1.42,-.35],dark,6);
   // Continuous track housings with individual road wheels.
   for (const side of [-1,1]) {
     box(THREE,g,'track-belt',[2.65,.48,.22],[0,.39,side*.79],dark);
@@ -75,6 +84,14 @@ export function createInfantry(THREE, options={}) {
   sphere(THREE,g,'head',.14,[0,1.12,0],skin,[.88,1.05,.88]);
   cylinder(THREE,g,'helmet',.17,.18,.11,[0,1.24,0],cloth,10);
   box(THREE,g,'helmet-rim',[.34,.035,.27],[0,1.2,0],cloth);
+  const armorPlate=mat(THREE,0x56645b,.72,.18), lens=mat(THREE,0x8fc5d0,.18,.55);
+  box(THREE,g,'plate-carrier',[.31,.29,.25],[0,.78,.13],armorPlate);
+  for(const side of [-1,1]){
+    box(THREE,g,'utility-pouch',[.11,.13,.12],[side*.19,.68,.13],cloth);
+    box(THREE,g,'knee-pad',[.16,.12,.17],[side*.1,.31,.08],armorPlate);
+    sphere(THREE,g,'helmet-goggle-lens',.045,[side*.075,1.17,.12],lens,[1,.7,.45]);
+  }
+  box(THREE,g,'radio-antenna',[.025,.42,.025],[-.13,1.12,-.2],dark);
   box(THREE,g,'backpack',[.22,.3,.13],[-.02,.78,-.17],cloth);
   for (const side of [-1,1]) {
     box(THREE,g,'upper-arm',[.12,.32,.13],[side*.23,.79,0],uniform,[0,0,side*-.18]);
@@ -132,6 +149,11 @@ export function createBuilding(THREE, type='barracks', options={}) {
   }
   // faction banner and readable silhouette details
   box(THREE,g,'faction-panel',[.5,.22,.045],[-1.25,1.25,1.04],faction);
+  for(const x of [-.85,.85]){
+    box(THREE,g,'exterior-light',[.18,.12,.06],[x,1.08,1.42],glass);
+    box(THREE,g,'service-vent',[.42,.26,.07],[x,1.52,-1.42],roof);
+    for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
+  }
   g.userData={kind:'building',buildingType:type,team,rotatingGun}; g.scale.setScalar(scale); return g;
 }
 
@@ -293,5 +315,18 @@ export function createExplosion(THREE, options={}) {
   }
   for(let i=0;i<5;i++)sphere(THREE,g,'smoke-puff',.28*factor,[((i%3)-1)*.36,.45+(i%2)*.24,((i*2)%3-1)*.28],smokeMat,[1.1,1.25,1]);
   g.userData={kind:'effect',effectType:'explosion',intensity,lifetimeSeconds:intensity==='large'?1.8:1.2,requiresRuntimeAnimation:true};
+  g.scale.setScalar(scale);return g;
+}
+
+
+export function createMuzzleFlash(THREE, options={}) {
+  const {team='blue',scale=1}=options;
+  const g=new THREE.Group();g.name='BA_MuzzleFlash';
+  const hot=new THREE.MeshBasicMaterial({color:0xffef9a,transparent:true,opacity:.95});
+  const glow=new THREE.MeshBasicMaterial({color:team==='red'?0xff7040:0xffb84a,transparent:true,opacity:.7});
+  const core=new THREE.Mesh(new THREE.SphereGeometry(.18,10,8),hot);core.name='flash-core';core.scale.set(1.8,.8,.8);g.add(core);
+  const flare=new THREE.Mesh(new THREE.ConeGeometry(.22,.72,8),glow);flare.name='flash-flare';flare.rotation.z=-Math.PI/2;flare.position.x=.34;g.add(flare);
+  for(let i=0;i<4;i++){const ray=new THREE.Mesh(new THREE.ConeGeometry(.045,.42,5),hot);ray.name='flash-ray';ray.rotation.z=-Math.PI/2+i*Math.PI/2;ray.position.set(.12,Math.cos(i*Math.PI/2)*.18,Math.sin(i*Math.PI/2)*.18);g.add(ray);}
+  g.userData={kind:'effect',effectType:'muzzle-flash',lifetimeSeconds:.12,requiresRuntimeAnimation:true};
   g.scale.setScalar(scale);return g;
 }
