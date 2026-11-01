@@ -11,7 +11,6 @@ import model.battlefield.army.ArmyManager;
 import model.battlefield.army.components.Unit;
 import com.jme3.math.Vector3f;
 import com.jme3.input.controls.ActionListener;
-import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.scene.Spatial.CullHint;
 import com.jme3.system.AppSettings;
 import view.math.TranslateUtil;
@@ -38,7 +37,6 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
     private boolean attackVerified;
     private boolean moveClickSeen;
     private boolean moveCommandAccepted;
-    private boolean actionListenerAttached;
     private boolean attackClickSeen;
     private boolean failed;
     private int enemyHealthAtAttack;
@@ -120,7 +118,6 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
                 return;
             }
             inputManager.addListener(nativeActionListener, "action");
-            actionListenerAttached = true;
             ready = true;
             System.out.println("BLUE ALERTS INTERACTIVE READY"
                     + " target=" + projectUnit(selectedUnit)
