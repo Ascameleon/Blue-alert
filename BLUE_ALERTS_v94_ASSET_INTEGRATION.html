@@ -991,14 +991,34 @@ function createUnit(x, z, team, kind) {
       speed = heavy ? 2.3 : 3.6; hp = heavy ? 320 : 160;
       dmg = heavy ? 42 : 24; range = heavy ? 12 : 10.5;
       const tank = BLUE_MODELS.createTank(THREE, { team: team === 1 ? 'blue' : 'red', variant: heavy ? 'heavy' : 'light', scale: heavy ? 1.16 : 1.0 });
-      // The procedural asset's cannon points along +X; the game tank faces +Z.
-      tank.rotation.y = Math.PI / 2;
+      // The procedural asset's cannon points along +X. Rotate -90° so its forward
+      // axis matches the RTS +Z heading, then expose the nested combat rig to the
+      // existing unit controller (which operates on the outer unit group).
+      tank.rotation.y = -Math.PI / 2;
       g.add(tank);
+      g.userData.turret = tank.userData.turret || null;
+      if (g.userData.turret && BLUE_MODELS.createMuzzleFlash) {
+        const muzzleFlash = BLUE_MODELS.createMuzzleFlash(THREE, {
+          team: team === 1 ? 'blue' : 'red',
+          scale: heavy ? 1.12 : 1.0
+        });
+        muzzleFlash.position.set(2.62, 0.36, 0);
+        muzzleFlash.visible = false;
+        muzzleFlash.traverse(part => {
+          if (part.material && typeof part.material.opacity === 'number') {
+            part.userData.baseOpacity = part.material.opacity;
+            part.material.opacity = 0;
+          }
+        });
+        g.userData.turret.add(muzzleFlash);
+        g.userData.flash = muzzleFlash;
+      }
     }
   } else if (BLUE_MODELS && kind === 'harvester' && BLUE_MODELS.createHarvester) {
     speed = 2.5; hp = 220; dmg = 0; range = 0;
     const harvester = BLUE_MODELS.createHarvester(THREE, { team: team === 1 ? 'blue' : 'red' });
-    harvester.rotation.y = Math.PI / 2;
+    // The harvester's collection head points along +X; align it with RTS +Z.
+    harvester.rotation.y = -Math.PI / 2;
     g.add(harvester);
   } else if (kind === 'infantry') {
     speed = 2.9; hp = 50; dmg = 9; range = 7.5;
@@ -1111,6 +1131,7 @@ function createUnit(x, z, team, kind) {
     );
     flash.position.set(0, 0.36 * sc, 2.58 * sc);
     turret.add(flash);
+    flash.userData.baseOpacity = 1;
     g.userData.flash = flash;
   }
 
@@ -1535,9 +1556,25 @@ function spawnParticle(pos, color, big) {
   }
 }
 
+function setMuzzleFlashIntensity(flash, intensity) {
+  if (!flash) return;
+  const alpha = THREE.MathUtils.clamp(intensity, 0, 1);
+  flash.visible = alpha > 0;
+  flash.traverse(part => {
+    const material = part.material;
+    if (!material || material.opacity === undefined) return;
+    const baseOpacity = Number.isFinite(part.userData.baseOpacity) ? part.userData.baseOpacity : 1;
+    material.opacity = baseOpacity * alpha;
+  });
+}
+
 function fireProjectile(shooter, target) {
   const from = new THREE.Vector3();
-  if (shooter.g) {
+  const muzzle = shooter.g?.userData?.flash || null;
+  if (shooter.g && muzzle) {
+    shooter.g.updateMatrixWorld(true);
+    muzzle.getWorldPosition(from);
+  } else if (shooter.g) {
     from.copy(shooter.g.position);
     from.y = shooter.kind === 'infantry' ? 0.95 : 1.45;
   } else {
@@ -1551,11 +1588,12 @@ function fireProjectile(shooter, target) {
     dest.set(target.x, target.kind === 'citadel' ? 3.5 : 1.3, target.z);
   }
   const dir = dest.clone().sub(from).normalize();
-  const start = from.clone().addScaledVector(dir, 1.3);
+  // Detailed tanks launch from the actual animated muzzle, not from the hull centre.
+  const start = muzzle ? from.clone() : from.clone().addScaledVector(dir, 1.3);
 
-  if (shooter.g && shooter.g.userData.flash) {
-    shooter.g.userData.flash.material.opacity = 1;
-    shooter.flashT = 0.08;
+  if (muzzle) {
+    setMuzzleFlashIntensity(muzzle, 1);
+    shooter.flashT = 0.12;
   }
 
   const isBlue = shooter.team === 1;
@@ -1575,6 +1613,7 @@ function fireProjectile(shooter, target) {
   projectiles.push({
     mesh: ball, line, pos: start, dest,
     target, shooter, speed: 34,
+    start: start.clone(),
     damage: shooter.dmg || 18,
     life: 2.0, isBlue
   });
@@ -2394,7 +2433,7 @@ function tick() {
       u.cd -= dt;
       u.flashT = Math.max(0, u.flashT - dt);
       if (u.g.userData.flash) {
-        u.g.userData.flash.material.opacity = u.flashT > 0 ? Math.min(1, u.flashT * 14) : 0;
+        setMuzzleFlashIntensity(u.g.userData.flash, u.flashT > 0 ? Math.min(1, u.flashT / 0.12) : 0);
       }
 
       // Determine combat target
@@ -2430,7 +2469,9 @@ function tick() {
 
         // Aim turret
         if (u.g.userData.turret) {
-          u.g.userData.turret.rotation.y = Math.atan2(dx, dz);
+          // Turret yaw is local to the moving hull. Subtract hull heading so the
+          // barrel tracks the target in world space instead of double-rotating.
+          u.g.userData.turret.rotation.y = Math.atan2(dx, dz) - u.g.rotation.y;
         }
 
         const rng = combatTarget.kind === 'citadel' ? u.range + 3 : u.range;
@@ -2678,6 +2719,65 @@ function tick() {
   );
   camera.lookAt(camTarget);
   renderer.render(scene, camera);
+}
+
+if (new URLSearchParams(location.search).get('qa') === 'combat-rig') {
+  let probeShooter = null;
+  let probeTarget = null;
+  window.__BLUE_ALERTS_COMBAT_QA = {
+    arm() {
+      probeShooter = units.find(u => !u.dead && u.team === 1 && u.kind === 'light' &&
+        u.g.userData.turret && u.g.userData.flash);
+      probeTarget = units.find(u => !u.dead && u.team === 2 && u.kind === 'light');
+      if (!probeShooter || !probeTarget) throw new Error('Combat rig probe units are unavailable');
+      probeShooter.g.position.set(0, 0.04, 0);
+      probeShooter.g.rotation.y = 0.65;
+      probeShooter.path = null;
+      probeShooter.pathIdx = 0;
+      probeShooter.dest = null;
+      probeShooter.combatRouteGoal = null;
+      probeShooter.atkTarget = probeTarget;
+      probeShooter.cd = 0;
+      probeTarget.g.position.set(0, 0.04, 8);
+      probeTarget.g.rotation.y = 0;
+      probeTarget.speed = 0;
+      probeTarget.dmg = 0;
+      probeTarget.path = null;
+      probeTarget.dest = null;
+      probeTarget.atkTarget = null;
+      return { shooterId: probeShooter.id, targetId: probeTarget.id };
+    },
+    snapshot() {
+      if (!probeShooter || !probeTarget) return null;
+      probeShooter.g.updateMatrixWorld(true);
+      const turret = probeShooter.g.userData.turret;
+      const direction = new THREE.Vector3(1, 0, 0)
+        .applyQuaternion(turret.getWorldQuaternion(new THREE.Quaternion())).normalize();
+      const targetDirection = new THREE.Vector3(
+        probeTarget.g.position.x - probeShooter.g.position.x,
+        0,
+        probeTarget.g.position.z - probeShooter.g.position.z
+      ).normalize();
+      const flash = probeShooter.g.userData.flash;
+      const muzzleWorld = new THREE.Vector3();
+      flash.getWorldPosition(muzzleWorld);
+      let flashOpacity = 0;
+      flash.traverse(part => {
+        if (part.material && Number.isFinite(part.material.opacity)) {
+          flashOpacity = Math.max(flashOpacity, part.material.opacity);
+        }
+      });
+      const projectile = projectiles.find(p => p.shooter === probeShooter);
+      return {
+        turretAvailable: !!turret,
+        flashVisible: flash.visible,
+        flashOpacity,
+        alignment: direction.dot(targetDirection),
+        muzzleWorld: muzzleWorld.toArray(),
+        projectileStart: projectile?.start?.toArray() || null
+      };
+    }
+  };
 }
 
 tick();
