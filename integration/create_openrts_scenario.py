@@ -17,6 +17,31 @@ if len(sys.argv) != 5:
 base_path, output_path, army_dir, report_path = map(Path, sys.argv[1:])
 data = json.loads(base_path.read_text())
 map_data = data.get("map", {})
+
+# The pinned OpenRTS test map leaves cliffShapeID empty on many elevated tiles.
+# Any level transition then asks BuilderManager for CliffShape/ and aborts.
+# StdRockyVegyDug is defined in the pinned engine's cliffshapes.xml and is
+# already linked by StdMapStyle, so use it as the deterministic default.
+DEFAULT_CLIFF_SHAPE_ID = "StdRockyVegyDug"
+cliff_shape_defaults_applied = 0
+for tile in map_data.get("tiles", []):
+    if not tile.get("cliffShapeID"):
+        tile["cliffShapeID"] = DEFAULT_CLIFF_SHAPE_ID
+        cliff_shape_defaults_applied += 1
+for ramp in map_data.get("ramps", []):
+    for tile in ramp.get("tiles", []):
+        if not tile.get("cliffShapeID"):
+            tile["cliffShapeID"] = DEFAULT_CLIFF_SHAPE_ID
+            cliff_shape_defaults_applied += 1
+if any(not tile.get("cliffShapeID") for tile in map_data.get("tiles", [])):
+    raise RuntimeError("Map contains tiles without a valid cliff shape ID")
+if any(
+    not tile.get("cliffShapeID")
+    for ramp in map_data.get("ramps", [])
+    for tile in ramp.get("tiles", [])
+):
+    raise RuntimeError("Ramp contains tiles without a valid cliff shape ID")
+
 width = int(map_data.get("atlas", {}).get("mapWidth", 0))
 height = int(map_data.get("atlas", {}).get("mapHeight", 0))
 if width < 60 or height < 60:
@@ -97,6 +122,8 @@ report = {
     "unit_count": len(verified_units),
     "factions": {"1": "red", "2": "blue"},
     "unit_composition": {"humantank": 4, "Marine": 8},
+    "cliff_shape_id": DEFAULT_CLIFF_SHAPE_ID,
+    "cliff_shape_defaults_applied": cliff_shape_defaults_applied,
     "source_map": str(base_path),
     "output_map": str(output_path),
 }
