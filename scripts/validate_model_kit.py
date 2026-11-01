@@ -10,6 +10,8 @@ REQUIRED_EXPORTS = (
     "createTank", "createInfantry", "createBuilding", "createLandscape",
     "createTree", "createRock", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion",
+    "a==='aircraft'", "a==='helicopter'", "a==='drone'",
+    "a==='projectile'", "a==='explosion'",
 )
 REQUIRED_PREVIEW = (
     "Avion d’attaque", "Hélicoptère d’assaut", "Drone de reconnaissance",
