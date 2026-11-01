@@ -17,7 +17,7 @@ REQUIRED_PREVIEW = (
     "Avion d’attaque", "Hélicoptère d’assaut", "Drone de reconnaissance",
     "Projectile", "Explosion", "Flash de bouche", "createMuzzleFlash", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion",
-    "Moissonneuse", "Citadelle", "Relais de capture", "Gisement de minerai",
+    "Moissonneuse", "Citadelle", "Relais de capture", "Gisement de minerai", "Tour de contrôle", "controlTower",
     "createHarvester", "createCitadel", "createRelay", "createOreNode",
     "a==='aircraft'", "a==='helicopter'", "a==='drone'",
     "a==='projectile'", "a==='explosion'", "a==='muzzleFlash'",
