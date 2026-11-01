@@ -100,6 +100,9 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 #selinfo .shp>i{display:block;height:100%;background:linear-gradient(90deg,#2080c0,#50c0f0)}
 
 /* Minimap */
+#mobileCommands{display:none;position:absolute;top:42px;left:8px;right:8px;z-index:35;gap:5px;justify-content:center;pointer-events:auto}
+#mobileCommands button{flex:1;min-width:0;min-height:44px;padding:8px 5px;border:1px solid #315b78;border-radius:6px;background:#0b1926ef;color:#d8eafa;font-size:10px;font-weight:800;touch-action:manipulation}
+#mobileCommands button[aria-pressed="true"]{border-color:#e8c040;color:#ffe17a;background:#26301f}
 #minimap{
   position:absolute;right:210px;bottom:10px;width:160px;height:120px;z-index:15;
   border:2px solid #1e4060;border-radius:4px;background:#0a1810;
@@ -160,6 +163,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
   .tab{min-height:44px;display:flex;align-items:center;justify-content:center}
   #cards{grid-template-columns:repeat(4,1fr);flex:1}
   #topbar{right:0}
+  #mobileCommands{display:flex}
   #minimap{right:8px;bottom:140px;width:110px;height:82px}
   #selinfo{bottom:140px}
   #dmglayer,#hbarlayer{right:0;bottom:130px}
@@ -178,6 +182,9 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
   <div class="pill">BLUE ALERTS <span style="color:#5a7890">Command v94 · 3D Assets</span></div>
   <div class="pill"><span class="cmd" id="cmdMode">SÉLECTION</span></div>
   <div class="pill">Vague <b id="waveN">1</b> · Kills <b id="killN">0</b></div>
+</div>
+<div id="mobileCommands" aria-label="Commandes tactiles">
+  <button type="button" id="mobileSelect">Tout</button><button type="button" id="mobileAttack" aria-pressed="false">Attaque-move</button><button type="button" id="mobileStop">Stop</button><button type="button" id="mobileCenter">Centrer</button><button type="button" id="mobileSound" aria-pressed="true">Son ON</button>
 </div>
 
 <div id="selinfo">
@@ -394,9 +401,10 @@ let camTarget = new THREE.Vector3(-18, 0, 4);
 let camYaw = 0.4, camPitch = 0.72, camDist = 48;
 let camVelX = 0, camVelZ = 0;
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
-renderer.shadowMap.enabled = true;
+const isMobile = matchMedia('(max-width: 800px)').matches;
+const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.15 : 1.5));
+renderer.shadowMap.enabled = !isMobile;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.12;
@@ -439,8 +447,8 @@ renderer.domElement.addEventListener('webglcontextlost', event => {
 scene.add(new THREE.HemisphereLight(0xd7e8f2, 0x303c2c, 1.85));
 const sun = new THREE.DirectionalLight(0xfff1dc, 2.8);
 sun.position.set(-40, 60, 20);
-sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.castShadow = !isMobile;
+sun.shadow.mapSize.set(isMobile ? 1024 : 2048, isMobile ? 1024 : 2048);
 Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, near: 2, far: 180 });
 sun.shadow.bias = -0.0003;
 scene.add(sun);
@@ -560,7 +568,7 @@ addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
 for (let x = -95; x < 95; x += 6) addBox(scene, x, 0.055, 0, 2.4, 0.01, 0.12, MAT.line);
 
 // Trees — deterministic placement keeps every match and visual test reproducible.
-for (let i = 0; i < 160; i++) {
+for (let i = 0; i < (isMobile ? 100 : 160); i++) {
   const x = (terrainRandom() - 0.5) * 185;
   const z = (terrainRandom() - 0.5) * 145;
   if (Math.abs(z) < 7) continue;
@@ -573,7 +581,7 @@ for (let i = 0; i < 160; i++) {
   scene.add(crown);
 }
 // Rocks — same seeded stream, separate from gameplay randomness.
-for (let i = 0; i < 80; i++) {
+for (let i = 0; i < (isMobile ? 48 : 80); i++) {
   const x = (terrainRandom() - 0.5) * 180;
   const z = (terrainRandom() - 0.5) * 140;
   if (Math.abs(z) < 6) continue;
@@ -1395,6 +1403,11 @@ function selectUnit(u, add) {
   sfx('select');
   updateHUD();
 }
+function syncMobileAttackButton() {
+  const button = $('mobileAttack');
+  if (button) button.setAttribute('aria-pressed', String(attackMoveMode));
+}
+
 function selectAll() {
   clearSelection();
   for (const u of units) {
@@ -1428,6 +1441,7 @@ function stopSelected() {
   }
   toast('Stop');
   attackMoveMode = false;
+  syncMobileAttackButton();
   $('cmdMode').textContent = 'SÉLECTION';
 }
 
@@ -1490,6 +1504,7 @@ function issueMove(wx, wz, isAttackMove = false) {
   placeOrderMark(wx, wz, isAttackMove);
   toast(isAttackMove ? 'Attack-move' : 'Déplacement');
   attackMoveMode = false;
+  syncMobileAttackButton();
   $('cmdMode').textContent = 'SÉLECTION';
 }
 function issueAttack(target) {
@@ -1515,6 +1530,7 @@ function issueAttack(target) {
   placeOrderMark(tx, tz, true);
   toast('Attaque : ' + (CFG.labels[target.kind] || 'cible'));
   attackMoveMode = false;
+  syncMobileAttackButton();
   $('cmdMode').textContent = 'SÉLECTION';
 }
 function placeOrderMark(x, z, isAtk) {
@@ -2128,6 +2144,7 @@ addEventListener('keydown', e => {
   if (k === 's') stopSelected();
   else if (k === 'a') {
     attackMoveMode = true;
+    syncMobileAttackButton();
     mode = 'select';
     placeKind = null; clearGhost();
     $('cmdMode').textContent = 'ATTACK-MOVE';
@@ -2142,6 +2159,7 @@ addEventListener('keydown', e => {
   else if (k === 'escape') {
     placeKind = null; mode = 'select'; clearGhost();
     attackMoveMode = false;
+    syncMobileAttackButton();
     $('cmdMode').textContent = 'SÉLECTION';
   }
 });
@@ -2167,7 +2185,19 @@ $('btnCenter').addEventListener('click', () => {
 $('btnSound').addEventListener('click', () => {
   soundOn = !soundOn;
   $('btnSound').textContent = 'Son : ' + (soundOn ? 'ON' : 'OFF');
+  $('mobileSound')?.setAttribute('aria-pressed', String(soundOn));
+  if ($('mobileSound')) $('mobileSound').textContent = 'Son ' + (soundOn ? 'ON' : 'OFF');
 });
+$('mobileSelect')?.addEventListener('click', selectAll);
+$('mobileStop')?.addEventListener('click', stopSelected);
+$('mobileCenter')?.addEventListener('click', () => { camTarget.set(-18,0,4); camYaw=.4; camPitch=.72; camDist=48; });
+$('mobileAttack')?.addEventListener('click', () => {
+  attackMoveMode = !attackMoveMode; mode='select'; placeKind=null; clearGhost();
+  syncMobileAttackButton();
+  $('cmdMode').textContent=attackMoveMode?'ATTACK-MOVE':'SÉLECTION';
+  toast(attackMoveMode?'Attack-move : touche la destination':'Mode sélection');
+});
+$('mobileSound')?.addEventListener('click', () => $('btnSound').click());
 
 // Tabs
 document.querySelectorAll('.tab').forEach(t => {
