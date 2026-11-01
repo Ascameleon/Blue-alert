@@ -41,6 +41,8 @@ The original v94 kit remains intact and gains additional procedural Three.js mod
 - attack helicopter with cabin, tail boom, main/tail rotor groups, skids and rocket pods;
 - reconnaissance quadcopter with four motor/propeller groups and a camera gimbal;
 - ballistic projectile with nose, stabilizer fins and tracer;
-- explosion effect with hot core, shockwave rings, sparks and smoke puffs.
+- explosion effect with hot core, shockwave rings, sparks and smoke puffs;
+- short-lived muzzle-flash effect with a hot core and directional flare;
+- extra reactive armour, side skirts, optics and antennae on the tank; plate carrier, pouches, knee pads and goggles on infantry; exterior lights and service vents on buildings.
 
 The interactive preview exposes all five new asset types. The assets remain original procedural geometry, deliberately avoiding paid generation APIs and unlicensed downloads. They are not AI-sculpted GLB models; rotor spin, projectile travel and explosion lifetime require the game runtime to animate the returned groups. Validate scale, hitboxes, animation timing and frame rate in the actual game before gameplay integration.
