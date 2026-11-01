@@ -43,6 +43,10 @@ The original v94 kit remains intact and gains additional procedural Three.js mod
 - ballistic projectile with nose, stabilizer fins and tracer;
 - explosion effect with hot core, shockwave rings, sparks and smoke puffs;
 - short-lived muzzle-flash effect with a hot core and directional flare;
+- tracked ore harvester with collection drum, cargo hopper, cabin and drivetrain;
+- command citadel with four bastions and a visible energy core;
+- capture relay tower and ore-field cluster assets;
+- the v94 browser prototype now uses the dedicated harvester, citadel and ore-node models while retaining the original gameplay health, movement and harvesting logic.
 - extra reactive armour, side skirts, optics and antennae on the tank; plate carrier, pouches, knee pads and goggles on infantry; exterior lights and service vents on buildings.
 
-The interactive preview exposes all five new asset types. The assets remain original procedural geometry, deliberately avoiding paid generation APIs and unlicensed downloads. They are not AI-sculpted GLB models; rotor spin, projectile travel and explosion lifetime require the game runtime to animate the returned groups. Validate scale, hitboxes, animation timing and frame rate in the actual game before gameplay integration.
+The interactive preview exposes all five new asset types. The assets remain original procedural geometry, deliberately avoiding paid generation APIs and unlicensed downloads. They are not AI-sculpted GLB models; rotor spin, projectile travel and explosion lifetime require the game runtime to animate the returned groups. The relay model is an asset for the existing OpenRTS capture-point design; the OpenRTS scenario XML is still not loaded by the browser prototype. Validate scale, hitboxes, animation timing and frame rate in the actual game before gameplay integration.
