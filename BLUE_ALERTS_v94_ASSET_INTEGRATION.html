@@ -1543,6 +1543,32 @@ function spawnParticle(pos, color, big) {
   }
 }
 
+// Short impact burst: a ground shock-ring plus fast sparks.
+function spawnImpact(pos, color, heavy) {
+  const ringGeo = new THREE.TorusGeometry(heavy ? 0.42 : 0.22, heavy ? 0.055 : 0.035, 5, 18);
+  const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.82 });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.copy(pos);
+  ring.position.y = Math.max(0.08, pos.y);
+  scene.add(ring);
+  fx.push({ mesh: ring, geo: ringGeo, mat: ringMat, life: heavy ? 0.34 : 0.22, max: heavy ? 0.34 : 0.22, smoke: false, expand: heavy ? 1.16 : 1.13 });
+
+  const count = heavy ? 7 : 4;
+  for (let i = 0; i < count; i++) {
+    const geo = new THREE.SphereGeometry(heavy ? 0.095 : 0.065, 5, 4);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 });
+    const spark = new THREE.Mesh(geo, mat);
+    spark.position.copy(pos);
+    spark.position.y += 0.12;
+    scene.add(spark);
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.3;
+    const speed = (heavy ? 3.8 : 2.5) * (0.7 + Math.random() * 0.5);
+    fx.push({ mesh: spark, geo, mat, life: 0.24 + Math.random() * 0.12, max: 0.36, smoke: false,
+      velocity: new THREE.Vector3(Math.cos(angle) * speed, 1.2 + Math.random() * 1.5, Math.sin(angle) * speed), gravity: 5.5 });
+  }
+}
+
 function fireProjectile(shooter, target) {
   const from = new THREE.Vector3();
   if (shooter.g) {
@@ -2630,8 +2656,12 @@ function tick() {
       const step = p.speed * dt;
       if (dist <= step || p.life <= 0) {
         scene.remove(p.mesh, p.line);
+        p.mesh.geometry.dispose();
+        p.mesh.material.dispose();
+        p.line.geometry.dispose();
+        p.line.material.dispose();
         projectiles.splice(i, 1);
-        spawnParticle(p.dest, p.isBlue ? 0x60d8ff : 0xff6030, false);
+        spawnImpact(p.dest, p.isBlue ? 0x60d8ff : 0xff6030, p.damage >= 18);
         if (p.target && !p.target.dead) {
           applyDamage(p.target, p.damage, p.shooter.team);
         }
@@ -2647,7 +2677,12 @@ function tick() {
     for (let i = fx.length - 1; i >= 0; i--) {
       const e = fx[i];
       e.life -= dt;
-      e.mesh.scale.multiplyScalar(e.smoke ? 1.015 : 1.06);
+      if (e.velocity) {
+        e.mesh.position.addScaledVector(e.velocity, dt);
+        e.velocity.y -= (e.gravity || 0) * dt;
+      }
+      if (e.expand) e.mesh.scale.multiplyScalar(e.expand);
+      else e.mesh.scale.multiplyScalar(e.smoke ? 1.015 : 1.06);
       e.mat.opacity = Math.max(0, (e.life / e.max) * (e.smoke ? 0.4 : 1));
       if (e.smoke) e.mesh.position.y += dt * 0.55;
       if (e.life <= 0) {
