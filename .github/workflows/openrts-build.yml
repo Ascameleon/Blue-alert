@@ -41,6 +41,8 @@ jobs:
         run: python3 integration/patch_openrts_ramp_serialization.py engine/OpenRTS/core/src/model/battlefield/map/cliff/Ramp.java
       - name: Patch OpenRTS animation control compatibility
         run: python3 integration/patch_openrts_animation_performer.py engine/OpenRTS/core/src/view/acting/AnimationPerformer.java
+      - name: Patch OpenRTS ground motion compatibility
+        run: python3 integration/patch_openrts_ground_motion.py engine/OpenRTS/core/src/model/battlefield/army/motion/CollisionManager.java
       - name: Validate BLUE ALERTS prototype
         run: python3 scripts/validate_prototype.py
       - name: Validate BLUE ALERTS v94 3D prototype
