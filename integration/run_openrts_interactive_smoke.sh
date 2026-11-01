@@ -67,6 +67,15 @@ if [ -z "$window_x" ] || [ -z "$window_y" ]; then
   exit 1
 fi
 echo "Interactive test window: id=$window_id origin=$window_x,$window_y"
+xdotool windowraise "$window_id" || true
+xdotool windowfocus --sync "$window_id"
+active_window="$(xdotool getwindowfocus || true)"
+echo "Focused X11 window: $active_window"
+if [ "$active_window" != "$window_id" ]; then
+  echo "Could not focus the BLUE ALERTS interactive test window."
+  cat "$LOG"
+  exit 1
+fi
 
 ready_line="$(grep -F "BLUE ALERTS INTERACTIVE READY" "$LOG" | tail -n1)"
 target_pair="$(sed -E 's/.*target=([0-9]+,[0-9]+).*/\1/' <<<"$ready_line")"
