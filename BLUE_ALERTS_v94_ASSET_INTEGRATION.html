@@ -1002,7 +1002,7 @@ function createUnit(x, z, team, kind) {
           team: team === 1 ? 'blue' : 'red',
           scale: heavy ? 1.12 : 1.0
         });
-        muzzleFlash.position.set(2.62, 0.36, 0);
+        muzzleFlash.position.set(1.78, 0.28, 0);
         muzzleFlash.visible = false;
         muzzleFlash.traverse(part => {
           if (part.material && typeof part.material.opacity === 'number') {
