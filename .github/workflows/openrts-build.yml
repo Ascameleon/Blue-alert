@@ -119,6 +119,7 @@ jobs:
           grep -q "switching controller to BattlefieldController" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
           grep -q "battlefield controller online" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
           grep -q "BLUE ALERTS runtime loaded 12 units" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
+          grep -Eq "BLUE ALERTS movement smoke test: ([1-9]|1[0-2])/12 units moved\\." "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
           if grep -Eq "SEVERE: Uncaught exception|Uncaught exception thrown in Thread|Exception: java.lang" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"; then
             echo "BLUE ALERTS runtime exception detected."
             cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
