@@ -33,7 +33,7 @@ const server=createServer(async(req,res)=>{
       if(!file.startsWith(root+sep)){res.writeHead(403);res.end('forbidden');return;}
       data=await readFile(file);
     }
-    res.writeHead(200,{'content-type':mime[extname(file)]||'application/octet-stream','cache-control':'no-store'});
+    res.writeHead(200,{'content-type':mime[extname(pathname)]||'application/octet-stream','cache-control':'no-store'});
     res.end(data);
   } catch(error) {
     res.writeHead(500);res.end(String(error));
