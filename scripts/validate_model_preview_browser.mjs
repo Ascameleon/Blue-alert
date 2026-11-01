@@ -6,10 +6,14 @@ import { execFileSync } from 'node:child_process';
 import { chromium } from 'playwright';
 
 const root=process.cwd();
-execFileSync('git',['fetch','origin','main','--depth=1'],{stdio:'ignore'});
+const baseBranch=process.env.GITHUB_BASE_REF||'main';
+console.log('Fetching '+baseBranch+' for visual before/after comparison');
+execFileSync('git',['fetch','--no-tags','--depth=1','origin',baseBranch],{stdio:'ignore',timeout:30000});
+console.log('Base branch fetched');
+const baseRef='FETCH_HEAD';
 const baselineFiles=new Map([
-  ['/game-data/models/preview.html',execFileSync('git',['show','origin/main:game-data/models/preview.html'],{encoding:'utf8',maxBuffer:16*1024*1024})],
-  ['/game-data/models/blue-alert-models.js',execFileSync('git',['show','origin/main:game-data/models/blue-alert-models.js'],{encoding:'utf8',maxBuffer:16*1024*1024})]
+  ['/game-data/models/preview.html',execFileSync('git',['show',baseRef+':game-data/models/preview.html'],{encoding:'utf8',maxBuffer:16*1024*1024})],
+  ['/game-data/models/blue-alert-models.js',execFileSync('git',['show',baseRef+':game-data/models/blue-alert-models.js'],{encoding:'utf8',maxBuffer:16*1024*1024})]
 ]);
 const allowed=new Set([
   '/game-data/models/preview.html',
