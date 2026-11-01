@@ -47,7 +47,7 @@ public class BlueAlertsInteractiveSmoke extends MainRTS {
         debugger.getNode().setCullHint(CullHint.Always);
 
         ModelManager.loadBattlefield("assets/maps/blue-alerts-skirmish.btf");
-        List<Unit> units = ArmyManager.getUnits();
+        var units = ArmyManager.getUnits();
         if (units.size() != 12) {
             throw new IllegalStateException("Expected 12 BLUE ALERTS units, found " + units.size());
         }
