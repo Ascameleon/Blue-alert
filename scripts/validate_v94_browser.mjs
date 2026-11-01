@@ -221,6 +221,63 @@ try {
   const tabBox = await mobile.locator('#sidebar .tab[data-t="units"]').boundingBox();
   await mobile.touchscreen.tap(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2);
   await assert.ok(await mobile.locator('#sidebar .tab[data-t="units"]').evaluate(el => el.classList.contains('active')), 'mobile touch must switch the unit tab');
+
+  const mobileCommands = await mobile.evaluate(() => {
+    const ids = ['mobileSelect', 'mobileAttack', 'mobileStop', 'mobileCenter', 'mobileSound'];
+    return ids.map(id => {
+      const el = document.getElementById(id);
+      const r = el?.getBoundingClientRect();
+      return { id, visible: !!el && getComputedStyle(el).display !== 'none' && r.width > 0 && r.height > 0,
+        width: r?.width || 0, height: r?.height || 0 };
+    });
+  });
+  assert.equal(mobileCommands.length, 5, 'all five mobile command controls must exist');
+  assert.ok(mobileCommands.every(c => c.visible && c.width >= 44 && c.height >= 44),
+    'all five mobile command controls must be visible and meet the 44x44px touch-target minimum');
+
+  await mobile.locator('#mobileSelect').tap();
+  assert.ok(await mobile.locator('#selinfo').evaluate(el => getComputedStyle(el).display !== 'none'),
+    'mobile Select All must update the visible selection panel');
+
+  await mobile.locator('#mobileAttack').tap();
+  assert.equal(await mobile.locator('#mobileAttack').getAttribute('aria-pressed'), 'true',
+    'mobile Attack-move must expose its active state');
+  assert.equal((await mobile.locator('#cmdMode').textContent()).trim(), 'ATTACK-MOVE',
+    'mobile Attack-move must update the command HUD');
+  await mobile.locator('#mobileStop').tap();
+  assert.equal(await mobile.locator('#mobileAttack').getAttribute('aria-pressed'), 'false',
+    'Stop must clear the mobile Attack-move active state');
+  assert.equal((await mobile.locator('#cmdMode').textContent()).trim(), 'SÉLECTION',
+    'Stop must restore the selection command HUD');
+
+  await mobile.locator('#mobileAttack').tap();
+  await mobile.locator('#viewport canvas').tap({ position: { x: 190, y: 250 } });
+  assert.equal(await mobile.locator('#mobileAttack').getAttribute('aria-pressed'), 'false',
+    'issuing an Attack-move ground order must clear the mobile active state');
+  assert.equal((await mobile.locator('#cmdMode').textContent()).trim(), 'SÉLECTION',
+    'issuing an Attack-move ground order must restore the selection command HUD');
+
+  await mobile.keyboard.press('a');
+  assert.equal(await mobile.locator('#mobileAttack').getAttribute('aria-pressed'), 'true',
+    'keyboard Attack-move must synchronize the mobile pressed state');
+  await mobile.keyboard.press('Escape');
+  assert.equal(await mobile.locator('#mobileAttack').getAttribute('aria-pressed'), 'false',
+    'Escape must clear the mobile Attack-move pressed state');
+
+  await mobile.locator('#mobileSound').tap();
+  assert.equal(await mobile.locator('#mobileSound').getAttribute('aria-pressed'), 'false',
+    'mobile sound toggle must expose OFF state');
+  assert.equal((await mobile.locator('#mobileSound').textContent()).trim(), 'Son OFF',
+    'mobile sound toggle label must show OFF');
+  assert.equal((await mobile.locator('#btnSound').textContent()).trim(), 'Son : OFF',
+    'mobile sound toggle must synchronize the desktop sound control');
+  await mobile.locator('#mobileSound').tap();
+  assert.equal(await mobile.locator('#mobileSound').getAttribute('aria-pressed'), 'true',
+    'mobile sound toggle must restore ON state');
+  assert.equal((await mobile.locator('#btnSound').textContent()).trim(), 'Son : ON',
+    'mobile sound toggle must restore the desktop sound control');
+
+  await mobile.locator('#mobileCenter').tap();
   await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
 
   const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
