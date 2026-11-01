@@ -10,13 +10,13 @@ REQUIRED_EXPORTS = (
     "createTank", "createInfantry", "createBuilding", "createLandscape",
     "createTree", "createRock", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion", "createMuzzleFlash",
-    "a==='aircraft'", "a==='helicopter'", "a==='drone'",
-    "a==='projectile'", "a==='explosion'", "a==='muzzleFlash'",
 )
 REQUIRED_PREVIEW = (
     "Avion d’attaque", "Hélicoptère d’assaut", "Drone de reconnaissance",
     "Projectile", "Explosion", "Flash de bouche", "createMuzzleFlash", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion",
+    "a==='aircraft'", "a==='helicopter'", "a==='drone'",
+    "a==='projectile'", "a==='explosion'", "a==='muzzleFlash'",
 )
 
 def node_check(source: str, label: str) -> None:
