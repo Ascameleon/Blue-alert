@@ -85,7 +85,8 @@ xdotool mousemove --sync "$((window_x + target_x))" "$((window_y + target_y))" c
 wait_for_marker "BLUE ALERTS INTERACTIVE SELECTED" 10
 
 xdotool mousemove --sync "$((window_x + move_x))" "$((window_y + move_y))" click 3
-wait_for_marker "BLUE ALERTS INTERACTIVE MOVED" 20
+wait_for_marker "BLUE ALERTS INTERACTIVE MOVE_CLICK_RECEIVED" 8
+wait_for_marker "BLUE ALERTS INTERACTIVE MOVED" 28
 wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_READY" 5
 
 enemy_line="$(grep -F "BLUE ALERTS INTERACTIVE ENEMY_SCREEN" "$LOG" | tail -n1)"
