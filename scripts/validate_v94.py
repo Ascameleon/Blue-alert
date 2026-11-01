@@ -115,10 +115,26 @@ def main():
         "const unitTarget = target.g &&",
         "if (!unitTarget) target.dead = true;",
         "window.__BLUE_ALERTS_COMBAT_QA__",
+        "qaFrameCount",
+        "qaLastFrameDelta",
+        "frameCount: qaFrameCount",
+        "lastFrameDelta: qaLastFrameDelta",
     )
     missing = [feature for feature in required_live_vfx_features if feature not in source]
     if missing:
         raise SystemExit("FAIL: live combat VFX/death lifecycle missing: " + ", ".join(missing))
+
+    required_mobile_features = (
+        'id="mobileCommands"',
+        'id="mobileAttack"',
+        "syncMobileAttackButton",
+        "antialias: !isMobile",
+        "isMobile ? 100 : 160",
+        "isMobile ? 48 : 80",
+    )
+    missing = [feature for feature in required_mobile_features if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: mobile RTS controls/performance integration missing: " + ", ".join(missing))
 
     terrain_start = source.index("/* ─── Deterministic terrain art")
     terrain_end = source.index("/* ─── Game state", terrain_start)
