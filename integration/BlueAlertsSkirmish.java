@@ -17,7 +17,7 @@ import com.jme3.scene.Spatial.CullHint;
 /**
  * BLUE ALERTS first playable OpenRTS skirmish.
  * Loads a two-faction battlefield, switches directly to the native battlefield
- * controller, then exercises select-all and a group move order for smoke testing.
+ * controller, then exercises select-all and independent faction move orders.
  */
 public class BlueAlertsSkirmish extends MainRTS {
     private final Map<Unit, Point3D> initialPositions = new HashMap<>();
@@ -69,7 +69,12 @@ public class BlueAlertsSkirmish extends MainRTS {
         super.simpleUpdate(tpf);
         elapsedSinceLoad += tpf;
         if (!movementVerified && elapsedSinceLoad >= 8f) {
-            long movedUnits = initialPositions.entrySet().stream()
+            long redMoved = initialPositions.entrySet().stream()
+                    .filter(entry -> "1".equals(entry.getKey().faction.getName()))
+                    .filter(entry -> entry.getKey().pos.getDistance(entry.getValue()) > 0.5)
+                    .count();
+            long blueMoved = initialPositions.entrySet().stream()
+                    .filter(entry -> "2".equals(entry.getKey().faction.getName()))
                     .filter(entry -> entry.getKey().pos.getDistance(entry.getValue()) > 0.5)
                     .count();
             for (Map.Entry<Unit, Point3D> entry : initialPositions.entrySet()) {
@@ -79,17 +84,19 @@ public class BlueAlertsSkirmish extends MainRTS {
                         + " distance=" + unit.pos.getDistance(entry.getValue())
                         + " start=" + entry.getValue() + " end=" + unit.pos);
             }
-            System.out.println("BLUE ALERTS movement smoke test: " + movedUnits + "/12 units moved.");
-            if (movedUnits == 0) {
-                throw new IllegalStateException("No BLUE ALERTS units moved after the group move order.");
+            System.out.println("BLUE ALERTS red faction movement smoke test: " + redMoved + "/6 units moved.");
+            System.out.println("BLUE ALERTS blue faction movement smoke test: " + blueMoved + "/6 units moved.");
+            if (redMoved != 6 || blueMoved != 6) {
+                throw new IllegalStateException("Expected both factions to move all 6 units; red="
+                        + redMoved + ", blue=" + blueMoved);
             }
             movementVerified = true;
-            // The stock editor camera starts near map origin; explicitly frame
-            // the skirmish cluster so CI screenshots prove that the units render.
-            cam.setFrustumPerspective(55f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
-            cam.setLocation(new Vector3f(23f, 18f, 20f));
-            cam.lookAt(new Vector3f(23f, 40f, 0f), Vector3f.UNIT_Z);
-            System.out.println("BLUE ALERTS camera framed around skirmish units at " + cam.getLocation());
+            // Frame the skirmish more tightly so the unit models are legible
+            // in CI evidence while retaining both faction groups in view.
+            cam.setFrustumPerspective(50f, (float) cam.getWidth() / cam.getHeight(), 0.1f, 1000f);
+            cam.setLocation(new Vector3f(23f, 31f, 12f));
+            cam.lookAt(new Vector3f(23f, 42f, 0f), Vector3f.UNIT_Z);
+            System.out.println("BLUE ALERTS close camera frame around skirmish units at " + cam.getLocation());
         }
     }
 
