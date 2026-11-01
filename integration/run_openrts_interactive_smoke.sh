@@ -97,6 +97,7 @@ if [[ ! "$enemy_pair" =~ ^[0-9]+,[0-9]+$ ]]; then
 fi
 IFS=, read -r enemy_x enemy_y <<<"$enemy_pair"
 xdotool mousemove --sync "$((window_x + enemy_x))" "$((window_y + enemy_y))" click 3
+wait_for_marker "BLUE ALERTS INTERACTIVE ATTACK_CLICK_RECEIVED" 8
 wait_for_marker "BLUE ALERTS INTERACTIVE PASS selection+move+attack" 35
 
 sleep 2
