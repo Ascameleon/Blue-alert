@@ -97,7 +97,7 @@ export function createInfantry(THREE, options={}) {
     box(THREE,g,'knee-pad',[.16,.12,.17],[side*.1,.31,.08],armorPlate);
     sphere(THREE,g,'helmet-goggle-lens',.045,[side*.075,1.17,.12],lens,[1,.7,.45]);
   }
-  box(THREE,g,'radio-antenna',[.025,.42,.025],[-.13,1.12,-.2],dark);
+  box(THREE,g,'radio-antenna',[.025,.42,.025],[-.13,1.12,-.2],boots);
   box(THREE,g,'backpack',[.22,.3,.13],[-.02,.78,-.17],cloth);
   for (const side of [-1,1]) {
     box(THREE,g,'upper-arm',[.12,.32,.13],[side*.23,.79,0],uniform,[0,0,side*-.18]);
