@@ -678,10 +678,17 @@ window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
     camVelX = 0; camVelZ = 0;
     return { focus: point, textureResolution: terrainSurfaceTextures.size };
   },
+  focusLogisticsCorridor() {
+    const point = { x: 8, z: -18, distance: isMobile ? 52 : 58 };
+    camTarget.set(point.x, 0, point.z);
+    camYaw = .4; camPitch = .82; camDist = point.distance;
+    camVelX = 0; camVelZ = 0;
+    return { focus: point, textureResolution: terrainSurfaceTextures.size };
+  },
   focusCrater() {
     const point = isMobile
-      ? { x: 36, z: 24, distance: 12.5 }
-      : { x: 44, z: 26, distance: 13.5 };
+      ? { x: -86, z: 44, distance: 12.5 }
+      : { x: -86, z: 44, distance: 13.5 };
     camTarget.set(point.x, 0, point.z);
     camYaw = .4; camPitch = .72; camDist = point.distance;
     camVelX = 0; camVelZ = 0;
