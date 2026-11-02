@@ -37,7 +37,14 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 /* Mission */
 .mission{padding:8px 10px;border-bottom:1px solid #1a3048;background:#0a1520}
 .mission .mtitle{font-size:10px;color:#4eb0e8;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
-.mission .mobj{font-size:11px;color:#b0c8d8;margin-top:4px;line-height:1.35}
+.mission .mobj{display:grid;gap:5px;margin-top:6px}
+.mission .objective{display:flex;align-items:flex-start;gap:6px;min-height:18px}
+.mission .objective-mark{flex:0 0 16px;height:16px;border:1px solid #31516b;border-radius:50%;display:grid;place-items:center;color:#82a4bb;font-size:9px;font-weight:800}
+.mission .objective.done .objective-mark{border-color:#34785b;background:#123326;color:#83e0ad}
+.mission .objective-copy{font-size:10px;color:#b0c8d8;line-height:1.25}
+.mission .objective.done .objective-copy{color:#8ed7ae}
+.mission .objective-copy small{display:block;margin-top:2px;color:#66869d;font-size:9px}
+.mission .objective.done .objective-copy small{color:#4e9b75}
 .mission .mprog{margin-top:6px;height:4px;background:#1a2838;border-radius:2px;overflow:hidden}
 .mission .mprog>i{display:block;height:100%;background:linear-gradient(90deg,#2a70a0,#50b0e0);width:0%;transition:width .3s}
 
@@ -104,6 +111,12 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 #mobileCommands button{flex:1;min-width:0;min-height:44px;padding:8px 5px;border:1px solid #315b78;border-radius:6px;background:#0b1926ef;color:#d8eafa;font-size:10px;font-weight:800;touch-action:manipulation}
 #mobileCommands button[aria-pressed="true"]{border-color:#e8c040;color:#ffe17a;background:#26301f}
 #mobileHQBadge{display:none;position:absolute;top:92px;left:8px;z-index:36;pointer-events:none;padding:4px 8px;border:1px solid #65d8ff;border-radius:4px;background:rgba(5,18,30,.92);color:#e1f7ff;font:800 10px/1.2 Arial,sans-serif;letter-spacing:.04em;box-shadow:0 2px 8px #0008}
+#mobileMission{display:none;position:absolute;top:122px;left:8px;z-index:34;width:min(190px,calc(100vw - 24px));padding:7px 9px;border:1px solid #31536d;border-radius:6px;background:rgba(5,14,23,.9);box-shadow:0 4px 14px #0008;pointer-events:none;color:#d6e9f5}
+#mobileMission .mobileMissionHead{display:flex;justify-content:space-between;gap:8px;color:#66c5f2;font-size:9px;font-weight:900;letter-spacing:.07em}
+#mobileMissionCount{color:#f2ce69}
+#mobileMissionObjective{margin-top:4px;color:#c4d7e3;font-size:10px;line-height:1.25}
+#mobileMission .mobileMissionBar{height:3px;margin-top:6px;border-radius:3px;background:#1b2c3a;overflow:hidden}
+#mobileMissionBarFill{display:block;width:0%;height:100%;background:linear-gradient(90deg,#2a70a0,#50b8e8);transition:width .25s}
 #minimap{
   position:absolute;right:210px;bottom:10px;width:160px;height:120px;z-index:15;
   border:2px solid #1e4060;border-radius:4px;background:#0a1810;
@@ -166,6 +179,9 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
   #topbar{right:0}
   #mobileCommands{display:flex}
   #mobileHQBadge{display:block}
+  #mobileMission{display:block}
+  /* Keep mission notifications below the mobile command row and objective HUD. */
+  #toast{top:210px;max-width:calc(100vw - 32px);font-size:11px;padding:7px 12px}
   #minimap{right:8px;bottom:140px;width:110px;height:82px}
   #selinfo{bottom:140px}
   #dmglayer,#hbarlayer{right:0;bottom:130px}
@@ -189,6 +205,11 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
   <button type="button" id="mobileSelect">Tout</button><button type="button" id="mobileAttack" aria-pressed="false">Attaque-move</button><button type="button" id="mobileStop">Stop</button><button type="button" id="mobileCenter">Centrer</button><button type="button" id="mobileSound" aria-pressed="true">Son ON</button>
 </div>
 <div id="mobileHQBadge" aria-label="Quartier général de la base bleue">QG • BASE ALPHA</div>
+<div id="mobileMission" aria-label="Objectifs de la mission">
+  <div class="mobileMissionHead"><b>MISSION 01 · PERCÉE NORD</b><span id="mobileMissionCount">0/3</span></div>
+  <div id="mobileMissionObjective">Livrer 600 minerais · 0 / 600 livrés</div>
+  <div class="mobileMissionBar"><i id="mobileMissionBarFill"></i></div>
+</div>
 
 <div id="selinfo">
   <div class="stitle" id="selTitle">—</div>
@@ -208,8 +229,12 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
     <div class="res-box pwr" id="pwrBox"><div class="lbl">Puissance</div><div class="num" id="pwrN">50/0</div></div>
   </div>
   <div class="mission">
-    <div class="mtitle">Mission 01 — Percée</div>
-    <div class="mobj" id="mObj">1. Récolter du minerai<br>2. Construire une armée<br>3. Détruire la citadelle</div>
+    <div class="mtitle">Mission 01 — Percée Nord</div>
+    <div class="mobj" id="mObj">
+      <div class="objective"><span class="objective-mark">1</span><span class="objective-copy">Livrer 600 minerais<small>0 / 600 livrés</small></span></div>
+      <div class="objective"><span class="objective-mark">2</span><span class="objective-copy">Former 3 unités de combat<small>0 / 3 produites</small></span></div>
+      <div class="objective"><span class="objective-mark">3</span><span class="objective-copy">Détruire la citadelle ennemie<small>Cible active</small></span></div>
+    </div>
     <div class="mprog"><i id="mBar"></i></div>
   </div>
   <div class="tabs">
@@ -235,7 +260,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
   <div class="panel">
     <h1>BLUE ALERTS</h1>
     <h2>Mission 01 — Percée Nord</h2>
-    <p>Les forces hostiles ont fortifié le secteur est. Votre mission : établir une base opérationnelle, sécuriser les gisements de minerai, et détruire la <b style="color:#e8c040">citadelle ennemie</b>.</p>
+    <p>Les forces hostiles ont fortifié le secteur est. Livrez <b style="color:#e8c040">600 minerais</b>, produisez <b style="color:#e8c040">3 unités de combat</b>, puis détruisez la <b style="color:#e8c040">citadelle ennemie</b>.</p>
     <div class="controls">
       <b>Clic gauche</b> — sélectionner · <b>Double-clic</b> — même type<br>
       <b>Glisser</b> — sélection rectangle · <b>Clic droit</b> — déplacer / attaquer<br>
@@ -768,6 +793,8 @@ let selected = new Set();
 let credits = 5000;
 let powerGen = 0, powerUse = 0;
 let started = false, gameOver = false;
+const MISSION_TARGETS = Object.freeze({ deliveredOre: 600, combatUnitsProduced: 3 });
+const missionState = { deliveredOre: 0, combatUnitsProduced: 0, enemyCitadelDestroyed: false };
 let wave = 1, kills = 0, time = 0;
 let enemyCD = 22;
 let queue = null; // {kind, remaining, total, spawner}
@@ -1432,6 +1459,73 @@ function refreshPower() {
   $('pwrBox').classList.toggle('low', powerGen < powerUse);
 }
 
+function missionObjectiveSnapshot() {
+  const deliveredOre = Math.min(MISSION_TARGETS.deliveredOre, missionState.deliveredOre);
+  const combatUnitsProduced = Math.min(MISSION_TARGETS.combatUnitsProduced, missionState.combatUnitsProduced);
+  const prerequisitesComplete =
+    deliveredOre >= MISSION_TARGETS.deliveredOre &&
+    combatUnitsProduced >= MISSION_TARGETS.combatUnitsProduced;
+  return [
+    {
+      id: 'ore', title: 'Livrer 600 minerais', progress: deliveredOre,
+      target: MISSION_TARGETS.deliveredOre, detail: `${deliveredOre} / ${MISSION_TARGETS.deliveredOre} livrés`,
+      complete: deliveredOre >= MISSION_TARGETS.deliveredOre
+    },
+    {
+      id: 'units', title: 'Former 3 unités de combat', progress: combatUnitsProduced,
+      target: MISSION_TARGETS.combatUnitsProduced, detail: `${combatUnitsProduced} / ${MISSION_TARGETS.combatUnitsProduced} produites`,
+      complete: combatUnitsProduced >= MISSION_TARGETS.combatUnitsProduced
+    },
+    {
+      id: 'citadel', title: 'Détruire la citadelle ennemie', progress: missionState.enemyCitadelDestroyed ? 1 : 0,
+      target: 1, detail: missionState.enemyCitadelDestroyed ? 'Cible détruite' :
+        prerequisitesComplete ? 'Cible active' : 'Verrouillée — logistique et renforts requis',
+      complete: missionState.enemyCitadelDestroyed
+    }
+  ];
+}
+
+function recordMissionDelivery(amount) {
+  if (!started || gameOver || !Number.isFinite(amount) || amount <= 0) return;
+  missionState.deliveredOre += Math.floor(amount);
+}
+
+function recordMissionUnitProduction(kind) {
+  if (!started || gameOver || !['infantry', 'light', 'heavy'].includes(kind)) return;
+  missionState.combatUnitsProduced += 1;
+}
+
+function updateMissionHUD() {
+  const objectives = missionObjectiveSnapshot();
+  const completed = objectives.filter(objective => objective.complete).length;
+  const progress = objectives.reduce((total, objective) =>
+    total + (objective.complete ? 1 : objective.progress / objective.target), 0) / objectives.length;
+  $('mObj').innerHTML = objectives.map((objective, index) =>
+    `<div class="objective ${objective.complete ? 'done' : ''}"><span class="objective-mark">${objective.complete ? '✓' : index + 1}</span><span class="objective-copy">${objective.title}<small>${objective.detail}</small></span></div>`
+  ).join('');
+  $('mBar').style.width = (progress * 100).toFixed(1) + '%';
+  $('mobileMissionCount').textContent = completed + '/' + objectives.length;
+  const active = objectives.find(objective => !objective.complete);
+  $('mobileMissionObjective').textContent = active
+    ? active.title + ' · ' + active.detail
+    : 'Tous les objectifs accomplis';
+  $('mobileMissionBarFill').style.width = (progress * 100).toFixed(1) + '%';
+}
+
+function missionSnapshot() {
+  const objectives = missionObjectiveSnapshot();
+  const completedCount = objectives.filter(objective => objective.complete).length;
+  const progressPercent = objectives.reduce((total, objective) =>
+    total + (objective.complete ? 1 : objective.progress / objective.target), 0) / objectives.length * 100;
+  return {
+    ...missionState,
+    objectives,
+    completedCount,
+    progressPercent: Number(progressPercent.toFixed(1)),
+    complete: completedCount === objectives.length
+  };
+}
+
 function updateHUD() {
   $('credN').textContent = Math.floor(credits);
   $('waveN').textContent = wave;
@@ -1448,9 +1542,8 @@ function updateHUD() {
     $('qName').textContent = 'Inactive';
   }
 
-  // mission progress (citadel damage)
-  const citPct = 1 - Math.max(0, citadel.hp) / citadel.maxHp;
-  $('mBar').style.width = (citPct * 100) + '%';
+  // Mission progress is driven by completed gameplay conditions, not enemy HP alone.
+  updateMissionHUD();
 
   // selection info
   if (selected.size === 1) {
@@ -2120,6 +2213,24 @@ function applyDamage(target, amount, fromTeam) {
     if (!unitTarget && target.g) target.damageFxCd = Math.min(target.damageFxCd ?? 0.25, 0.12);
 
     if (target.kind === 'citadel') {
+      if (target.team === 2) {
+        const prerequisitesComplete =
+          missionState.deliveredOre >= MISSION_TARGETS.deliveredOre &&
+          missionState.combatUnitsProduced >= MISSION_TARGETS.combatUnitsProduced;
+        if (!prerequisitesComplete) {
+          // Keep the enemy citadel targetable, but do not let a rush attack bypass the mission.
+          target.hp = 1;
+          target.dead = false;
+          if (!target.missionLockNotified) {
+            toast('Objectifs requis : livrer 600 minerais et former 3 unités');
+            target.missionLockNotified = true;
+          }
+          updateHUD();
+          return;
+        }
+        missionState.enemyCitadelDestroyed = true;
+      }
+      updateMissionHUD();
       gameOver = true;
       spawnParticle(new THREE.Vector3(target.x, 3.5, target.z), 0xffa020, true);
       spawnParticle(new THREE.Vector3(target.x, 2, target.z), 0xff4020, true);
@@ -2796,6 +2907,7 @@ function tick() {
         const sx = sp.x + (Math.random() - 0.5) * 5;
         const sz = sp.z + 5 + Math.random() * 2;
         const u = createUnit(sx, sz, 1, queue.kind);
+        recordMissionUnitProduction(queue.kind);
         if (queue.kind === 'harvester') {
           u.harvestState = 'seek';
         }
@@ -2860,6 +2972,7 @@ function tick() {
           } else {
             const gained = Math.floor(u.cargo);
             credits += gained;
+            recordMissionDelivery(gained);
             u.cargo = 0;
             u.harvestState = 'seek';
             u.oreRef = null;
@@ -3494,6 +3607,26 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       if (expectedHpAfter <= 0) throw new Error('Building damage QA refuses a burst that would destroy the target before its damage state can be inspected.');
       for (let i = 0; i < shots; i++) fireProjectile(shooter, target);
       return { stage, shots, damagePerShot, hpBefore, expectedHpAfter, ...buildingDamageSnapshot() };
+    }
+  });
+
+  window.__BLUE_ALERTS_MISSION_QA__ = Object.freeze({
+    snapshot: missionSnapshot,
+    recordDelivery(amount) {
+      recordMissionDelivery(amount);
+      updateHUD();
+      return missionSnapshot();
+    },
+    recordProduction(kind) {
+      recordMissionUnitProduction(kind);
+      updateHUD();
+      return missionSnapshot();
+    },
+    destroyEnemyCitadel() {
+      const target = buildings.find(building => !building.dead && building.team === 2 && building.kind === 'citadel');
+      if (!target) throw new Error('Mission QA requires a live enemy citadel.');
+      applyDamage(target, target.hp, 1);
+      return { ...missionSnapshot(), enemyCitadelHp: target.hp, enemyCitadelAlive: !target.dead };
     }
   });
 }
