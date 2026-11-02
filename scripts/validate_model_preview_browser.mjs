@@ -116,6 +116,10 @@ try {
   await page.waitForTimeout(450);
   const blueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(blueInfantry.factionProfile,'BLUE_SENTINEL_RIFLEMAN','blue infantry must use the Sentinel faction profile');
+  assert.equal(blueInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V1','blue infantry must render original fabric/ceramic surface maps');
+  assert.ok(blueInfantry.surfaceTextureCount>=7 && blueInfantry.surfaceMaterialCount>=5,
+    'blue infantry must bind cached color, roughness and micro-relief maps to its PBR materials');
+  assert.equal(blueInfantry.headScale,.82,'infantry head/helmet silhouette must use the corrected human proportion');
   assert.ok(blueInfantry.cameraDistance<8,'blue infantry preview camera must frame the model closely: '+blueInfantry.cameraDistance);
   assert.ok(blueInfantry.namedParts.includes('sentinel-visor') && blueInfantry.namedParts.includes('infantry-assault-rifle') &&
     blueInfantry.namedParts.includes('left-leg-pivot') && blueInfantry.namedParts.includes('right-leg-pivot'),
@@ -142,6 +146,8 @@ try {
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION_RIFLEMAN',null,{timeout:10000});
   await page.waitForTimeout(350);
   const redInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.equal(redInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V1','red infantry must share the same textured surface pipeline');
+  assert.ok(redInfantry.surfaceTextureCount>=7 && redInfantry.surfaceMaterialCount>=5,'red infantry PBR maps must be bound');
   assert.ok(redInfantry.namedParts.includes('bastion-brow-guard') &&
     redInfantry.namedParts.includes('bastion-jaw-guard') &&
     redInfantry.namedParts.includes('right-bastion-pauldron'),
