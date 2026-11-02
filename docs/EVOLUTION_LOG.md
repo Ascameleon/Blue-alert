@@ -462,3 +462,16 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - The correction does not alter production game code, effect lifetimes, test thresholds or gameplay behavior. The prior run #343 remains recorded as failed; a new exact-head workflow is required.
 - Changed files for this correction: `scripts/validate_v94_browser.mjs` (code/test); `docs/EVOLUTION_LOG.md` (this record).
 - No workflow was active when this branch update was prepared. No release/version is authorized. Budget remains 0 €.
+
+
+### Desktop turret-alignment probe isolation correction after workflow #344 — 2026-11-02
+
+- Exact tested PR head: `0e5c246e75471e996979aeea87cef50e27c40039`; workflow [41480189328](https://github.com/Ascameleon/Blue-alert/actions/runs/41480189328), run #344, completed with failure in the desktop V94 browser sequence.
+- Passed on this exact run: prototype/static validation, V94 static validation, expanded model-kit validation, imported V93 validation, skirmish-data validation, standalone V94 HTML build, and desktop/mobile model-preview browser rendering.
+- The desktop V94 run now passed the controlled projectile impact, target-specific unit-death explosion, explosion lifetime progression, and complete VFX cleanup assertion. The cleanup snapshot recorded zero projectiles, muzzle flashes, model explosions, impact rings and impact sparks. Desktop mission-objective state and production/delivery progression were also exercised before the later failure.
+- The browser then failed at the turret-alignment probe: `qa.arm()` intentionally relies on autonomous turret fire to expose the live projectile start and muzzle flash. The previous correction kept `qaSuppressCombat` active during that probe, so the expected shot/flash never appeared within five seconds. This is a QA-isolation sequencing issue, not a production rendering or OpenRTS compile failure.
+- Inspected artifact [13158733561](https://github.com/Ascameleon/Blue-alert/actions/runs/41480189328/artifacts/13158733561), including the fresh desktop live-game tank A/B pair and desktop/mobile model-preview A/B captures. The mobile live-game sequence was not reached. The visible finish remains too mottled/camouflage-like for the target standard; no release/version is authorized.
+- Correction commit: `d4f7801c7fd59703495feeeaed4a165fb706e39b` (`test: resume combat for controlled turret alignment probe`). It temporarily calls `resumeCombat()` immediately before the explicit `qa.arm()` turret-alignment probe. The existing later `freezeNewCombat()` still stops new autonomous shots before building-damage and remaining desktop QA; the final desktop test restores combat before closing the page.
+- This preserves all live firing, muzzle alignment, projectile, explosion, cleanup, building-damage and gameplay assertions. No production runtime code, combat contract, effect lifetime or acceptance threshold was changed.
+- Changed files: `scripts/validate_v94_browser.mjs` (code/test); `docs/EVOLUTION_LOG.md` (this evidence record).
+- OpenRTS build/launch and native selection/movement/attack were skipped because the web browser job failed first; no OpenRTS failure is inferred. Mobile model-preview is 390×844 emulation, not a physical Samsung test. Budget remains 0 €. No version/release.
