@@ -2462,6 +2462,10 @@ function showDmgNum(worldPos, amount, isAlly) {
 function killUnit(u) {
   if (u.dead) return;
   u.dead = true;
+  // A dead unit is skipped by the simulation loop, so its attached turret flash
+  // cannot rely on the normal flashT countdown to hide it on a later frame.
+  u.flashT = 0;
+  if (u.g?.userData?.flash) setMuzzleFlashIntensity(u.g.userData.flash, 0);
   // Remove every stale order that still points at this unit. Attack-move units
   // keep their existing waypoint path and can resume it on the next update.
   for (const v of units) {
@@ -3966,11 +3970,18 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);
       if (!target) throw new Error('Combat QA requires a living red combat unit.');
       const targetKind = target.kind, hpBefore = target.hp, killsBefore = kills, creditsBefore = credits;
+      const attachedFlash = target.g?.userData?.flash || null;
+      if (attachedFlash) {
+        target.flashT = 0.12;
+        setMuzzleFlashIntensity(attachedFlash, 1);
+      }
+      const flashWasActive = !!attachedFlash?.visible;
       camTarget.set(target.g.position.x, 0, target.g.position.z);
       camDist = Math.min(camDist, 26);
       applyDamage(target, hpBefore, 1);
       return {
         targetKind, targetDead: target.dead, targetRemoved: !scene.children.includes(target.g),
+        flashWasActive, flashHidden: !attachedFlash?.visible, flashTimer: target.flashT,
         killsDelta: kills - killsBefore, creditsDelta: credits - creditsBefore,
         ...combatState()
       };
