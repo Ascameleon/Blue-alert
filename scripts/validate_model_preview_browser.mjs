@@ -112,6 +112,8 @@ try {
   }));
   assert.ok(blueInfantry.triangleCount>=1200,
     'blue infantry must retain its detailed geometry budget: '+blueInfantry.triangleCount+' triangles');
+  assert.ok(blueInfantry.boundsMinY>=-0.03,
+    'blue infantry combat boots must not sink below the ground plane: '+blueInfantry.boundsMinY);
   assert.ok(blueInfantry.drawCalls<=60,
     'blue infantry must stay within the 60-draw-call mobile preview ceiling: '+blueInfantry.drawCalls);
   assert.ok(blueInfantry.animationPhase>0 && blueInfantry.walkAmount>=0.8,
