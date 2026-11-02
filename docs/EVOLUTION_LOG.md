@@ -451,3 +451,14 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Changed files for this cycle: `scripts/validate_v94_browser.mjs` (code/test); `docs/EVOLUTION_LOG.md` (this evidence record).
 - The final documentation commit and exact-head validation result will be recorded after the completed workflow. No workflow was active when this branch update was prepared.
 - Evidence boundaries: desktop/mobile model-preview screenshots are actual browser renders; mobile is 390×844 emulation, not a physical Samsung test. OpenRTS is a separate native engine and was not reached in run #342. Three.js remains CDN-loaded. No paid APIs, assets, credits or services; budget 0 €. No game version/release was created.
+
+
+### Static-contract correction after workflow #343 — 2026-11-02
+
+- Exact PR head tested: `b53019aaf52e12021ef665696fd05d79aa9a5c83`; workflow [41479939268](https://github.com/Ascameleon/Blue-alert/actions/runs/41479939268), run #343, completed with failure at `Validate BLUE ALERTS v94 3D prototype`.
+- The validator correctly caught that the desktop browser test no longer contained a `resumeCombat` call after the first correction. The QA suppression was intentionally kept active during the controlled desktop probes, but the test must also restore the original live combat state before closing the desktop page.
+- This was a static source-contract failure, not a browser-rendering, gameplay, OpenRTS or native-engine failure. The remaining workflow stages were skipped and no screenshot artifact was produced.
+- Correction commit: `3c1887ccae48109e2a474e1b613180d8317f9b2d` (`test: restore desktop combat after isolated VFX probes`). It adds an explicit `resumeCombat()` plus an assertion that `combatSuppressed` is false after the final desktop terrain evidence capture and before the desktop WebGL context is closed. The suppression still remains active throughout the controlled projectile, explosion, building-damage, infantry and mission checks.
+- The correction does not alter production game code, effect lifetimes, test thresholds or gameplay behavior. The prior run #343 remains recorded as failed; a new exact-head workflow is required.
+- Changed files for this correction: `scripts/validate_v94_browser.mjs` (code/test); `docs/EVOLUTION_LOG.md` (this record).
+- No workflow was active when this branch update was prepared. No release/version is authorized. Budget remains 0 €.
