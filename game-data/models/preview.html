@@ -40,6 +40,7 @@ const sun=new THREE.DirectionalLight(0xfff0d5,3);sun.position.set(8,14,9);sun.ca
 const grid=new THREE.GridHelper(80,80,0x53655e,0x718078);grid.position.y=-.12;scene.add(grid);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0x56684f,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.16;ground.receiveShadow=true;scene.add(ground);
 let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
+let tankSurfaceFinishEnabled=true;
 const desc={
 tank:['Char de combat','Deux silhouettes de faction : BLUE SENTINEL à tourelle basse et RED BASTION à tourelle renforcée, avec chenilles segmentées, galets boulonnés et blindage incliné.'],
 infantry:['Fantassin','Silhouette tactique renforcée : casque facetté, respirateur scellé à filtres latéraux, plaques d’armure biseautées, équipement dorsal et fusil détaillé. Modèle procédural original, sans image générique.'],
@@ -61,7 +62,7 @@ relay:['Relais de capture','Mât de communication, antennes et halo de contrôle
 ore:['Gisement de minerai','Amas rocheux et cristaux métalliques sur un disque de ressource.']
 };
 function build(){clear();const a=document.querySelector('#asset').value,t=document.querySelector('#team').value;
-if(a==='tank')current=createTank(THREE,{team:t});
+if(a==='tank')current=createTank(THREE,{team:t,surfaceFinish:tankSurfaceFinishEnabled});
 else if(a==='infantry')current=createInfantry(THREE,{team:t});
 else if(a==='landscape'){current=createLandscape(THREE,{size:80});}
 else if(a==='aircraft')current=createAircraft(THREE,{team:t});
@@ -159,5 +160,14 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     canvasHeight:renderer.domElement.height
   };
 };
+window.__BLUE_ALERTS_PREVIEW_QA__=Object.freeze({
+  setTankSurfaceFinish(enabled){
+    if(document.querySelector('#asset').value!=='tank')throw new Error('Tank surface A/B requires the tank preview.');
+    const cameraPosition=camera.position.clone(),target=controls.target.clone();
+    tankSurfaceFinishEnabled=!!enabled;build();
+    camera.position.copy(cameraPosition);controls.target.copy(target);controls.update();renderer.render(scene,camera);
+    return window.__BLUE_ALERTS_PREVIEW__();
+  }
+});
 let previewClock=0;renderer.setAnimationLoop(()=>{previewClock+=.016;if(current?.userData?.animationRig)updateInfantryAnimation(current.userData.animationRig,.016,.85);if(current?.userData?.rotatingGun)current.userData.rotatingGun.rotation.y+=.006;if(current?.userData?.rotatingGun?.name==='rotating-radar')current.userData.rotatingGun.rotation.y+=.018;current?.traverse(o=>{if(o.userData?.emissivePulse&&o.material?.emissiveIntensity!==undefined)o.material.emissiveIntensity=.55+Math.sin(previewClock*3.2)*.45;});if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;if(current?.userData?.collectionDrum)current.userData.collectionDrum.rotation.x+=.08;if(current?.userData?.reactorRing)current.userData.reactorRing.rotation.z+=.008;if(current?.userData?.core)current.userData.core.rotation.y+=.012;if(current?.userData?.captureHalo)current.userData.captureHalo.rotation.z+=.008;controls.update();renderer.render(scene,camera);});
 </script></body></html>
