@@ -193,7 +193,7 @@ export function createInfantry(THREE, options={}) {
   const makeLeg = (side, label) => {
     const pivot = new THREE.Group();
     pivot.name = label + '-leg-pivot';
-    pivot.position.set(side * .105, .51, 0);
+    pivot.position.set(side * .105, .62, 0);
     g.add(pivot);
     box(THREE, pivot, label + '-thigh', [.155, .29, .17], [0, -.145, 0], cloth);
     box(THREE, pivot, label + '-knee-pad', [.17, .13, .19], [0, -.285, .075], armor);
