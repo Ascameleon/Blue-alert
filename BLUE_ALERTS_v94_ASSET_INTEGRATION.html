@@ -582,6 +582,170 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
 addBox(scene, 0, 0.015, 0, 200, 0.03, 5.0, MAT.concrete);
 addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
 for (let x = -95; x < 95; x += 6) addBox(scene, x, 0.055, 0, 2.4, 0.01, 0.12, MAT.line);
+
+
+/* ─── Industrial logistics yard — playable V94 environment content ───
+   Four authored, non-blocking set pieces. Shared geometry and instancing
+   keep the added draw calls and memory cost bounded on mobile. */
+function addIndustrialLogisticsSet() {
+  const steel = new THREE.MeshStandardMaterial({ color: 0x66747a, roughness: 0.48, metalness: 0.68 });
+  const paleSteel = new THREE.MeshStandardMaterial({ color: 0xa1abad, roughness: 0.38, metalness: 0.72 });
+  const concrete = new THREE.MeshStandardMaterial({ color: 0x777d7b, roughness: 0.96, metalness: 0.02 });
+  const hazard = new THREE.MeshStandardMaterial({ color: 0xc58b32, roughness: 0.68, metalness: 0.18 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x222d32, roughness: 0.76, metalness: 0.22 });
+  const signal = new THREE.MeshStandardMaterial({
+    color: 0x45b6c8, emissive: 0x145568, emissiveIntensity: 0.65,
+    roughness: 0.32, metalness: 0.42
+  });
+  const geometry = new Map();
+  const boxGeometry = (w,h,d) => {
+    const key = 'b:' + [w,h,d].join(':');
+    if (!geometry.has(key)) geometry.set(key, new THREE.BoxGeometry(w,h,d));
+    return geometry.get(key);
+  };
+  const cylinderGeometry = (radius,height,segments=12) => {
+    const key = 'c:' + [radius,height,segments].join(':');
+    if (!geometry.has(key)) geometry.set(key, new THREE.CylinderGeometry(radius,radius,height,segments));
+    return geometry.get(key);
+  };
+  const root = new THREE.Group();
+  root.name = 'BA_IndustrialLogisticsYard';
+  root.userData = { kind:'environment-set', id:'industrial-logistics-yard-v94', blocksMovement:false };
+  scene.add(root);
+  const addBox = (parent,name,x,y,z,w,h,d,mat,rz=0) => {
+    const mesh = new THREE.Mesh(boxGeometry(w,h,d),mat);
+    mesh.name = name; mesh.position.set(x,y,z); mesh.rotation.z = rz;
+    mesh.castShadow = !isMobile; mesh.receiveShadow = !isMobile; parent.add(mesh);
+    return mesh;
+  };
+  const addCylinder = (parent,name,x,y,z,radius,height,mat,segments=12) => {
+    const mesh = new THREE.Mesh(cylinderGeometry(radius,height,segments),mat);
+    mesh.name = name; mesh.position.set(x,y,z);
+    mesh.castShadow = !isMobile; mesh.receiveShadow = !isMobile; parent.add(mesh);
+    return mesh;
+  };
+  const cluster = (name,x,z) => {
+    const group = new THREE.Group();
+    group.name = name; group.position.set(x,0,z);
+    group.userData = { kind:'environment-prop', blocksMovement:false };
+    root.add(group); return group;
+  };
+
+  // 1 — Electrical substation: transformer banks, busbars, insulators and fence.
+  const substation = cluster('BA_Substation',-72,-47);
+  addBox(substation,'substation-concrete-apron',0,.12,0,20,.24,13,concrete);
+  for (const x of [-5.6,0,5.6]) {
+    addBox(substation,'transformer-main-tank',x,1.05,0,3.55,1.65,3.35,steel);
+    addBox(substation,'transformer-cover',x,1.94,0,3.82,.16,3.58,dark);
+    for (const z of [-1.05,0,1.05]) {
+      addCylinder(substation,'ceramic-insulator',x,2.42,z,.22,.78,paleSteel,8);
+      addCylinder(substation,'insulator-cap',x,2.86,z,.29,.12,hazard,10);
+    }
+    addBox(substation,'transformer-side-panel',x+1.86,.98,0,.12,1.28,2.75,paleSteel);
+  }
+  addBox(substation,'high-voltage-busbar',0,3.18,-3.2,15,.14,.18,hazard);
+  addBox(substation,'switchgear-front',0,.94,5.15,14,1.5,.3,dark);
+  for (let i=0;i<8;i++) addBox(substation,'switchgear-indicator',-5.65+i*1.62,1.1,5.34,.42,.18,.06,signal);
+  for (let i=0;i<7;i++) {
+    const x=-8.4+i*2.8;
+    addBox(substation,'substation-fence-post',x,1.05,6.35,.12,2.1,.12,paleSteel);
+  }
+  addBox(substation,'substation-fence-rail',0,1.6,6.35,17,.1,.1,steel);
+
+  // 2 — Loading gantry: crossbeam, braced legs, trolley and suspended hook.
+  const gantry = cluster('BA_LoadingGantry',-5,-51);
+  addBox(gantry,'gantry-concrete-apron',0,.1,0,23,.2,13,concrete);
+  for (const x of [-8.7,8.7]) {
+    addBox(gantry,'gantry-leg',x,3.9,0,.58,7.5,.72,hazard);
+    addBox(gantry,'gantry-foot',x,.38,0,1.9,.56,1.9,steel);
+    addBox(gantry,'gantry-diagonal-brace',x*.72,3.45,0,.24,5.8,.24,paleSteel,x<0?-.3:.3);
+    addBox(gantry,'gantry-track',x,7.65,0,.9,.3,1.05,dark);
+  }
+  addBox(gantry,'gantry-crossbeam',0,7.75,0,18.5,.72,.92,steel);
+  addBox(gantry,'gantry-hazard-stripe',0,7.36,.49,17.7,.16,.08,hazard);
+  addBox(gantry,'gantry-trolley',1.1,7.15,0,2.15,.56,1.35,dark);
+  addCylinder(gantry,'gantry-hoist-cable',1.1,6.08,0,.055,1.65,paleSteel,8);
+  addBox(gantry,'gantry-hook',1.1,5.2,0,.52,.2,.38,hazard);
+  addBox(gantry,'gantry-control-cab',-6.9,5.7,.8,1.3,1.15,1.1,signal);
+
+  // 3 — Fuel storage: three ribbed silos, ladders and transfer pipework.
+  const silos = cluster('BA_FuelSilos',72,-46);
+  addBox(silos,'silo-containment-apron',0,.12,0,22,.24,12,concrete);
+  for (const x of [-5.1,0,5.1]) {
+    addCylinder(silos,'fuel-silo-shell',x,2.55,0,2.05,5.05,steel,18);
+    addCylinder(silos,'fuel-silo-cap',x,5.15,0,2.02,.2,paleSteel,18);
+    addCylinder(silos,'fuel-silo-foundation',x,.2,0,2.25,.36,concrete,18);
+    for (const y of [1.15,2.55,3.9]) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(2.08,.045,6,22),paleSteel);
+      ring.name = 'fuel-silo-rib'; ring.position.set(x,y,0); ring.rotation.x=Math.PI/2;
+      silos.add(ring);
+    }
+    addBox(silos,'silo-warning-plate',x,2.15,2.07,1.2,.28,.08,hazard);
+    addBox(silos,'silo-ladder-rail',x+1.08,2.28,-1.53,.09,3.9,.09,dark);
+    for(let step=0;step<9;step++) addBox(silos,'silo-ladder-rung',x+1.08,.55+step*.42,-1.53,.56,.07,.1,paleSteel);
+  }
+  addCylinder(silos,'fuel-transfer-pipe',0,.72,4.65,.16,10.4,hazard,10).rotation.z=Math.PI/2;
+
+  // 4 — Cargo apron: colored container stacks and hazard drums, instanced.
+  const cargo = cluster('BA_CargoStacks',5,56);
+  addBox(cargo,'cargo-concrete-apron',0,.1,0,17,.2,15,concrete);
+  const crateGeometry = new THREE.BoxGeometry(1.72,1.42,1.62);
+  const crateMaterial = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:.78, metalness:.32 });
+  const crates = new THREE.InstancedMesh(crateGeometry,crateMaterial,18);
+  crates.name='instanced-cargo-crates'; crates.castShadow=!isMobile; crates.receiveShadow=!isMobile;
+  const dummy = new THREE.Object3D();
+  const crateColors=[0x617a83,0x8c7149,0x465f6a];
+  for(let i=0;i<18;i++){
+    const col=i%3, row=Math.floor(i/3), level=Math.floor(row/3), depth=row%3;
+    dummy.position.set((col-1)*2.0,.82+level*1.45,(depth-1)*2.0);
+    dummy.rotation.set(0,(i%3-1)*.045,0); dummy.updateMatrix();
+    crates.setMatrixAt(i,dummy.matrix);
+    crates.setColorAt(i,new THREE.Color(crateColors[i%crateColors.length]));
+  }
+  crates.instanceMatrix.needsUpdate=true;
+  if(crates.instanceColor) crates.instanceColor.needsUpdate=true;
+  cargo.add(crates);
+  const barrels = new THREE.InstancedMesh(new THREE.CylinderGeometry(.42,.42,1.12,10),hazard,8);
+  barrels.name='instanced-hazard-barrels'; barrels.castShadow=!isMobile;
+  for(let i=0;i<8;i++){
+    dummy.position.set(-5.1+(i%4)*1.45,.66,5.0+Math.floor(i/4)*1.55);
+    dummy.rotation.set(0,0,0); dummy.updateMatrix(); barrels.setMatrixAt(i,dummy.matrix);
+  }
+  barrels.instanceMatrix.needsUpdate=true; cargo.add(barrels);
+  addBox(cargo,'cargo-apron-warning-line',0,.22,6.95,15,.035,.16,hazard);
+
+  return {
+    root, clusters:[substation,gantry,silos,cargo],
+    counts:{ cargoCrates:crates.count, hazardBarrels:barrels.count },
+    focus:{
+      base:{x:-18,z:4}, substation:{x:-72,z:-47},
+      gantry:{x:-5,z:-51}, silos:{x:72,z:-46}, cargo:{x:5,z:56}
+    }
+  };
+}
+const industrialYard = addIndustrialLogisticsSet();
+window.__BLUE_ALERTS_ENVIRONMENT = Object.freeze({
+  id:'industrial-logistics-yard-v94',
+  runtimeIntegrated:true,
+  clusterCount:industrialYard.clusters.length,
+  cargoCrates:industrialYard.counts.cargoCrates,
+  hazardBarrels:industrialYard.counts.hazardBarrels,
+  blocksMovement:false
+});
+if (new URLSearchParams(location.search).get('environment') === '1') {
+  window.__BLUE_ALERTS_ENVIRONMENT_QA = Object.freeze({
+    snapshot:() => window.__BLUE_ALERTS_ENVIRONMENT,
+    focus(name) {
+      const point=industrialYard.focus[name];
+      if(!point) throw new Error('Unknown industrial environment focus: '+name);
+      camTarget.set(point.x,0,point.z);
+      camYaw=.4; camPitch=.72; camDist=name==='base'?48:31;
+      camVelX=0; camVelZ=0;
+      return {name,...point};
+    }
+  });
+}
+
  
 // Battlefield dressing: lightweight instanced scrub and reflective road markers.
 // Instancing keeps the extra environmental detail to a handful of draw calls on mobile.
