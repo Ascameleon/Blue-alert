@@ -22,6 +22,7 @@ REQUIRED_PREVIEW = (
     "a==='aircraft'", "a==='helicopter'", "a==='drone'",
     "a==='projectile'", "a==='explosion'", "a==='muzzleFlash'",
     "a==='harvester'", "a==='citadel'", "a==='relay'", "a==='ore'",
+    "BLUE SENTINEL", "RED BASTION", "BLUE_SENTINEL", "RED_BASTION",
 )
 
 def node_check(source: str, label: str) -> None:
@@ -48,6 +49,15 @@ def main():
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
+    required_tank_features = (
+        "factionProfile", "BLUE_SENTINEL", "RED_BASTION", "front-glacis",
+        "track-shoe-instanced", "wheel-bolts-instanced", "blue-turret-cheek",
+        "red-turret-cheek", "red-bastion-cupola", "heavy-turret-reinforcement",
+    )
+    missing = [feature for feature in required_tank_features if feature not in model]
+    if missing:
+        raise SystemExit("FAIL: faction tank signatures missing: " + ", ".join(missing))
+
     for token in ("blue-alert-models.js?v=4", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
