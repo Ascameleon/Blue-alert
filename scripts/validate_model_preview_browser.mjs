@@ -90,7 +90,8 @@ try {
   await page.waitForFunction(()=>typeof window.__BLUE_ALERTS_PREVIEW__==='function' && window.__BLUE_ALERTS_PREVIEW__().drawCalls>0,null,{timeout:30000});
   const initial=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(initial.asset,'tank');
-  assert.ok(initial.meshCount>=50 && initial.triangleCount>0,'default faction tank must render a detailed geometry set');
+  assert.ok(initial.meshCount>=30 && initial.meshCount<=45 && initial.triangleCount>0,'detailed faction tank must batch repeated geometry into a compact mesh set');
+  assert.ok(initial.drawCalls<=60,'one tank preview must stay within the instanced draw-call budget');
   assert.ok(initial.environment,'procedural reflection environment must be assigned');
   assert.ok(initial.physicalMaterialCount>0,'PBR physical materials must be present');
   assert.ok(initial.canvasWidth>0 && initial.canvasHeight>0,'WebGL canvas must have a backing resolution');
@@ -98,8 +99,9 @@ try {
   assert.equal(initial.factionProfile,'BLUE_SENTINEL','blue faction must use its own low-profile turret signature');
   assert.equal(initial.trackShoeInstances,36,'both tracks must expose 36 instanced tread shoes');
   assert.equal(initial.wheelBoltInstances,60,'twelve road wheels must expose 60 instanced wheel bolts');
+  assert.deepEqual(initial.detailInstances,{engineGrilles:7,reactiveArmorTiles:8,returnRollers:6,roadWheels:12,wheelHubs:12,wheelHubCaps:12,smokeDischargers:4,faction:{turretCheeks:2,turretSidePlates:0,smokeBanks:0}},'repeated chassis and faction details must be batched');
   assert.ok(initial.cameraDistance<12,'tank preview must frame the vehicle at a useful scale');
-  for(const name of ['front-glacis','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheek','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
+  for(const name of ['front-glacis','engine-deck-grilles-instanced','reactive-armor-tiles-instanced','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheeks-instanced','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
   await page.screenshot({path:output+'/desktop-blue-sentinel-tank.png',fullPage:true});
 
   await page.selectOption('#team','red');
@@ -109,7 +111,9 @@ try {
   assert.equal(redTank.factionProfile,'RED_BASTION','red faction must use its reinforced high turret signature');
   assert.equal(redTank.trackShoeInstances,36);
   assert.equal(redTank.wheelBoltInstances,60);
-  for(const name of ['front-glacis','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheek','red-bastion-side-plate']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
+  assert.ok(redTank.meshCount<=45 && redTank.drawCalls<=60,'red tank must share the same mobile-friendly draw-call budget');
+  assert.deepEqual(redTank.detailInstances.faction,{turretCheeks:2,turretSidePlates:2,smokeBanks:2},'red reinforced turret details must be instanced');
+  for(const name of ['front-glacis','engine-deck-grilles-instanced','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
   assert.notEqual(redTank.factionProfile,initial.factionProfile,'factions must not share the same visual profile');
   await page.screenshot({path:output+'/desktop-red-bastion-tank.png',fullPage:true});
   await page.selectOption('#team','blue');
