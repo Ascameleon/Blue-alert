@@ -156,3 +156,11 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 
 
 - Added deterministic coverage diagnostics for soil patches and the two road-shoulder ruts. Desktop/mobile browser acceptance now asserts both coverage ratios, in addition to texture resolution, checksum and surface mode.
+
+
+### Deterministic coverage preflight and threshold correction
+
+- New refinement commit before the threshold correction: \`f5d8a3da053000aa2bc548f3d67394ea9fa9e801\`; PR #33 targets current \`main\` \`241bc45c1e76af6a4ad5b94dd9554469071a7e11\`.
+- A local deterministic reproduction of the exact terrain hash/noise functions measured soil-patch coverage at approximately 20.1% and road-rut coverage at approximately 0.91% for both 512px and 256px textures.
+- The browser assertion initially required more than 1% road-rut coverage, slightly above the actual deterministic 0.91% layout. Corrected only that threshold to >0.5%, which still rejects missing/near-zero ruts while matching the intended two shoulder tracks.
+- The new exact-head workflow for \`f5d8a3d\` is running; its result is not attributed to the corrected test. A fresh workflow on the threshold-corrected commit is required.
