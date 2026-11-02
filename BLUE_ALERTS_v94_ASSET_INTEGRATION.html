@@ -1270,6 +1270,7 @@ const ores = [];
 const projectiles = [];
 const fx = [];
 let qaSuppressCombat = false; // QA-only gate; production gameplay remains unchanged unless explicitly enabled.
+let qaSuppressEconomyRewards = false; // QA-only gate for deterministic construction-cost assertions.
 let impactSequence = 0;
 let lastImpactEvent = null;
 const orderMarks = [];
@@ -2611,7 +2612,7 @@ function killUnit(u) {
   selected.delete(u);
   if (u.team === 2) {
     kills++;
-    credits += 50 + Math.floor(Math.random() * 40);
+    if (!qaSuppressEconomyRewards) credits += 50 + Math.floor(Math.random() * 40);
   }
   sfx('boom');
   updateHUD();
@@ -2764,7 +2765,7 @@ function applyDamage(target, amount, fromTeam) {
       if (target.scorch) { scene.remove(target.scorch); disposeObject3D(target.scorch); target.scorch = null; }
       for (const material of (target.damageMaterials || [])) material.dispose();
       scene.remove(target.g);
-      if (target.team === 2) { kills++; credits += 100; }
+      if (target.team === 2) { kills++; if (!qaSuppressEconomyRewards) credits += 100; }
       sfx('boom');
       refreshPower();
     }
@@ -3463,7 +3464,7 @@ function tick() {
             setAutoRoute(u, ref.x, ref.z);
           } else {
             const gained = Math.floor(u.cargo);
-            credits += gained;
+            if (!qaSuppressEconomyRewards) credits += gained;
             recordMissionDelivery(gained);
             u.cargo = 0;
             u.harvestState = 'seek';
@@ -4107,6 +4108,14 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     resumeCombat() {
       qaSuppressCombat = false;
       return combatState();
+    },
+    freezeEconomyRewards() {
+      qaSuppressEconomyRewards = true;
+      return { ...combatState(), economyRewardsFrozen: qaSuppressEconomyRewards };
+    },
+    resumeEconomyRewards() {
+      qaSuppressEconomyRewards = false;
+      return { ...combatState(), economyRewardsFrozen: qaSuppressEconomyRewards };
     },
     fire() {
       const shooter = units.find(u => !u.dead && u.team === 1 && u.dmg > 0);
