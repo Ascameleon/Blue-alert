@@ -28,6 +28,7 @@ This log records verified source changes only. A design specification, static ch
 - The feature has been ported onto the post-terrain mainline. Full browser, OpenRTS and native interaction validation is pending on the rebased branch head.
 - The existing main-branch baseline run `41366901893` passed its V94 desktop/mobile browser validation, standalone HTML build, OpenRTS build and native desktop selection/movement/attack smoke test. That run tested base commit `9ee75ddca9d7773c251cd1cf824a7b6df50abc4f`, not this feature branch.
 - Existing main-branch graphical artifact: `openrts-graphical-smoke-test` (artifact `13107407250`). The connector exposed the artifact metadata and job logs but not the binary screenshot contents for direct visual inspection in this run.
+- Follow-up gameplay integrity fix: the enemy citadel is now locked at 1 HP until both delivery and production objectives are complete; a browser regression attempts an early citadel kill and verifies the mission remains active.
 - No physical Samsung/Android device was tested.
 - No paid APIs, assets, credits or services were used.
 
