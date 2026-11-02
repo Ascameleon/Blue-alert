@@ -100,7 +100,7 @@ export function createInfantry(THREE, options={}) {
   const rifleMat = mat(THREE, 0x242b2d, .76, .32);
   const rubber = mat(THREE, 0x171d20, .98, .01);
 
-  const addInstances = (name, size, material, transforms) => {
+  const addInstances = (parent, name, size, material, transforms) => {
     const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(...size), material, transforms.length);
     mesh.name = name;
     mesh.castShadow = true;
@@ -115,7 +115,7 @@ export function createInfantry(THREE, options={}) {
     });
     mesh.instanceMatrix.needsUpdate = true;
     mesh.computeBoundingSphere();
-    g.add(mesh);
+    parent.add(mesh);
     return mesh;
   };
 
@@ -131,12 +131,12 @@ export function createInfantry(THREE, options={}) {
   box(THREE, torso, 'belt-webbing', [.4, .075, .27], [0, -.205, .015], dark);
   box(THREE, torso, 'belt-buckle', [.09, .085, .035], [0, -.205, .16], metal);
   box(THREE, torso, 'sternum-rail', [.045, .24, .035], [0, .035, .205], dark);
-  addInstances('chest-magazine-pouches', [.095, .13, .065], cloth, [
+  addInstances(torso, 'chest-magazine-pouches', [.095, .13, .065], cloth, [
     { position: [-.125, -.04, .205] },
     { position: [0, -.04, .205] },
     { position: [.125, -.04, .205] }
   ]);
-  addInstances('belt-utility-pouches', [.105, .13, .105], armor, [
+  addInstances(torso, 'belt-utility-pouches', [.105, .13, .105], armor, [
     { position: [-.235, -.19, .035] },
     { position: [.235, -.19, .035] }
   ]);
