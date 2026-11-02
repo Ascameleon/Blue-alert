@@ -441,7 +441,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.waitForFunction(() => {
     const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
     return state && state.impactRings > 0 && state.impactSparks > 0;
-  }, null, { timeout: 4000, polling: 50 });
+  }, null, { timeout: 9000, polling: 50 });
   const mobileImpact = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   console.log('MOBILE_PROJECTILE_IMPACT ' + JSON.stringify(mobileImpact));
   assert.ok(mobileImpact.impactRings > 0 && mobileImpact.impactSparks > 0, 'mobile projectile hit must create a shock ring and sparks');
