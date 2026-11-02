@@ -60,3 +60,10 @@ The same \`createTank(THREE, { team, variant, scale })\` entry point now produce
 - **RED BASTION** — taller reinforced turret, side armor slabs, raised command cupola, protected rangefinder and warm sensor accents.
 
 Both retain the existing outer group and \`userData.turret\` contract used by V94 combat. Track belts remain continuous collision-safe chassis geometry; 36 instanced tread shoes and 60 instanced wheel fasteners add detail without creating one draw call per bolt or shoe. The sloped glacis, engine-deck grilles, fenders, return rollers and hub caps are procedural Three.js geometry. No third-party model, texture, API or paid asset is used.
+
+
+## Softened faction armor pass (V94)
+
+The BLUE SENTINEL and RED BASTION hulls and turrets now use original chamfered, bevel-extruded armor geometry rather than relying on plain rectangular boxes for their main silhouette. The front glacis, upper/lower hull, engine deck, turret shell, faction cheek plates, side skirts and heavy reinforcements share the same lightweight procedural treatment. Repeated armor details remain instanced, and the preview exposes the exact bevelled part list so desktop/mobile browser tests can verify that the runtime model—not a detached illustration—contains the new geometry.
+
+The V94 runtime already loads this model module through its BLUE_MODELS.createTank path; collision footprints, health, movement speed, turret control and weapon behavior are unchanged. This is a geometry-quality pass, not a claim of photogrammetric/PBR sculpting or AAA asset quality.

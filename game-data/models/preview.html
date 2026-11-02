@@ -81,18 +81,28 @@ document.querySelector('#title').textContent=profileTitle;
 const profileCopy=a==='tank'?(t==='red'?'RED BASTION — tourelle haute à plaques latérales, cupola de commandement et capteurs protégés.':'BLUE SENTINEL — tourelle basse profilée, joues inclinées et télémètre compact.'):desc[a][1];
 document.querySelector('#desc').textContent=profileCopy;
 controls.target.set(0,a==='infantry'?.7:a==='tank'?.96:1,0);
-camera.position.set(a==='landscape'?22:a==='tank'?6.4:8,a==='landscape'?25:a==='tank'?4.6:7,a==='landscape'?24:a==='tank'?7.8:11);controls.update();}
+if(a==='tank'){
+  const aspect=host.clientWidth/Math.max(1,host.clientHeight);
+  const targetDistance=aspect<.8?10.2:8.2;
+  const factor=targetDistance/Math.hypot(6.4,4.6,7.8);
+  camera.position.set(6.4*factor,4.6*factor,7.8*factor);
+}else{
+  camera.position.set(a==='landscape'?22:8,a==='landscape'?25:7,a==='landscape'?24:11);
+}
+controls.update();}
 document.querySelector('#asset').addEventListener('change',build);document.querySelector('#team').addEventListener('change',build);
 document.querySelector('#reset').addEventListener('click',build);
 function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
 new ResizeObserver(resize).observe(host);resize();build();
 window.__BLUE_ALERTS_PREVIEW__ = () => {
   let meshCount=0, triangleCount=0, physicalMaterialCount=0, genericDecorationCount=0;
+  const beveledArmorParts=[];
   current?.traverse(object => {
     if (!object.isMesh) return;
     meshCount++;
     if (['faction-panel','exterior-light','service-vent','vent-slat'].includes(object.name)) genericDecorationCount++;
     const geometry=object.geometry;
+    if(geometry.userData?.beveledArmor) beveledArmorParts.push(object.name);
     triangleCount += geometry.index ? geometry.index.count/3 : (geometry.attributes.position?.count || 0)/3;
     for (const material of (Array.isArray(object.material)?object.material:[object.material])) {
       if (material?.isMeshPhysicalMaterial) physicalMaterialCount++;
@@ -104,6 +114,8 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
   });
   return {
     asset:document.querySelector('#asset').value,
+    beveledArmorPartCount:beveledArmorParts.length,
+    beveledArmorParts,
     team:document.querySelector('#team').value,
     factionProfile:current?.userData?.factionProfile||null,
     trackShoeInstances:current?.userData?.trackShoeInstances||0,

@@ -25,6 +25,46 @@ const box = (THREE, parent, name, size, position, material, rotation) => {
   if (rotation) mesh.rotation.set(...rotation);
   mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
 };
+const beveledBoxGeometry = (THREE, size, bevel = 0.04) => {
+  const [width, height, depth] = size;
+  const b = Math.min(bevel, width * 0.12, height * 0.12, depth * 0.12);
+  const cornerCut = Math.min(width, height) * 0.18;
+  const shape = new THREE.Shape();
+  shape.moveTo(-width / 2 + b + cornerCut, -height / 2 + b);
+  shape.lineTo(width / 2 - b - cornerCut, -height / 2 + b);
+  shape.lineTo(width / 2 - b, -height / 2 + b + cornerCut);
+  shape.lineTo(width / 2 - b, height / 2 - b - cornerCut);
+  shape.lineTo(width / 2 - b - cornerCut, height / 2 - b);
+  shape.lineTo(-width / 2 + b + cornerCut, height / 2 - b);
+  shape.lineTo(-width / 2 + b, height / 2 - b - cornerCut);
+  shape.lineTo(-width / 2 + b, -height / 2 + b + cornerCut);
+  shape.closePath();
+  const innerDepth = Math.max(0.02, depth - 2 * b);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: innerDepth,
+    bevelEnabled: true,
+    bevelSegments: 2,
+    steps: 1,
+    bevelSize: b,
+    bevelThickness: b,
+    curveSegments: 2
+  });
+  geometry.translate(0, 0, -innerDepth / 2);
+  geometry.computeVertexNormals();
+  geometry.userData.beveledArmor = true;
+  return geometry;
+};
+const beveledBox = (THREE, parent, name, size, position, material, rotation, bevel = 0.04) => {
+  const mesh = new THREE.Mesh(beveledBoxGeometry(THREE, size, bevel), material);
+  mesh.name = name;
+  mesh.position.set(...position);
+  if (rotation) mesh.rotation.set(...rotation);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.beveledArmor = true;
+  parent.add(mesh);
+  return mesh;
+};
 const cylinder = (THREE, parent, name, rt, rb, h, pos, material, segments=12) => {
   const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, segments), material);
   mesh.name=name; mesh.position.set(...pos); mesh.castShadow=true; mesh.receiveShadow=true; parent.add(mesh); return mesh;
@@ -61,6 +101,7 @@ export function createTank(THREE, options={}) {
     mesh.name=name;
     mesh.castShadow=true;
     mesh.receiveShadow=true;
+    mesh.userData.beveledArmor=!!geometry.userData?.beveledArmor;
     const transform=new THREE.Object3D();
     transforms.forEach((item,index)=>{
       transform.position.set(...(item.position||[0,0,0]));
@@ -75,10 +116,10 @@ export function createTank(THREE, options={}) {
   };
 
   // Layered hull: lower chassis, raised crew cell and a sloped forward glacis.
-  box(THREE,g,'lower-hull',[2.62,.48,1.5],[0,.55,0],hull);
-  box(THREE,g,'upper-hull',[1.9,.35,1.22],[-.12,.91,0],armor);
-  box(THREE,g,'front-glacis',[.72,.2,1.22],[.82,.72,0],heavyArmor,[0,0,-.34]);
-  box(THREE,g,'engine-deck',[.76,.13,.98],[-.82,1.105,0],dark);
+  beveledBox(THREE,g,'lower-hull',[2.62,.48,1.5],[0,.55,0],hull,null,.055);
+  beveledBox(THREE,g,'upper-hull',[1.9,.35,1.22],[-.12,.91,0],armor,null,.045);
+  beveledBox(THREE,g,'front-glacis',[.72,.2,1.22],[.82,.72,0],heavyArmor,[0,0,-.34],.028);
+  beveledBox(THREE,g,'engine-deck',[.76,.13,.98],[-.82,1.105,0],dark,null,.018);
 
   const grilleTransforms=Array.from({length:7},(_,i)=>({position:[-1.12+i*.1,1.18,0]}));
   addInstances(g,'engine-deck-grilles-instanced',new THREE.BoxGeometry(.055,.025,.78),metal,grilleTransforms);
@@ -101,13 +142,13 @@ export function createTank(THREE, options={}) {
       position:[x,.68,side*.84],rotation:[Math.PI/2,0,0]
     });
   }
-  addInstances(g,'reactive-armor-tiles-instanced',new THREE.BoxGeometry(.3,.19,.1),heavyArmor,armorTileTransforms);
-  addInstances(g,'side-skirt-armor-instanced',new THREE.BoxGeometry(1.62,.18,.1),armor,skirtTransforms);
-  addInstances(g,'fenders-instanced',new THREE.BoxGeometry(.38,.09,.2),hull,fenderTransforms);
+  addInstances(g,'reactive-armor-tiles-instanced',beveledBoxGeometry(THREE,[.3,.19,.1],.014),heavyArmor,armorTileTransforms);
+  addInstances(g,'side-skirt-armor-instanced',beveledBoxGeometry(THREE,[1.62,.18,.1],.012),armor,skirtTransforms);
+  addInstances(g,'fenders-instanced',beveledBoxGeometry(THREE,[.38,.09,.2],.012),hull,fenderTransforms);
   addInstances(g,'smoke-dischargers-instanced',new THREE.CylinderGeometry(.045,.055,.16,8),dark,smokeTransforms);
   addInstances(g,'return-rollers-instanced',new THREE.CylinderGeometry(.075,.075,.12,10),metal,rollerTransforms);
 
-  box(THREE,g,'commander-hatch',[.32,.08,.3],[-.62,1.12,.08],dark);
+  beveledBox(THREE,g,'commander-hatch',[.32,.08,.3],[-.62,1.12,.08],dark,null,.012);
   cylinder(THREE,g,'hatch-rim',.19,.19,.05,[-.62,1.17,.08],metal,12);
   sphere(THREE,g,'gunner-optic',.075,[.36,1.18,.28],optics,[1,.55,.7]);
   cylinder(THREE,g,'radio-antenna',.018,.018,.72,[-.86,1.42,-.35],dark,6);
@@ -150,31 +191,31 @@ export function createTank(THREE, options={}) {
   cylinder(THREE,turret,'turret-ring',.54,.58,.13,[0,0,0],dark,18);
   let factionDetailCounts={};
   if(isRed){
-    box(THREE,turret,'turret-body',[1.3,.5,1.08],[0,.29,0],hull);
-    box(THREE,turret,'red-bastion-roof-plate',[.82,.12,.84],[-.08,.57,0],armor);
+    beveledBox(THREE,turret,'turret-body',[1.3,.5,1.08],[0,.29,0],hull,null,.055);
+    beveledBox(THREE,turret,'red-bastion-roof-plate',[.82,.12,.84],[-.08,.57,0],armor,null,.018);
     const redCheeks=[],redSidePlates=[],redSmoke=[];
     for(const side of [-1,1]){
       redCheeks.push({position:[-.12,.24,side*.59],rotation:[0,0,side*.09]});
       redSidePlates.push({position:[-.08,.08,side*.63]});
       redSmoke.push({position:[.42,.42,side*.38],rotation:[0,0,Math.PI/2]});
     }
-    addInstances(turret,'red-turret-cheeks-instanced',new THREE.BoxGeometry(.52,.3,.18),heavyArmor,redCheeks);
-    addInstances(turret,'red-bastion-side-plates-instanced',new THREE.BoxGeometry(.62,.13,.12),edge,redSidePlates);
+    addInstances(turret,'red-turret-cheeks-instanced',beveledBoxGeometry(THREE,[.52,.3,.18],.02),heavyArmor,redCheeks);
+    addInstances(turret,'red-bastion-side-plates-instanced',beveledBoxGeometry(THREE,[.62,.13,.12],.012),edge,redSidePlates);
     cylinder(THREE,turret,'red-bastion-cupola',.18,.2,.15,[-.34,.64,0],dark,12);
     cylinder(THREE,turret,'red-bastion-rangefinder',.07,.08,.18,[.1,.66,.3],optics,10).rotation.z=Math.PI/2;
     addInstances(turret,'red-bastion-smoke-banks-instanced',new THREE.CylinderGeometry(.055,.06,.22,8),dark,redSmoke);
     factionDetailCounts={turretCheeks:2,turretSidePlates:2,smokeBanks:2};
   }else{
-    box(THREE,turret,'turret-body',[1.22,.36,.96],[0,.24,0],hull);
-    box(THREE,turret,'blue-sentinel-crown',[.78,.12,.8],[-.12,.47,0],armor);
+    beveledBox(THREE,turret,'turret-body',[1.22,.36,.96],[0,.24,0],hull,null,.045);
+    beveledBox(THREE,turret,'blue-sentinel-crown',[.78,.12,.8],[-.12,.47,0],armor,null,.018);
     const blueCheeks=[];
     for(const side of [-1,1]) blueCheeks.push({
       position:[.16,.2,side*.53],rotation:[0,0,side*.13]
     });
-    addInstances(turret,'blue-turret-cheeks-instanced',new THREE.BoxGeometry(.46,.23,.16),heavyArmor,blueCheeks);
+    addInstances(turret,'blue-turret-cheeks-instanced',beveledBoxGeometry(THREE,[.46,.23,.16],.018),heavyArmor,blueCheeks);
     cylinder(THREE,turret,'blue-sentinel-optic',.075,.085,.16,[.38,.48,.26],optics,10).rotation.z=Math.PI/2;
     cylinder(THREE,turret,'blue-sentinel-laser-rangefinder',.045,.05,.12,[.42,.38,-.28],edge,10).rotation.z=Math.PI/2;
-    box(THREE,turret,'blue-sentinel-rear-sensor',[.25,.12,.32],[-.42,.43,0],dark);
+    beveledBox(THREE,turret,'blue-sentinel-rear-sensor',[.25,.12,.32],[-.42,.43,0],dark,null,.012);
     factionDetailCounts={turretCheeks:2,turretSidePlates:0,smokeBanks:0};
   }
   if(isHeavy){
@@ -182,10 +223,10 @@ export function createTank(THREE, options={}) {
     for(const side of [-1,1]) reinforcementTransforms.push({
       position:[-.28,.23,side*.64],rotation:[0,0,side*.08]
     });
-    addInstances(turret,'heavy-turret-reinforcements-instanced',new THREE.BoxGeometry(.5,.25,.14),heavyArmor,reinforcementTransforms);
-    box(THREE,turret,'heavy-turret-roof-armor',[.62,.1,.76],[-.16,.67,0],armor);
+    addInstances(turret,'heavy-turret-reinforcements-instanced',beveledBoxGeometry(THREE,[.5,.25,.14],.016),heavyArmor,reinforcementTransforms);
+    beveledBox(THREE,turret,'heavy-turret-roof-armor',[.62,.1,.76],[-.16,.67,0],armor,null,.014);
   }
-  box(THREE,turret,'commander-hatch',[.32,.12,.31],[-.23,.53,.05],armor);
+  beveledBox(THREE,turret,'commander-hatch',[.32,.12,.31],[-.23,.53,.05],armor,null,.012);
   cylinder(THREE,turret,'hatch-rim',.19,.19,.05,[-.23,.6,.05],dark,12);
   const barrel=cylinder(THREE,turret,'main-cannon',.105,.14,isHeavy?1.72:1.52,[.88,.3,0],metal,14);
   barrel.rotation.z=-Math.PI/2;
@@ -220,6 +261,12 @@ export function createTank(THREE, options={}) {
       faction: factionDetailCounts
     }
   };
+  const beveledArmorParts = [];
+  g.traverse(object => {
+    if (object.isMesh && object.geometry?.userData?.beveledArmor) beveledArmorParts.push(object.name);
+  });
+  g.userData.beveledArmorPartCount = beveledArmorParts.length;
+  g.userData.beveledArmorParts = beveledArmorParts;
   g.scale.setScalar(scale);
   return g;
 }

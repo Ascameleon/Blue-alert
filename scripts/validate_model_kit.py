@@ -57,11 +57,15 @@ def main():
         "blue-turret-cheeks-instanced", "red-turret-cheeks-instanced",
         "red-bastion-side-plates-instanced", "red-bastion-cupola",
         "heavy-turret-reinforcements-instanced",
+        "beveledBoxGeometry", "beveledBox", "new THREE.ExtrudeGeometry",
+        "geometry.userData.beveledArmor", "cornerCut",
     )
     missing = [feature for feature in required_tank_features if feature not in model]
     if missing:
         raise SystemExit("FAIL: faction tank signatures missing: " + ", ".join(missing))
 
+    if "BLUE_MODELS.createTank" not in game:
+        raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
     for token in ("blue-alert-models.js?v=4", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
