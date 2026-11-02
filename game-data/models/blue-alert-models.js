@@ -83,32 +83,191 @@ export function createTank(THREE, options={}) {
 }
 
 export function createInfantry(THREE, options={}) {
-  const { team='blue', role='rifleman', scale=1 }=options;
-  const g=new THREE.Group(); g.name='BA_Infantry_'+role;
-  const uniform=teamColor(THREE,team), cloth=mat(THREE,PALETTE.olive), boots=mat(THREE,PALETTE.dark), skin=mat(THREE,0xb18a69), gun=mat(THREE,0x252a28);
-  box(THREE,g,'torso',[.34,.48,.22],[0,.76,0],uniform);
-  sphere(THREE,g,'head',.14,[0,1.12,0],skin,[.88,1.05,.88]);
-  cylinder(THREE,g,'helmet',.17,.18,.11,[0,1.24,0],cloth,10);
-  box(THREE,g,'helmet-rim',[.34,.035,.27],[0,1.2,0],cloth);
-  const armorPlate=mat(THREE,0x56645b,.72,.18), lens=mat(THREE,0x8fc5d0,.18,.55);
-  box(THREE,g,'plate-carrier',[.31,.29,.25],[0,.78,.13],armorPlate);
-  for(const side of [-1,1]){
-    box(THREE,g,'utility-pouch',[.11,.13,.12],[side*.19,.68,.13],cloth);
-    box(THREE,g,'knee-pad',[.16,.12,.17],[side*.1,.31,.08],armorPlate);
-    sphere(THREE,g,'helmet-goggle-lens',.045,[side*.075,1.17,.12],lens,[1,.7,.45]);
+  const { team='blue', role='rifleman', scale=1 } = options;
+  const isRed = team === 'red';
+  const factionProfile = isRed ? 'RED_BASTION_RIFLEMAN' : 'BLUE_SENTINEL_RIFLEMAN';
+  const g = new THREE.Group();
+  g.name = 'BA_Infantry_' + factionProfile + '_' + role;
+
+  const uniform = teamColor(THREE, team);
+  const cloth = mat(THREE, isRed ? 0x51453d : 0x40545a, .9, .04);
+  const armor = mat(THREE, isRed ? 0x75604e : 0x536f7a, .58, .28);
+  const dark = mat(THREE, 0x20282a, .94, .04);
+  const metal = mat(THREE, 0x87928f, .42, .64);
+  const skin = mat(THREE, 0x9e795f, .92, .02);
+  const optic = mat(THREE, isRed ? 0xf0a15b : 0x7bd5ed, .2, .68);
+  const accent = mat(THREE, isRed ? 0xd7834f : 0x65bcd6, .42, .36);
+  const rifleMat = mat(THREE, 0x242b2d, .76, .32);
+  const rubber = mat(THREE, 0x171d20, .98, .01);
+
+  const addInstances = (name, size, material, transforms) => {
+    const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(...size), material, transforms.length);
+    mesh.name = name;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    const dummy = new THREE.Object3D();
+    transforms.forEach((item, index) => {
+      dummy.position.set(...(item.position || [0, 0, 0]));
+      dummy.rotation.set(...(item.rotation || [0, 0, 0]));
+      dummy.scale.set(...(item.scale || [1, 1, 1]));
+      dummy.updateMatrix();
+      mesh.setMatrixAt(index, dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+    g.add(mesh);
+    return mesh;
+  };
+
+  // The torso is a small rig so breathing and the walk cycle do not disturb
+  // the outer V94 unit transform, hit area, selection ring or weapon controller.
+  const torso = new THREE.Group();
+  torso.name = 'infantry-torso-rig';
+  torso.position.y = 0.77;
+  g.add(torso);
+  box(THREE, torso, 'torso', [.36, .48, .23], [0, 0, 0], uniform);
+  box(THREE, torso, 'reinforced-chest-carrier', [.39, .31, .085], [0, .035, .145], armor);
+  box(THREE, torso, 'lower-abdomen-plate', [.33, .13, .105], [0, -.205, .13], cloth);
+  box(THREE, torso, 'belt-webbing', [.4, .075, .27], [0, -.205, .015], dark);
+  box(THREE, torso, 'belt-buckle', [.09, .085, .035], [0, -.205, .16], metal);
+  box(THREE, torso, 'sternum-rail', [.045, .24, .035], [0, .035, .205], dark);
+  addInstances('chest-magazine-pouches', [.095, .13, .065], cloth, [
+    { position: [-.125, -.04, .205] },
+    { position: [0, -.04, .205] },
+    { position: [.125, -.04, .205] }
+  ]);
+  addInstances('belt-utility-pouches', [.105, .13, .105], armor, [
+    { position: [-.235, -.19, .035] },
+    { position: [.235, -.19, .035] }
+  ]);
+  for (const side of [-1, 1]) {
+    box(THREE, torso, 'carrier-shoulder-strap', [.065, .31, .045], [side * .125, .055, .18], cloth, [0, 0, side * -.12]);
+    sphere(THREE, torso, 'chest-fastener', .026, [side * .16, .105, .202], metal, [1, 1, .55]);
   }
-  box(THREE,g,'radio-antenna',[.025,.42,.025],[-.13,1.12,-.2],boots);
-  box(THREE,g,'backpack',[.22,.3,.13],[-.02,.78,-.17],cloth);
-  for (const side of [-1,1]) {
-    box(THREE,g,'upper-arm',[.12,.32,.13],[side*.23,.79,0],uniform,[0,0,side*-.18]);
-    box(THREE,g,'forearm',[.1,.25,.11],[side*.25,.62,.1],cloth);
-    box(THREE,g,'leg',[.13,.36,.14],[side*.1,.36,0],cloth,[0,0,side*.04]);
-    box(THREE,g,'boot',[.14,.11,.23],[side*.1,.12,.035],boots);
+
+  // Helmet and face have faction-specific silhouettes, not just recoloured cloth.
+  const head = new THREE.Group();
+  head.name = 'infantry-head-rig';
+  head.position.set(0, 1.13, 0);
+  g.add(head);
+  sphere(THREE, head, 'head', .14, [0, 0, 0], skin, [.88, 1.05, .9]);
+  sphere(THREE, head, 'helmet-shell', .19, [0, .115, -.015], cloth, [1.05, .76, 1.02]);
+  box(THREE, head, 'helmet-brim', [.35, .045, .28], [0, .065, .035], dark);
+  box(THREE, head, 'helmet-front-rail', [.24, .045, .035], [0, .095, .17], accent);
+  if (isRed) {
+    box(THREE, head, 'bastion-brow-guard', [.34, .095, .075], [0, .015, .175], armor, [-.12, 0, 0]);
+    box(THREE, head, 'bastion-jaw-guard', [.25, .095, .09], [0, -.095, .125], armor);
+    for (const side of [-1, 1]) {
+      box(THREE, head, 'bastion-helmet-cheek', [.075, .17, .16], [side * .145, -.025, .035], armor, [0, 0, side * -.08]);
+    }
+  } else {
+    box(THREE, head, 'sentinel-visor', [.28, .055, .035], [0, .025, .176], optic);
+    box(THREE, head, 'sentinel-side-rail', [.045, .12, .22], [-.17, .08, -.005], metal);
+    box(THREE, head, 'sentinel-comms-mount', [.085, .085, .09], [.17, .065, -.035], dark);
   }
-  const rifle=box(THREE,g,'rifle',[.56,.055,.065],[.26,.68,.2],gun,[0,0,-.05]);
-  cylinder(THREE,g,'rifle-barrel',.025,.025,.25,[.58,.69,.2],gun,6).rotation.z=-Math.PI/2;
-  addMarking(THREE,g,.18,.87,.115,team);
-  g.userData={kind:'infantry',role,team,weapon:rifle}; g.scale.setScalar(scale); return g;
+  for (const side of [-1, 1]) {
+    sphere(THREE, head, 'helmet-optic', .037, [side * .075, .02, .19], optic, [1, .72, .48]);
+    box(THREE, head, 'ear-protection', [.065, .11, .09], [side * .16, -.035, -.015], dark);
+  }
+
+  // Independent shoulder, elbow, hip and knee pivots make a real deterministic
+  // gait possible while preserving the model's single outer transform.
+  const makeArm = (side, label) => {
+    const pivot = new THREE.Group();
+    pivot.name = label + '-arm-pivot';
+    pivot.position.set(side * .235, .94, .015);
+    g.add(pivot);
+    sphere(THREE, pivot, label + '-shoulder-pad', .14, [0, -.055, .015], armor, [.9, .78, 1.05]);
+    box(THREE, pivot, label + '-upper-arm', [.145, .29, .15], [side * .012, -.17, .015], uniform, [0, 0, side * -.08]);
+    box(THREE, pivot, label + '-elbow-pad', [.15, .105, .17], [side * .012, -.315, .075], dark);
+    box(THREE, pivot, label + '-forearm', [.125, .25, .145], [side * .012, -.405, .105], cloth, [0, 0, side * .035]);
+    box(THREE, pivot, label + '-wrist-guard', [.14, .075, .16], [side * .012, -.52, .12], armor);
+    sphere(THREE, pivot, label + '-glove', .075, [side * .012, -.575, .145], rubber, [1, .72, 1.12]);
+    if (isRed) {
+      box(THREE, pivot, label + '-bastion-pauldron', [.2, .12, .19], [side * .015, -.035, .025], accent, [0, 0, side * -.08]);
+    } else {
+      box(THREE, pivot, label + '-sentinel-shoulder-mark', [.12, .055, .025], [side * .015, -.055, .13], accent);
+    }
+    return pivot;
+  };
+  const leftArm = makeArm(-1, 'left');
+  const rightArm = makeArm(1, 'right');
+
+  const makeLeg = (side, label) => {
+    const pivot = new THREE.Group();
+    pivot.name = label + '-leg-pivot';
+    pivot.position.set(side * .105, .51, 0);
+    g.add(pivot);
+    box(THREE, pivot, label + '-thigh', [.155, .29, .17], [0, -.145, 0], cloth);
+    box(THREE, pivot, label + '-knee-pad', [.17, .13, .19], [0, -.285, .075], armor);
+    box(THREE, pivot, label + '-shin', [.14, .25, .15], [0, -.405, .025], uniform);
+    box(THREE, pivot, label + '-ankle-guard', [.155, .09, .18], [0, -.51, .06], dark);
+    box(THREE, pivot, label + '-combat-boot', [.17, .13, .26], [0, -.57, .085], rubber);
+    box(THREE, pivot, label + '-boot-sole', [.175, .035, .27], [0, -.635, .095], dark);
+    return pivot;
+  };
+  const leftLeg = makeLeg(-1, 'left');
+  const rightLeg = makeLeg(1, 'right');
+
+  // A compact assault pack, radio, antenna and field canteen finish the rear silhouette.
+  const pack = new THREE.Group();
+  pack.name = 'infantry-field-pack';
+  pack.position.set(0, .79, -.17);
+  g.add(pack);
+  box(THREE, pack, 'radio-backpack', [.25, .34, .16], [0, 0, 0], cloth);
+  box(THREE, pack, 'backpack-top-flap', [.23, .075, .17], [0, .16, 0], armor);
+  for (const side of [-1, 1]) {
+    box(THREE, pack, 'backpack-side-pocket', [.09, .17, .13], [side * .17, -.015, .005], armor);
+    box(THREE, pack, 'pack-retention-strap', [.045, .31, .025], [side * .08, 0, .095], dark);
+  }
+  cylinder(THREE, pack, 'radio-antenna', .012, .018, .42, [-.105, .31, -.025], metal, 6);
+  cylinder(THREE, pack, 'field-canteen', .065, .075, .18, [.18, -.11, -.025], dark, 8);
+
+  // Rifle details remain grouped on the chest so the existing combat unit and
+  // muzzle/targeting systems continue to use the same outer V94 unit contract.
+  const rifleGroup = new THREE.Group();
+  rifleGroup.name = 'infantry-assault-rifle';
+  rifleGroup.position.set(.19, .69, .265);
+  g.add(rifleGroup);
+  const rifle = box(THREE, rifleGroup, 'rifle-receiver', [.48, .06, .075], [0, 0, 0], rifleMat);
+  box(THREE, rifleGroup, 'rifle-stock', [.18, .085, .095], [-.3, -.005, -.005], dark);
+  box(THREE, rifleGroup, 'rifle-handguard', [.2, .075, .085], [.18, 0, 0], armor);
+  const barrel = cylinder(THREE, rifleGroup, 'rifle-barrel', .022, .022, .3, [.42, .005, 0], metal, 8);
+  barrel.rotation.z = -Math.PI / 2;
+  cylinder(THREE, rifleGroup, 'rifle-muzzle', .032, .032, .055, [.58, .005, 0], dark, 8).rotation.z = -Math.PI / 2;
+  box(THREE, rifleGroup, 'rifle-optic', [.085, .07, .065], [.045, .075, 0], optic);
+  box(THREE, rifleGroup, 'rifle-magazine', [.09, .15, .065], [.02, -.095, .015], dark, [0, 0, -.12]);
+  box(THREE, rifleGroup, 'rifle-trigger-guard', [.07, .045, .025], [.12, -.055, .045], metal);
+  addMarking(THREE, torso, .17, .12, .205, team);
+
+  const animationRig = {
+    leftArm, rightArm, leftLeg, rightLeg, torso, head,
+    phase: 0,
+    walkAmount: 0
+  };
+  g.userData = {
+    kind: 'infantry', role, team, factionProfile, weapon: rifle,
+    animationRig
+  };
+  g.scale.setScalar(scale);
+  return g;
+}
+
+export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
+  if (!rig || !rig.leftArm || !rig.rightArm || !rig.leftLeg || !rig.rightLeg) return false;
+  const dt = Number.isFinite(deltaSeconds) ? Math.max(0, Math.min(.05, deltaSeconds)) : 0;
+  const intensity = Number.isFinite(movement) ? Math.max(0, Math.min(1, movement)) : 0;
+  rig.phase = (rig.phase || 0) + dt * (intensity > .02 ? 11 : 2.2);
+  const swing = Math.sin(rig.phase) * .58 * intensity;
+  const idle = Math.sin(rig.phase * .5) * .018;
+  rig.leftLeg.rotation.x = swing + idle;
+  rig.rightLeg.rotation.x = -swing + idle;
+  rig.leftArm.rotation.x = -swing * .58 - .08 + idle;
+  rig.rightArm.rotation.x = swing * .42 - .12 - idle;
+  rig.torso.rotation.z = idle * .55;
+  rig.head.rotation.x = idle * .25;
+  rig.walkAmount = intensity;
+  return true;
 }
 
 export function createBuilding(THREE, type='barracks', options={}) {
