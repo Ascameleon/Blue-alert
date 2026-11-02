@@ -56,6 +56,7 @@ async function loadGame(page, options = {}) {
   if (options.combatVfx) params.set('qa', '1');
   if (options.combatRig) params.set('combat-rig', '1');
   if (options.buildQa) params.set('build-zone', '1');
+  if (options.environment) params.set('environment', '1');
   const query = params.toString();
   const response = await page.goto(url + (query ? '?' + query : ''), { waitUntil: 'domcontentloaded', timeout: 60000 });
   assert.equal(response?.status(), 200, 'v94 game HTML must load');
@@ -110,7 +111,8 @@ async function metrics(page) {
       runtimeError: !!document.getElementById('blueRuntimeError'),
       startupError: !!document.getElementById('blueStartupError'),
       terrain: window.__BLUE_ALERTS_TERRAIN || null,
-      terrainDressing: window.__BLUE_ALERTS_TERRAIN_DRESSING || null
+      terrainDressing: window.__BLUE_ALERTS_TERRAIN_DRESSING || null,
+      environment: window.__BLUE_ALERTS_ENVIRONMENT || null
     };
   });
 }
@@ -125,7 +127,7 @@ try {
   });
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  await loadGame(desktop, { combatRig: true, combatVfx: true, buildQa: true });
+  await loadGame(desktop, { combatRig: true, combatVfx: true, buildQa: true, environment: true });
   const desktopMetrics = await metrics(desktop);
   assert.ok(desktopMetrics.webgl && !desktopMetrics.contextLost, 'desktop must render with a live WebGL context');
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
@@ -133,6 +135,12 @@ try {
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
   assert.ok(desktopMetrics.terrainDressing?.scrubInstances >= 160 && desktopMetrics.terrainDressing.roadMarkers === 26,
     'desktop battlefield must include instanced scrub and reflective supply-road markers');
+  assert.ok(desktopMetrics.environment?.runtimeIntegrated &&
+    desktopMetrics.environment.clusterCount === 4 &&
+    desktopMetrics.environment.cargoCrates === 18 &&
+    desktopMetrics.environment.hazardBarrels === 8 &&
+    desktopMetrics.environment.blocksMovement === false,
+    'desktop V94 must contain four non-blocking industrial clusters, 18 instanced crates and eight barrels');
   const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
   assert.ok(buildBefore, 'build-zone QA diagnostics must be available');
   assert.ok(buildBefore.hq.modelsLoaded, 'the procedural model library must load from inside the single HTML file');
@@ -148,6 +156,11 @@ try {
     'enemy territory, road, occupied structures and ore deposits must reject construction');
   await desktop.waitForTimeout(2800);
   await desktop.screenshot({ path: output + '/desktop-v94-gameplay.png', fullPage: true });
+  const industrialFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('gantry'));
+  assert.equal(industrialFocus?.name, 'gantry', 'industrial yard visual focus must be available for evidence capture');
+  await desktop.waitForTimeout(650);
+  await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
+  await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA.focus('base'));
 
   // Real mouse input: place a power station on the pad, then prove invalid ground
   // clicks do not spend credits or create structures.
@@ -323,7 +336,7 @@ try {
     isMobile: true,
     hasTouch: true
   });
-  await loadGame(mobile, { combatVfx: true, buildQa: true });
+  await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true });
   const mobileMetrics = await metrics(mobile);
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
@@ -343,6 +356,12 @@ try {
   assert.ok(mobileMetrics.canvasRect.width >= 380 && mobileMetrics.canvasRect.height >= 600, 'mobile battlefield must retain a usable touch area');
   assert.ok(mobileMetrics.startOverlayHidden && !mobileMetrics.fallback && !mobileMetrics.runtimeError && !mobileMetrics.startupError, 'mobile game must start in the 3D runtime without fallback/errors');
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
+  assert.ok(mobileMetrics.environment?.runtimeIntegrated &&
+    mobileMetrics.environment.clusterCount === 4 &&
+    mobileMetrics.environment.cargoCrates === 18 &&
+    mobileMetrics.environment.hazardBarrels === 8 &&
+    mobileMetrics.environment.blocksMovement === false,
+    'mobile V94 must retain the industrial set without marking gameplay lanes as blocked');
   assert.equal(touchTargets.tabs.length, 3, 'all three mobile sidebar tabs must be present');
   assert.ok(touchTargets.tabs.every(t => t.width >= 44 && t.height >= 44), 'every mobile tab must meet the 44px touch-target minimum');
   assert.ok(touchTargets.firstCard && touchTargets.firstCard.width >= 60 && touchTargets.firstCard.height >= 44, 'mobile build cards must remain tappable');
