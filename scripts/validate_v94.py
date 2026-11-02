@@ -217,6 +217,10 @@ def main():
         "new THREE.Quaternion()",
         "new THREE.ConeGeometry(radius, height, segments, 1)",
         "geometry.userData",
+        "function createLegacyLayeredTreeFoliageGeometry()",
+        "setLegacy(enabled)",
+        "treeFoliage.geometry = legacyTreeFoliageGeometry",
+        "treeFoliage.geometry = treeFoliageGeometry",
     )
     missing = [feature for feature in required_tree_features if feature not in tree_section]
     if missing:
@@ -249,6 +253,12 @@ def main():
         "spawnedExplosionLife",
         "freezeNewCombat",
         "resumeCombat",
+        "desktopTreeBaseline",
+        "mobileTreeBaseline",
+        "desktop-v94-woodland-tree-baseline.png",
+        "mobile-v94-woodland-tree-baseline-390x844.png",
+        "setLegacy(true)",
+        "setLegacy(false)",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:

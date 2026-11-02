@@ -1109,6 +1109,40 @@ function createLayeredTreeFoliageGeometry() {
   return geometry;
 }
 
+
+function createLegacyLayeredTreeFoliageGeometry() {
+  const tiers = [
+    { radius: .88, height: 1.45, y: 1.10, light: .76 },
+    { radius: .70, height: 1.30, y: 1.62, light: .88 },
+    { radius: .52, height: 1.10, y: 2.08, light: 1.00 }
+  ];
+  const positions = [], normals = [], colors = [];
+  for (let tierIndex = 0; tierIndex < tiers.length; tierIndex++) {
+    const tier = tiers[tierIndex];
+    const indexed = new THREE.ConeGeometry(tier.radius, tier.height, 8, 1);
+    const part = indexed.toNonIndexed();
+    indexed.dispose();
+    part.translate(0, tier.y, 0);
+    const p = part.getAttribute('position');
+    const n = part.getAttribute('normal');
+    for (let vertex = 0; vertex < p.count; vertex++) {
+      positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
+      normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
+      const facet = .97 + (vertex % 7) * .005;
+      const tone = tier.light * facet;
+      colors.push(tone * .84, tone, tone * .82);
+    }
+    part.dispose();
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.userData = { branchWhorls: 0, branchArms: 0, needleClusters: 0, triangleCount: positions.length / 9 };
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
 const treeCapacity = isMobile ? 100 : 160;
 const treeTrunkGeometry = new THREE.CylinderGeometry(.10, .16, .85, 7);
 treeTrunkGeometry.translate(0, .425, 0);
@@ -1198,6 +1232,7 @@ window.__BLUE_ALERTS_VEGETATION = Object.freeze({
   renderGroups: 3,
   blocksMovement: false
 });
+let legacyTreeFoliageGeometry = null;
 window.__BLUE_ALERTS_VEGETATION_QA = Object.freeze({
   focus() {
     if (!firstTreeFocus) throw new Error('No deterministic battlefield tree is available for visual QA');
@@ -1212,6 +1247,19 @@ window.__BLUE_ALERTS_VEGETATION_QA = Object.freeze({
       focus: firstTreeFocus,
       cameraDistance: camDist
     };
+  },
+  setLegacy(enabled) {
+    if (enabled) {
+      if (!legacyTreeFoliageGeometry) legacyTreeFoliageGeometry = createLegacyLayeredTreeFoliageGeometry();
+      treeFoliage.geometry = legacyTreeFoliageGeometry;
+      return 'legacy';
+    }
+    treeFoliage.geometry = treeFoliageGeometry;
+    if (legacyTreeFoliageGeometry) {
+      legacyTreeFoliageGeometry.dispose();
+      legacyTreeFoliageGeometry = null;
+    }
+    return 'detailed';
   }
 });
 
