@@ -174,6 +174,18 @@ def main():
     if "vertexColors: true" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic vertex color variation")
 
+
+    environment_contract = {
+        "runtime industrial set": "addIndustrialLogisticsSet",
+        "four authored clusters": "clusterCount:group.children.length",
+        "instanced cargo batch": "new THREE.InstancedMesh(new THREE.BoxGeometry(1.65,1.45,1.65),steel,12)",
+        "instanced hazard batch": "new THREE.InstancedMesh(new THREE.CylinderGeometry(.42,.42,1.15,10),hazard,8)",
+        "non-blocking environment": "blocksMovement:false"
+    }
+    for label, token in environment_contract.items():
+        if token not in source:
+            raise SystemExit(f"FAIL: missing {label} contract in runtime HTML")
+
     parser = ScriptCollector()
     parser.feed(source)
     parser.close()
