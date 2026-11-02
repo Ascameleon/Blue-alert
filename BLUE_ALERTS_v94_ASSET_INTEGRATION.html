@@ -1644,6 +1644,27 @@ if (BLUE_EXTERNAL_ASSETS.guardTower) {
     });
     scene.add(tower);
   }
+  // Parked CC0 armour assets add a visible silhouette upgrade without replacing
+  // the articulated combat rigs used for aiming, muzzle flashes and projectile origins.
+  for (const [assetKey,x,z,team,scale] of [
+    ['mainBattleTank',-55,-34,1,0.40],
+    ['lightTank',55,-34,2,0.48]
+  ]) {
+    const parked = BLUE_EXTERNAL_ASSETS[assetKey].clone(true);
+    parked.name = team === 1 ? 'BLUE_SENTINEL_PARKED_CC0_ARMOUR' : 'RED_BASTION_PARKED_CC0_ARMOUR';
+    parked.scale.setScalar(scale);
+    parked.position.set(x,0,z);
+    parked.traverse(part => {
+      if (!part.isMesh) return;
+      part.castShadow = !isMobile;
+      part.receiveShadow = true;
+      if (part.material) {
+        part.material = part.material.clone();
+        if (part.material.color) part.material.color.lerp(new THREE.Color(team === 1 ? 0x318fc2 : 0xc34d42), 0.22);
+      }
+    });
+    scene.add(parked);
+  }
 }
 
 /* ─── Game state ─────────────────────────────────────────── */
@@ -2097,7 +2118,7 @@ function createUnit(x, z, team, kind) {
       const heavy = kind === 'heavy';
       speed = heavy ? 2.3 : 3.6; hp = heavy ? 320 : 160;
       dmg = heavy ? 42 : 24; range = heavy ? 12 : 10.5;
-      const externalSource = BLUE_EXTERNAL_ASSETS[heavy ? 'mainBattleTank' : 'lightTank'];
+      const externalSource = null; // Combat units keep the articulated native turret rig; static CC0 GLBs are displayed as parked perimeter assets.
       let tank;
       if (externalSource) {
         // GLB source models are metre-scaled and face +Z. Clone geometry/materials per
