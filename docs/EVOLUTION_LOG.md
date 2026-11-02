@@ -157,3 +157,12 @@ The existing V94 `createUnit(..., 'infantry')` path now loads the faction-specif
 - QA probe fallback: `de75269dce52ac35bdb39b1e5f71bfab9943b84d`.
 - Ground-contact browser assertions: `cd9c95a78ded227e75601f90e2de807d1fe43bc7`.
 - No gameplay/browser/native test is claimed from the preceding run while it was still in progress; the next exact-head workflow must revalidate the complete build and interaction suite.
+
+
+### Infantry pouch-parenting correction
+
+- Exact-head workflow `41383518397` passed static checks and the standalone V94 build, then failed the new ground-clearance assertion at `boundsMinY = -0.255`.
+- Root cause: the two InstancedMesh pouch groups were positioned in torso-local coordinates but attached to the outer infantry root. The pouches therefore appeared below the feet even though the leg pivots were corrected.
+- Both pouch instance groups are now parented to the torso rig. They follow torso breathing and retain their batched draw calls.
+- Fix commit: `97ef049e6698e48ed665cab153690074e47a5738`.
+- The preceding workflow did not reach V94 browser or OpenRTS tests. A new exact-head run is required.
