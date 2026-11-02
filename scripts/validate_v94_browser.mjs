@@ -430,8 +430,8 @@ try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 15000, polling: 50 });
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0;
+    }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const diagnostic = await desktop.evaluate(() => ({
       state: window.__BLUE_ALERTS_COMBAT_QA__?.state(),
@@ -447,6 +447,21 @@ try {
     }));
     throw error;
   }
+  const desktopPostRigVfx = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+  assert.ok(desktopPostRigVfx && desktopPostRigVfx.activeProjectiles === 0 &&
+    desktopPostRigVfx.modelProjectiles === 0 && desktopPostRigVfx.modelMuzzleFlashes === 0 &&
+    desktopPostRigVfx.modelExplosions === 0,
+    'desktop building-damage probe must start without in-flight projectiles, muzzle flashes or explosions');
+  // Impact rings/sparks are already lifecycle-asserted by the preceding full
+  // cleanup probe. Keep their residual count diagnostic here rather than
+  // blocking a second time on software-rendered RAF timing after the rig test.
+  console.log('DESKTOP_POST_RIG_VFX_READY ' + JSON.stringify({
+    activeProjectiles: desktopPostRigVfx.activeProjectiles,
+    modelMuzzleFlashes: desktopPostRigVfx.modelMuzzleFlashes,
+    modelExplosions: desktopPostRigVfx.modelExplosions,
+    transientImpactRings: desktopPostRigVfx.impactRings,
+    transientImpactSparks: desktopPostRigVfx.impactSparks
+  }));
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(desktopBuildingStart?.shooterKind,
     'desktop building-damage QA must use a live blue combat unit');
