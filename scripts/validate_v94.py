@@ -275,10 +275,23 @@ def main():
     qa_start = source.index("const combatState =")
     qa_end = source.index("if (new URLSearchParams(location.search).get('qa') === '1')", qa_start)
     qa_section = source[qa_start:qa_end]
-    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition", "qaSuppressCombat", "freezeNewCombat", "resumeCombat", "qaSuppressEconomyRewards", "freezeEconomyRewards", "resumeEconomyRewards")
+    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition", "qaSuppressCombat", "freezeNewCombat", "resumeCombat", "qaSuppressEconomyRewards", "freezeEconomyRewards", "resumeEconomyRewards", "combatSuppressed")
     missing = [token for token in required_qa if token not in qa_section]
     if missing:
-        raise SystemExit("FAIL: combat QA must track the exact death explosion: " + ", ".join(missing))
+        raise SystemExit("FAIL: combat QA must track the exact death explosion and isolated combat state: " + ", ".join(missing))
+
+    building_qa_start = source.index("window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__")
+    building_qa_end = source.index("window.__BLUE_ALERTS_MISSION_QA__", building_qa_start)
+    building_qa_section = source[building_qa_start:building_qa_end]
+    required_building_qa = (
+        "units.find(u => !u.dead && u.team === 1 && u.kind === 'light' && u.dmg > 0 && u.g)",
+        "units.find(u => !u.dead && u.team === 1 && u.dmg > 0 && u.g)",
+        "shooterKind: shooter.kind",
+        "live blue combat unit",
+    )
+    missing = [token for token in required_building_qa if token not in building_qa_section]
+    if missing:
+        raise SystemExit("FAIL: building damage QA must retain a live blue combat shooter and report its unit kind: " + ", ".join(missing))
 
     browser_test = BROWSER_TEST.read_text(encoding="utf-8")
     if "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))" not in browser_test:
@@ -291,6 +304,9 @@ def main():
         "spawnedExplosionLife",
         "freezeNewCombat",
         "resumeCombat",
+        "desktopBuildingFreeze?.combatSuppressed === true",
+        "mobileClean.combatSuppressed === true",
+        "shooterKind",
         "desktopEconomyFreeze",
         "mobileEconomyFreeze",
         "freezeEconomyRewards",

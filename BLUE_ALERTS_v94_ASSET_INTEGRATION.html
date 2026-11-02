@@ -4421,7 +4421,8 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     kills,
     credits,
     livingBlueCombatUnits: units.filter(u => !u.dead && u.team === 1 && u.dmg > 0).length,
-    livingRedCombatUnits: units.filter(u => !u.dead && u.team === 2 && u.dmg > 0).length
+    livingRedCombatUnits: units.filter(u => !u.dead && u.team === 2 && u.dmg > 0).length,
+    combatSuppressed: qaSuppressCombat
   });
   window.__BLUE_ALERTS_COMBAT_QA__ = Object.freeze({
     state: combatState,
@@ -4503,8 +4504,9 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
           .sort((a, b) => b.hp - a.hp)[0] || null;
       }
       const target = buildingProbeTarget;
-      const shooter = units.find(u => !u.dead && u.team === 1 && u.kind === 'light');
-      if (!target || !shooter) throw new Error('Building damage QA requires a healthy enemy turret and a live blue light unit.');
+      const shooter = units.find(u => !u.dead && u.team === 1 && u.kind === 'light' && u.dmg > 0 && u.g) ||
+        units.find(u => !u.dead && u.team === 1 && u.dmg > 0 && u.g);
+      if (!target || !shooter) throw new Error('Building damage QA requires a healthy enemy turret and a live blue combat unit.');
       shooter.g.position.set(target.x - 6, 0.04, target.z + 1);
       shooter.g.rotation.y = 0;
       shooter.path = null; shooter.pathIdx = 0; shooter.dest = null;
@@ -4518,7 +4520,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       const expectedHpAfter = hpBefore - shots * damagePerShot;
       if (expectedHpAfter <= 0) throw new Error('Building damage QA refuses a burst that would destroy the target before its damage state can be inspected.');
       for (let i = 0; i < shots; i++) fireProjectile(shooter, target);
-      return { stage, shots, damagePerShot, hpBefore, expectedHpAfter, ...buildingDamageSnapshot() };
+      return { stage, shooterKind: shooter.kind, shots, damagePerShot, hpBefore, expectedHpAfter, ...buildingDamageSnapshot() };
     }
   });
 
