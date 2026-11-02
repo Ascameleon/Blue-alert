@@ -109,7 +109,8 @@ async function metrics(page) {
       fallback: !!document.getElementById('blue2dFallback'),
       runtimeError: !!document.getElementById('blueRuntimeError'),
       startupError: !!document.getElementById('blueStartupError'),
-      terrain: window.__BLUE_ALERTS_TERRAIN || null
+      terrain: window.__BLUE_ALERTS_TERRAIN || null,
+      environment: window.__BLUE_ALERTS_ENVIRONMENT || null
     };
   });
 }
@@ -130,6 +131,10 @@ try {
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
+  assert.ok(desktopMetrics.environment?.runtimeIntegrated, 'industrial logistics set must be present in the live 3D scene');
+  assert.equal(desktopMetrics.environment?.clusterCount, 4, 'industrial environment must contain four authored clusters');
+  assert.equal(desktopMetrics.environment?.instancedCrates, 12, 'cargo crates must use a bounded instanced batch');
+  assert.equal(desktopMetrics.environment?.instancedBarrels, 8, 'hazard barrels must use a bounded instanced batch');
   const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
   assert.ok(buildBefore, 'build-zone QA diagnostics must be available');
   assert.ok(buildBefore.hq.modelsLoaded, 'the procedural model library must load from inside the single HTML file');
