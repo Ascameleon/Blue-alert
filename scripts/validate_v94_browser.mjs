@@ -348,6 +348,7 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
   const desktopCraterFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.focus());
   assert.equal(desktopCraterFocus?.craterCount, 8, 'desktop crater visual focus must expose all eight impact scars');
+  assert.equal(desktopCraterFocus?.focus?.x, 44, 'desktop crater framing must retain the landscape showcase focus');
   await desktop.waitForTimeout(350);
   await desktop.screenshot({ path: output + '/desktop-v94-battlefield-craters.png', fullPage: true });
 
@@ -612,6 +613,9 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
   const mobileCraterFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.focus());
   assert.equal(mobileCraterFocus?.craterCount, 8, 'mobile crater visual focus must expose all eight impact scars');
+  assert.equal(mobileCraterFocus?.focus?.x, 36, 'portrait crater framing must center the western crater');
+  assert.equal(mobileCraterFocus?.focus?.z, 24, 'portrait crater framing must center the crater bowl');
+  assert.equal(mobileCraterFocus?.focus?.distance, 12.5, 'portrait crater framing must keep the full rim in view');
   await mobile.waitForTimeout(350);
   await mobile.screenshot({ path: output + '/mobile-v94-battlefield-craters-390x844.png', fullPage: true });
 
