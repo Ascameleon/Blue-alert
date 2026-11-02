@@ -38,7 +38,9 @@ class ScriptCollector(HTMLParser):
     def handle_endtag(self, tag):
         if tag.lower() == "script" and self.current is not None:
             code = "".join(self.current).strip()
-            if code:
+            # Import maps contain JSON, not executable JavaScript; keep them out
+            # of node --check while retaining the module scripts for validation.
+            if code and self.current_type != "importmap":
                 self.scripts.append((self.current_type, code))
             self.current = None
             self.current_type = ""
