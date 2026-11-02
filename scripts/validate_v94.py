@@ -283,6 +283,23 @@ def main():
     building_qa_start = source.index("window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__")
     building_qa_end = source.index("window.__BLUE_ALERTS_MISSION_QA__", building_qa_start)
     building_qa_section = source[building_qa_start:building_qa_end]
+    infantry_qa_start = source.index("const infantryProbe")
+    infantry_qa_end = source.index("const visibleModelMuzzleFlashCount", infantry_qa_start)
+    infantry_qa_section = source[infantry_qa_start:infantry_qa_end]
+    required_infantry_qa = ("TWO_HAND_FORWARD_READY_V1", "leftGripError", "rightGripError",
+                            "muzzleAxisDot", "camDist = 9.5")
+    missing = [token for token in required_infantry_qa if token not in infantry_qa_section]
+    if missing:
+        raise SystemExit("FAIL: infantry QA must verify hand-to-rifle alignment and forward muzzle axis: " + ", ".join(missing))
+
+    combat_qa_start = source.index("window.__BLUE_ALERTS_COMBAT_QA__ = Object.freeze({")
+    combat_qa_end = source.index("window.__BLUE_ALERTS_TANK_SURFACE_QA__", combat_qa_start)
+    combat_qa_section = source[combat_qa_start:combat_qa_end]
+    required_infantry_fire = ("fireInfantry()", "muzzleError", "projectileStart", "flashVisible")
+    missing = [token for token in required_infantry_fire if token not in combat_qa_section]
+    if missing:
+        raise SystemExit("FAIL: infantry firing QA must verify projectile origin at the live rifle muzzle: " + ", ".join(missing))
+
     required_building_qa = (
         "units.find(u => !u.dead && u.team === 1 && u.kind === 'light' && u.dmg > 0 && u.g)",
         "units.find(u => !u.dead && u.team === 1 && u.dmg > 0 && u.g)",
@@ -326,6 +343,10 @@ def main():
         "mobile-v94-road-wear-baseline-390x844.png",
         "mobile-v94-road-wear-detail-390x844.png",
         "desktop-v94-mission-complete.png",
+        "desktop-v94-infantry-fire.png",
+        "mobile-v94-infantry-fire-390x844.png",
+        "fireInfantry()",
+        "muzzleError",
         "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
         "desktop-v94-industrial-yard.png",
         "desktop-v94-terrain-surface.png",

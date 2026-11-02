@@ -694,7 +694,8 @@ export function createInfantry(THREE, options={}) {
     upperArm.position.set(side*.01,0,.015); upperArm.castShadow=true; upperArm.receiveShadow=true; pivot.add(upperArm);
     const elbow = new THREE.Group();
     elbow.name = label + '-elbow-pivot';
-    elbow.position.set(side*.01,-.18,.035);
+    // Bring both wrists onto the rifle's pistol/fore-end grip sockets.
+    elbow.position.set(-side*.12,-.10,side === -1 ? .175 : .035);
     pivot.add(elbow);
     sphere(THREE, elbow, label + '-elbow-joint', .052, [0,0,0], armor, [.92,.9,1]);
     const forearm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
@@ -704,12 +705,16 @@ export function createInfantry(THREE, options={}) {
     forearm.position.set(0,0,.065); forearm.rotation.x=-.86;
     forearm.castShadow=true; forearm.receiveShadow=true; elbow.add(forearm);
     beveledBox(THREE, elbow, label + '-wrist-guard', [.125,.065,.13], [0,-.13,.16], armor, [0,0,0], .012);
-    sphere(THREE, elbow, label + '-glove-palm', .057, [0,-.16,.19], rubber, [.92,.72,1.18]);
+    const hand = new THREE.Group();
+    hand.name = label + '-hand-rig';
+    hand.position.set(0,-.16,.19);
+    elbow.add(hand);
+    sphere(THREE, hand, label + '-glove-palm', .057, [0,0,0], rubber, [.92,.72,1.18]);
     for(let finger=0;finger<4;finger++) {
-      sphere(THREE, elbow, label + '-glove-finger', .021,
-        [(finger-1.5)*.025,-.198,.235], rubber, [.82,1.25,.78]);
+      sphere(THREE, hand, label + '-glove-finger', .021,
+        [(finger-1.5)*.025,-.038,.045], rubber, [.82,1.25,.78]);
     }
-    sphere(THREE, elbow, label + '-glove-thumb', .026, [side*-.06,-.165,.19], rubber, [.9,1.1,.85]);
+    sphere(THREE, hand, label + '-glove-thumb', .026, [side*-.06,-.005,.005], rubber, [.9,1.1,.85]);
     if (isRed) {
       beveledBox(THREE, pivot, label + '-bastion-pauldron', [.17,.095,.15],
         [side*.012,-.035,.025], accent, [0,0,side*-.08], .012);
@@ -717,7 +722,7 @@ export function createInfantry(THREE, options={}) {
       box(THREE, pivot, label + '-sentinel-shoulder-mark', [.10,.045,.022],
         [side*.012,-.045,.13], accent);
     }
-    return { pivot, elbow };
+    return { pivot, elbow, hand };
   };
   const leftArm = makeArm(-1, 'left');
   const rightArm = makeArm(1, 'right');
@@ -763,39 +768,94 @@ export function createInfantry(THREE, options={}) {
   cylinder(THREE, pack, 'radio-antenna', .012, .018, .42, [-.105, .31, -.025], metal, 6);
   cylinder(THREE, pack, 'field-canteen', .065, .075, .18, [.18, -.11, -.025], dark, 8);
 
-  // Rifle details remain grouped on the chest so the existing combat unit and
-  // muzzle/targeting systems continue to use the same outer V94 unit contract.
+  // The rifle's barrel axis is +Z, matching the soldier's forward axis.
+  // Two explicit sockets keep the right hand on the pistol grip and the left on the fore-end.
   const rifleGroup = new THREE.Group();
   rifleGroup.name = 'infantry-assault-rifle';
-  rifleGroup.userData.keepSeparateForCombat = true;
-  rifleGroup.position.set(.05, .73, .29);
+  rifleGroup.position.set(0, .73, .24);
+  rifleGroup.rotation.y = -Math.PI / 2;
+  rifleGroup.userData.weaponForwardAxis = '+Z';
   g.add(rifleGroup);
-  const rifle = box(THREE, rifleGroup, 'rifle-receiver', [.48, .06, .075], [0, 0, 0], rifleMat);
-  box(THREE, rifleGroup, 'rifle-stock', [.18, .085, .095], [-.3, -.005, -.005], dark);
+  const rifle = beveledBox(THREE, rifleGroup, 'rifle-receiver', [.48,.06,.075], [0,0,0], rifleMat, [0,0,0], .012);
+  rifle.userData.keepSeparateForCombat = true;
+  beveledBox(THREE, rifleGroup, 'rifle-stock', [.18,.085,.095], [-.3,-.005,-.005], dark, [0,0,0], .012);
+  box(THREE, rifleGroup, 'rifle-buttpad', [.035,.095,.105], [-.405,-.005,-.005], rubber);
+  beveledBox(THREE, rifleGroup, 'rifle-stock-cheek-rest', [.16,.035,.11], [-.31,.045,0], armor, [0,0,0], .008);
   beveledBox(THREE, rifleGroup, 'rifle-handguard', [.22,.085,.095], [.18,0,0], armor, [0,0,0], .012);
-  box(THREE,rifleGroup,'rifle-top-rail',[.42,.025,.035],[.04,.055,0],metal);
-  box(THREE,rifleGroup,'rifle-foregrip',[.065,.12,.07],[.19,-.085,.01],dark,[0,0,-.12]);
-  box(THREE,rifleGroup,'rifle-ejection-port',[.095,.025,.012],[.06,.018,.044],metal);
-  box(THREE,rifleGroup,'rifle-stock-cheek-rest',[.16,.035,.11],[-.31,.045,0],armor);
-  const barrel = cylinder(THREE, rifleGroup, 'rifle-barrel', .022, .022, .3, [.42, .005, 0], metal, 8);
+  box(THREE, rifleGroup, 'rifle-top-rail', [.42,.025,.035], [.04,.055,0], metal);
+  beveledBox(THREE, rifleGroup, 'rifle-pistol-grip', [.08,.14,.075], [0,-.10,-.095], dark, [0,0,.12], .01);
+  beveledBox(THREE, rifleGroup, 'rifle-foregrip', [.065,.12,.07], [.14,-.08,.095], dark, [0,0,-.12], .008);
+  box(THREE, rifleGroup, 'rifle-ejection-port', [.095,.025,.012], [.06,.018,.044], metal);
+  cylinder(THREE, rifleGroup, 'rifle-charging-handle', .012, .012, .055, [.105,.018,.052], metal, 8).rotation.z = Math.PI / 2;
+  cylinder(THREE, rifleGroup, 'rifle-selector-switch', .009, .009, .042, [-.075,-.018,-.05], metal, 8).rotation.x = Math.PI / 2;
+  box(THREE, rifleGroup, 'rifle-trigger', [.012,.045,.012], [.02,-.065,-.09], metal);
+  const triggerCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-.025,-.035,-.095), new THREE.Vector3(-.02,-.105,-.095),
+    new THREE.Vector3(.045,-.105,-.095), new THREE.Vector3(.055,-.035,-.095)
+  ]);
+  const triggerGuard = new THREE.Mesh(new THREE.TubeGeometry(triggerCurve, 10, .008, 6, false), metal);
+  triggerGuard.name = 'rifle-trigger-guard'; triggerGuard.castShadow = true; rifleGroup.add(triggerGuard);
+  for (let vent = 0; vent < 4; vent++) {
+    const x = .105 + vent * .045;
+    for (const side of [-1,1]) box(THREE, rifleGroup, 'rifle-handguard-vent', [.024,.022,.008], [x,.005,side*.052], dark);
+  }
+  const barrel = cylinder(THREE, rifleGroup, 'rifle-barrel', .022, .022, .3, [.42,.005,0], metal, 10);
   barrel.rotation.z = -Math.PI / 2;
-  cylinder(THREE, rifleGroup, 'rifle-muzzle', .032, .032, .055, [.58, .005, 0], dark, 8).rotation.z = -Math.PI / 2;
-  box(THREE, rifleGroup, 'rifle-optic', [.085, .07, .065], [.045, .075, 0], optic);
-  box(THREE, rifleGroup, 'rifle-magazine', [.09, .15, .065], [.02, -.095, .015], dark, [0, 0, -.12]);
+  cylinder(THREE, rifleGroup, 'rifle-muzzle', .032, .032, .055, [.58,.005,0], dark, 10).rotation.z = -Math.PI / 2;
+  const muzzleBrake = cylinder(THREE, rifleGroup, 'rifle-muzzle-brake', .038, .034, .065, [.635,.005,0], metal, 10);
+  muzzleBrake.rotation.z = -Math.PI / 2;
+  for (let port = 0; port < 3; port++) box(THREE, rifleGroup, 'rifle-muzzle-port', [.018,.018,.012], [.625,.005,(port-1)*.026], dark);
+  box(THREE, rifleGroup, 'rifle-front-sight', [.035,.07,.035], [.43,.065,0], dark);
+  box(THREE, rifleGroup, 'rifle-rear-sight', [.035,.06,.035], [-.15,.06,0], dark);
+  box(THREE, rifleGroup, 'rifle-optic', [.085,.07,.065], [.045,.075,0], optic);
+  sphere(THREE, rifleGroup, 'rifle-optic-lens', .027, [.045,.075,.036], lens, [1,.85,.35]);
+  sphere(THREE, rifleGroup, 'rifle-optic-lens', .027, [.045,.075,-.036], lens, [1,.85,.35]);
+  beveledBox(THREE, rifleGroup, 'rifle-magazine', [.09,.15,.065], [.02,-.12,.015], dark, [0,0,-.12], .01);
+  for (let rib = 0; rib < 3; rib++) box(THREE, rifleGroup, 'rifle-magazine-rib', [.07,.012,.009], [.02,-.075-rib*.032,.052], metal);
+  const slingCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-.37,.035,-.055), new THREE.Vector3(-.28,-.16,-.055),
+    new THREE.Vector3(.22,-.16,-.055), new THREE.Vector3(.34,.035,-.055)
+  ]);
+  const sling = new THREE.Mesh(new THREE.TubeGeometry(slingCurve, 20, .009, 6, false), cloth);
+  sling.name = 'rifle-sling'; sling.castShadow = true; rifleGroup.add(sling);
+  const rightGripSocket = new THREE.Object3D();
+  rightGripSocket.name = 'right-weapon-grip-socket';
+  rightGripSocket.position.set(0,0,-.095);
+  rifleGroup.add(rightGripSocket);
+  const leftGripSocket = new THREE.Object3D();
+  leftGripSocket.name = 'left-weapon-grip-socket';
+  leftGripSocket.position.set(.14,0,.095);
+  rifleGroup.add(leftGripSocket);
+  const muzzleFlash = createMuzzleFlash(THREE, { team: isRed ? 'red' : 'blue', scale: .55 });
+  muzzleFlash.name = 'infantry-rifle-muzzle-flash';
+  muzzleFlash.position.set(.69,.005,0);
+  muzzleFlash.visible = false;
+  muzzleFlash.userData.keepSeparateForCombat = true;
+  muzzleFlash.traverse(part => {
+    if (part.material && typeof part.material.opacity === 'number') {
+      part.userData.baseOpacity = part.material.opacity;
+      part.material.opacity = 0;
+    }
+  });
+  rifleGroup.add(muzzleFlash);
   addMarking(THREE, torso, .17, .12, .205, team);
-
   // Batch static geometry inside each rig pivot; never merge across moving joints.
   const renderOptimization = mergeInfantryStaticMeshes(THREE, g);
 
   const animationRig = {
     leftArm:leftArm.pivot, rightArm:rightArm.pivot,
     leftElbow:leftArm.elbow, rightElbow:rightArm.elbow,
+    leftHand:leftArm.hand, rightHand:rightArm.hand,
     leftLeg:leftLeg.pivot, rightLeg:rightLeg.pivot,
     leftKnee:leftLeg.knee, rightKnee:rightLeg.knee,
     torso, head, phase:0, walkAmount:0
   };
   g.userData = {
     kind: 'infantry', role, team, factionProfile, weapon: rifle,
+    weaponRig: rifleGroup,
+    weaponGripSockets: { left: leftGripSocket, right: rightGripSocket },
+    weaponMuzzle: muzzleFlash,
+    flash: muzzleFlash,
     animationRig,
     renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V3',
     bodyGeometryProfile:'ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1',
@@ -824,8 +884,8 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
   rig.rightLeg.rotation.x = -swing + idle;
   rig.leftKnee.rotation.x = Math.max(0, Math.sin(rig.phase + .35)) * .46 * intensity;
   rig.rightKnee.rotation.x = Math.max(0, Math.sin(rig.phase + Math.PI + .35)) * .46 * intensity;
-  rig.leftArm.rotation.x = -swing * .24 - .04 + idle;
-  rig.rightArm.rotation.x = swing * .24 - .04 - idle;
+  rig.leftArm.rotation.x = -swing * .14 - .04 + idle;
+  rig.rightArm.rotation.x = swing * .14 - .04 - idle;
   rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.045*intensity;
   rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.045*intensity;
   rig.torso.rotation.z = idle * .55;

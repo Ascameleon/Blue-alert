@@ -386,3 +386,14 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Files changed against the accepted main base: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, and this log. No external assets, paid APIs, credits or services were used; budget remains 0 €.
 - Evidence boundaries: 390×844 is browser emulation, not a physical Samsung test; Three.js remains CDN-loaded; the CI log includes non-blocking Node deprecation notices and OpenRTS material-parser warnings, with no failed step or uncaught exception. No game version/release was created.
 - The PR was merged with its branch history preserved in main merge commit `c261a3d75126ac01248b8066165bd20009449818`. The only commit after tested code/test head `c7fcc69eefd818644f5233e3f9043e3625208869` and before merge was `a1d9a8280f02fcf068110c7b1231d5c03c8eb338`, which changed only this log; the compare confirms no runtime or test file changed after the passing workflow. The available GitHub commit-status and workflow-run queries returned no post-merge main-run record, so a post-merge exact-main workflow pass is not claimed. No game version or release was created.
+
+
+## Cycle — forward-facing infantry rifle, two-hand grip and real muzzle origin (2026-11-02)
+
+- Base: `main` at `462b6d448c810485b597effcf3e60c708dbbd48e`; working branch: `art/v94-infantry-forward-grip-20261102`.
+- Corrected the procedural rifle axis from lateral +X to the soldier's forward +Z heading. Repositioned articulated hand rigs onto explicit pistol-grip and fore-end sockets; reduced arm swing so both hands remain seated during the existing displacement-linked gait.
+- Added receiver/stock/handguard grip details, trigger guard, charging handle, selector, optic lenses, front/rear sights, magazine ribs, muzzle brake/ports and sling within the existing procedural model kit. Static meshes remain batchable; the receiver and transient muzzle flash remain separate for combat.
+- Attached a faction-colored muzzle flash to the rifle muzzle and propagated it to the existing outer V94 unit group. Infantry projectiles now originate from the actual weapon muzzle through the existing `fireProjectile` contract; unit movement, collision, selection, HP, damage and targeting remain unchanged.
+- Added desktop/mobile live-game checks for grip retention during movement and projectile-origin alignment. Existing model-preview checks remain in place and exercise the same updated model kit.
+- Exact-head validation and screenshots are pending. No game version/release is created; no external or paid assets/services are used; budget remains 0 €.
+- Evidence boundaries: desktop/mobile screenshots are browser-engine captures; 390×844 is mobile emulation, not a physical Samsung test. OpenRTS is a separate native engine and does not import these Three.js infantry meshes.

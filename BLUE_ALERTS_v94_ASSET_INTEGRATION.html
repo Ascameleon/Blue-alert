@@ -2032,8 +2032,12 @@ function createUnit(x, z, team, kind) {
       speed = 2.9; hp = 50; dmg = 9; range = 7.5;
       const infantryModel = BLUE_MODELS.createInfantry(THREE, { team: team === 1 ? 'blue' : 'red', role: 'rifleman' });
       g.add(infantryModel);
+      g.userData.infantryModel = infantryModel;
       g.userData.infantryRig = infantryModel.userData?.animationRig || null;
       g.userData.infantryProfile = infantryModel.userData?.factionProfile || null;
+      g.userData.weaponGripProfile = infantryModel.userData?.weaponGripProfile || null;
+      g.userData.weapon = infantryModel.userData?.weapon || null;
+      g.userData.flash = infantryModel.userData?.flash || null;
     } else {
       const heavy = kind === 'heavy';
       speed = heavy ? 2.3 : 3.6; hp = heavy ? 320 : 160;
@@ -4351,9 +4355,32 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
   const infantrySnapshot = () => {
     const unit = infantryProbe();
     if (!unit) return null;
+    const model = unit.g.userData.infantryModel;
     const rig = unit.g.userData.infantryRig;
+    unit.g.updateMatrixWorld(true);
+    const gripError = (hand, socket) => {
+      if (!hand || !socket) return null;
+      const handPosition = new THREE.Vector3();
+      const socketPosition = new THREE.Vector3();
+      hand.getWorldPosition(handPosition);
+      socket.getWorldPosition(socketPosition);
+      return Number(handPosition.distanceTo(socketPosition).toFixed(4));
+    };
+    const weaponOrigin = new THREE.Vector3();
+    const muzzleWorld = new THREE.Vector3();
+    if (model?.userData?.weaponRig) model.userData.weaponRig.getWorldPosition(weaponOrigin);
+    if (model?.userData?.weaponMuzzle) model.userData.weaponMuzzle.getWorldPosition(muzzleWorld);
+    const forward = new THREE.Vector3(0,0,1).applyQuaternion(unit.g.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const muzzleAxis = muzzleWorld.clone().sub(weaponOrigin);
+    const muzzleAxisDot = model?.userData?.weaponMuzzle && model?.userData?.weaponRig && muzzleAxis.lengthSq() > 0
+      ? Number(muzzleAxis.normalize().dot(forward).toFixed(4)) : null;
     return {
       profile: unit.g.userData.infantryProfile,
+      weaponGripProfile: model?.userData?.weaponGripProfile || null,
+      leftGripError: gripError(rig.leftHand, model?.userData?.weaponGripSockets?.left),
+      rightGripError: gripError(rig.rightHand, model?.userData?.weaponGripSockets?.right),
+      muzzleAxisDot,
+      muzzleAttached: unit.g.userData.flash === model?.userData?.weaponMuzzle,
       position: [unit.g.position.x, unit.g.position.z],
       walkAmount: rig.walkAmount,
       phase: rig.phase,
@@ -4380,7 +4407,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       unit.stuckTime = 0;
       unit.dest = { x: -64, z: 50 };
       camTarget.set(-70, 0, 50);
-      camDist = 15;
+      camYaw = .4; camPitch = .72; camDist = 9.5;
       return infantrySnapshot();
     }
   });
@@ -4450,6 +4477,37 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       camDist = Math.min(camDist, 26);
       fireProjectile(shooter, target);
       return { shooterKind: shooter.kind, targetKind: target.kind, ...combatState() };
+    },
+    fireInfantry() {
+      const shooter = infantryProbe();
+      const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0 && u.g);
+      if (!shooter || !target) throw new Error('Infantry firing QA requires a live blue rifleman and red target.');
+      shooter.dmg = 1;
+      shooter.speed = 0;
+      shooter.dest = null; shooter.path = null; shooter.pathIdx = 0; shooter.atkTarget = null;
+      shooter.g.position.set(target.g.position.x - 6, .04, target.g.position.z + 1);
+      shooter.g.rotation.y = Math.atan2(target.g.position.x - shooter.g.position.x, target.g.position.z - shooter.g.position.z);
+      shooter.g.updateMatrixWorld(true);
+      const muzzle = shooter.g.userData.flash;
+      if (!muzzle || muzzle.userData?.effectType !== 'muzzle-flash') {
+        throw new Error('Infantry rifle muzzle flash must be attached to the outer combat unit.');
+      }
+      const muzzleWorld = new THREE.Vector3();
+      muzzle.getWorldPosition(muzzleWorld);
+      camTarget.set(shooter.g.position.x, 0, shooter.g.position.z);
+      camYaw = .4; camPitch = .72; camDist = Math.min(camDist, 9.5);
+      fireProjectile(shooter, target);
+      const projectile = [...projectiles].reverse().find(item => item.shooter === shooter);
+      const projectileStart = projectile?.start?.clone() || new THREE.Vector3(NaN,NaN,NaN);
+      const diagnostic = infantrySnapshot();
+      return {
+        shooterKind: shooter.kind, targetKind: target.kind,
+        projectileStart: [projectileStart.x,projectileStart.y,projectileStart.z],
+        muzzleWorld: [muzzleWorld.x,muzzleWorld.y,muzzleWorld.z],
+        muzzleError: Number(projectileStart.distanceTo(muzzleWorld).toFixed(4)),
+        flashVisible: muzzle.visible,
+        ...diagnostic
+      };
     },
     destroyEnemyUnit() {
       const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);

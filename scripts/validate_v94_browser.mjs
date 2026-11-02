@@ -457,9 +457,31 @@ try {
     const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
     return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 && Math.abs(state.leftLeg - state.rightLeg) > 0.1;
   }, infantryWalkStart.position, { timeout: 5000, polling: 50 });
+  assert.equal(infantryReady.weaponGripProfile, 'TWO_HAND_FORWARD_READY_V1',
+    'desktop V94 rifleman must use the existing two-hand forward weapon rig');
+  assert.ok(infantryReady.leftGripError < .07 && infantryReady.rightGripError < .07 &&
+    infantryReady.muzzleAxisDot > .99 && infantryReady.muzzleAttached,
+    'desktop live rifleman must hold the forward-facing weapon at both sockets');
   const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
-  assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 && desktopInfantryGait.walkAmount > 0.2 && Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04, 'desktop V94 infantry arms and legs must animate in response to real movement');
+  assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 &&
+    desktopInfantryGait.walkAmount > 0.2 &&
+    Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.025 &&
+    desktopInfantryGait.leftGripError < .09 && desktopInfantryGait.rightGripError < .09 &&
+    desktopInfantryGait.muzzleAxisDot > .99,
+    'desktop V94 infantry gait must preserve both rifle grips and the forward muzzle axis while moving');
+  await desktop.locator('#toast').evaluate(el => { el.style.opacity = '0'; el.textContent = ''; });
   await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
+  const desktopInfantryFire = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.fireInfantry());
+  assert.ok(desktopInfantryFire?.shooterKind === 'infantry' && desktopInfantryFire.flashVisible &&
+    desktopInfantryFire.muzzleError < .05 && desktopInfantryFire.muzzleAxisDot > .99 &&
+    desktopInfantryFire.leftGripError < .09 && desktopInfantryFire.rightGripError < .09,
+    'desktop infantry projectile must originate at the forward rifle muzzle while both hands remain on their grips');
+  console.log('DESKTOP_INFANTRY_MUZZLE ' + JSON.stringify(desktopInfantryFire));
+  await desktop.screenshot({ path: output + '/desktop-v94-infantry-fire.png', fullPage: true });
+  await desktop.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+    return state && state.activeProjectiles === 0 && state.modelMuzzleFlashes === 0;
+  }, null, { timeout: 5000, polling: 50 });
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
   assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
     desktopTreeDetail.needleSpraysPerArm === 3 &&
@@ -872,9 +894,30 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
     return state && state.position[0] > start[0] + 0.25 && state.walkAmount > 0.15 && Math.abs(state.leftLeg - state.rightLeg) > 0.08;
   }, mobileInfantryWalkStart.position, { timeout: 6000, polling: 50 });
+  assert.equal(mobileInfantryReady.weaponGripProfile, 'TWO_HAND_FORWARD_READY_V1',
+    'mobile V94 rifleman must use the existing two-hand forward weapon rig');
+  assert.ok(mobileInfantryReady.leftGripError < .07 && mobileInfantryReady.rightGripError < .07 &&
+    mobileInfantryReady.muzzleAxisDot > .99 && mobileInfantryReady.muzzleAttached,
+    'mobile live rifleman must hold the forward-facing weapon at both sockets');
   const mobileInfantryGait = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
-  assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 && mobileInfantryGait.walkAmount > 0.15, 'mobile V94 infantry gait must follow actual unit displacement');
+  assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 &&
+    mobileInfantryGait.walkAmount > 0.15 &&
+    mobileInfantryGait.leftGripError < .09 && mobileInfantryGait.rightGripError < .09 &&
+    mobileInfantryGait.muzzleAxisDot > .99,
+    'mobile V94 infantry gait must preserve the rifle grip and forward muzzle axis while moving');
+  await mobile.locator('#toast').evaluate(el => { el.style.opacity = '0'; el.textContent = ''; });
   await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true });
+  const mobileInfantryFire = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.fireInfantry());
+  assert.ok(mobileInfantryFire?.shooterKind === 'infantry' && mobileInfantryFire.flashVisible &&
+    mobileInfantryFire.muzzleError < .05 && mobileInfantryFire.muzzleAxisDot > .99 &&
+    mobileInfantryFire.leftGripError < .09 && mobileInfantryFire.rightGripError < .09,
+    'mobile infantry projectile must originate at the forward rifle muzzle while both hands remain on their grips');
+  console.log('MOBILE_INFANTRY_MUZZLE ' + JSON.stringify(mobileInfantryFire));
+  await mobile.screenshot({ path: output + '/mobile-v94-infantry-fire-390x844.png', fullPage: true });
+  await mobile.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+    return state && state.activeProjectiles === 0 && state.modelMuzzleFlashes === 0;
+  }, null, { timeout: 5000, polling: 50 });
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must be available');
   await mobile.waitForTimeout(300);
@@ -897,7 +940,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'desktop-v94-infantry-fire.png', 'mobile-v94-infantry-gait-390x844.png', 'mobile-v94-infantry-fire-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
