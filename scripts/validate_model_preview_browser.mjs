@@ -120,10 +120,23 @@ try {
   assert.ok(blueInfantry.surfaceTextureCount>=7 && blueInfantry.surfaceMaterialCount>=5,
     'blue infantry must bind cached color, roughness and micro-relief maps to its PBR materials');
   assert.equal(blueInfantry.headScale,.82,'infantry head/helmet silhouette must use the corrected human proportion');
+  assert.equal(blueInfantry.bodyGeometryProfile,'ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1',
+    'infantry torso and limbs must use tapered anatomical loft geometry');
+  assert.equal(blueInfantry.animationJointProfile,'SHOULDER_ELBOW_HIP_KNEE_V1',
+    'infantry must expose shoulder, elbow, hip and knee articulation');
+  assert.equal(blueInfantry.weaponGripProfile,'TWO_HAND_FORWARD_READY_V1',
+    'infantry weapon and hand pose must use the two-hand ready alignment');
+  assert.deepEqual(blueInfantry.jointDiagnostics,{leftElbow:true,rightElbow:true,leftKnee:true,rightKnee:true},
+    'both elbows and both knees must be real articulated rig pivots');
   assert.ok(blueInfantry.cameraDistance<8,'blue infantry preview camera must frame the model closely: '+blueInfantry.cameraDistance);
   assert.ok(blueInfantry.namedParts.includes('sentinel-visor') && blueInfantry.namedParts.includes('infantry-assault-rifle') &&
-    blueInfantry.namedParts.includes('left-leg-pivot') && blueInfantry.namedParts.includes('right-leg-pivot'),
-    'blue infantry must render its visor, rifle and independent leg pivots');
+    blueInfantry.namedParts.includes('anatomical-torso-loft') &&
+    blueInfantry.namedParts.includes('left-upper-arm-loft') && blueInfantry.namedParts.includes('right-forearm-loft') &&
+    blueInfantry.namedParts.includes('left-thigh-loft') && blueInfantry.namedParts.includes('right-calf-loft') &&
+    blueInfantry.namedParts.includes('left-glove-palm') && blueInfantry.namedParts.includes('right-glove-palm') &&
+    blueInfantry.namedParts.includes('left-elbow-pivot') && blueInfantry.namedParts.includes('right-elbow-pivot') &&
+    blueInfantry.namedParts.includes('left-knee-pivot') && blueInfantry.namedParts.includes('right-knee-pivot'),
+    'blue infantry must render its anatomical torso, tapered limbs, hands and four articulated joints');
   console.log('BLUE_SENTINEL_INFANTRY_METRICS '+JSON.stringify({
     meshCount:blueInfantry.meshCount,triangleCount:blueInfantry.triangleCount,
     drawCalls:blueInfantry.drawCalls,animationPhase:blueInfantry.animationPhase
