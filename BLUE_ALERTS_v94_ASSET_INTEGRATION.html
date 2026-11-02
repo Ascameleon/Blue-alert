@@ -3119,7 +3119,11 @@ function tick() {
       const stage = ratio <= 0.25 ? 2 : ratio <= 0.55 ? 1 : 0;
       if (stage !== (b.damageStage || 0)) {
         b.damageStage = stage;
-        if (stage > 0) applyBuildingDamageVisuals(b, stage);
+        if (stage > 0) {
+          applyBuildingDamageVisuals(b, stage);
+          // Show damage feedback immediately on threshold crossing; do not wait for the recurring FX timer.
+          b.damageFxCd = 0;
+        }
       }
       if (stage > 0) {
         b.damageFxCd = (b.damageFxCd ?? 0.25) - dt;
