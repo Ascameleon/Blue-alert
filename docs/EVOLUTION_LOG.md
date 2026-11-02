@@ -359,3 +359,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Exact-head workflow [#315](https://github.com/Ascameleon/Blue-alert/actions/runs/41436059900) passed the repository prototype syntax check and then stopped at the V94 static validator.
 - The runtime correctly declares the helper as a const arrow function, but the new source contract incorrectly searched for a function declaration. Corrected the validator token to match the actual declaration; no runtime geometry or gameplay behavior changed.
 - Browser/WebGL capture, standalone build and OpenRTS/native checks did not run on that failed attempt. A new exact-head workflow is required before visual acceptance.
+
+
+## Cycle — connected logistics corridor wear (2026-11-02)
+
+- Base: merged main 628635e64aa45f74e5f2d930028eb76ee70f1fde; branch: art/v94-logistics-corridor-wear-20261102.
+- The accepted V94 surface had a flat 200-unit road slab with simple center dashes; the existing gantry apron was not connected to the main road by a distinct service surface.
+- Added one connected, deterministic, visual-only wear layer: irregular gravel shoulders, a concrete-and-asphalt gantry access spur, broken twin tire tracks, seven irregular asphalt repair patches, branching cracks, ten instanced drainage grates and eight faded apron safety bars.
+- The details are grouped into a small set of batched meshes/instances. Existing road, industrial yard, evergreen geometry, pathfinding, collision and unit behavior remain unchanged. The new layer reports its counts and exposes a QA-only visibility toggle for matched A/B screenshots.
+- Acceptance is pending exact-head static, desktop/mobile WebGL, standalone build, OpenRTS and native-input validation. The browser suite captures road and gantry-corridor baseline/detail pairs at 1440×900 and 390×844 with identical camera poses. No visual improvement or release is claimed until those images are inspected.
+- Mobile captures are browser emulation, not a physical Samsung test. Three.js remains CDN-loaded. Budget: 0 €.
