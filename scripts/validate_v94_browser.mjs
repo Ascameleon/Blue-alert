@@ -183,8 +183,10 @@ try {
     desktopMetrics.vegetation.foliageTiers === 3 &&
     desktopMetrics.vegetation.branchWhorls === 3 &&
     desktopMetrics.vegetation.branchArms >= 17 &&
-    desktopMetrics.vegetation.needleClusters >= 17 &&
-    desktopMetrics.vegetation.foliageTriangles >= 350 &&
+    desktopMetrics.vegetation.needleSpraysPerArm === 3 &&
+    desktopMetrics.vegetation.needleClusters === desktopMetrics.vegetation.branchArms * 3 &&
+    desktopMetrics.vegetation.needleClusters >= 51 &&
+    desktopMetrics.vegetation.foliageTriangles >= 1500 &&
     desktopMetrics.vegetation.rockInstances >= 30 &&
     desktopMetrics.vegetation.renderGroups === 3 && desktopMetrics.vegetation.blocksMovement === false,
     'desktop vegetation must render detailed instanced evergreen branch whorls and needle clusters without adding draw groups');
@@ -413,7 +415,9 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
   assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
-    desktopTreeDetail.needleClusters >= 17 && desktopTreeDetail.foliageTriangles >= 350,
+    desktopTreeDetail.needleSpraysPerArm === 3 &&
+    desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 3 &&
+    desktopTreeDetail.needleClusters >= 51 && desktopTreeDetail.foliageTriangles >= 1500,
     'desktop live V94 must expose a complete instanced evergreen asset for close visual inspection');
   const desktopTreeBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
   assert.equal(desktopTreeBaseline, 'legacy', 'desktop A/B baseline must restore the previous three-cone evergreen geometry');
@@ -788,7 +792,9 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   const mobileTreeDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
   assert.ok(mobileTreeDetail?.branchWhorls === 3 && mobileTreeDetail.branchArms >= 17 &&
-    mobileTreeDetail.needleClusters >= 17 && mobileTreeDetail.foliageTriangles >= 350,
+    mobileTreeDetail.needleSpraysPerArm === 3 &&
+    mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 3 &&
+    mobileTreeDetail.needleClusters >= 51 && mobileTreeDetail.foliageTriangles >= 1500,
     'mobile live V94 must expose the same detailed evergreen asset within the mobile draw-call budget');
   const mobileTreeBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
   assert.equal(mobileTreeBaseline, 'legacy', 'mobile A/B baseline must restore the previous three-cone evergreen geometry');

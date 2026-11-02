@@ -1031,9 +1031,14 @@ createBuildZoneVisual();
 // Every transform is deterministic; props remain visual-only and never alter pathing.
 function createLayeredTreeFoliageGeometry() {
   const tiers = [
-    { radius: .82, height: 1.28, y: 1.10, light: .76, branches: 6, branchLength: .92, branchRise: .28, branchRadius: .085, tuftRadius: .20, tuftHeight: .58 },
-    { radius: .65, height: 1.12, y: 1.62, light: .88, branches: 6, branchLength: .73, branchRise: .27, branchRadius: .075, tuftRadius: .17, tuftHeight: .50 },
-    { radius: .47, height: .96, y: 2.08, light: 1.00, branches: 5, branchLength: .55, branchRise: .25, branchRadius: .065, tuftRadius: .14, tuftHeight: .42 }
+    { radius: .82, height: 1.28, y: 1.10, light: .76, branches: 6, branchLength: .78, branchRise: .20, branchRadius: .065 },
+    { radius: .65, height: 1.12, y: 1.62, light: .88, branches: 6, branchLength: .62, branchRise: .18, branchRadius: .058 },
+    { radius: .47, height: .96, y: 2.08, light: 1.00, branches: 5, branchLength: .46, branchRise: .15, branchRadius: .050 }
+  ];
+  const needleSprays = [
+    { at: .43, length: .22, width: .17, tone: .92 },
+    { at: .68, length: .21, width: .16, tone: 1.00 },
+    { at: .88, length: .17, width: .125, tone: 1.07 }
   ];
   const positions = [], normals = [], colors = [];
   let branchArms = 0;
@@ -1054,6 +1059,27 @@ function createLayeredTreeFoliageGeometry() {
       const facet = .91 + (vertex % 7) * .014;
       const shade = tone * facet;
       colors.push(shade * .78, shade * greenShift, shade * .80);
+    }
+    part.dispose();
+  };
+  const needleClusterBase = new THREE.DodecahedronGeometry(1, 0);
+  const appendNeedleCluster = (length, width, center, direction, tone, twist) => {
+    const indexed = needleClusterBase.clone();
+    const part = indexed.toNonIndexed();
+    indexed.dispose();
+    const axis = direction.clone().normalize();
+    const rotation = new THREE.Quaternion().setFromUnitVectors(up, axis);
+    rotation.multiply(new THREE.Quaternion().setFromAxisAngle(axis, twist));
+    const scale = new THREE.Vector3(width, length, width * .90);
+    part.applyMatrix4(new THREE.Matrix4().compose(center, rotation, scale));
+    const p = part.getAttribute('position');
+    const n = part.getAttribute('normal');
+    for (let vertex = 0; vertex < p.count; vertex++) {
+      positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
+      normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
+      const facet = .84 + (vertex % 5) * .032;
+      const shade = tone * facet;
+      colors.push(shade * .72, shade * 1.02, shade * .74);
     }
     part.dispose();
   };
@@ -1081,20 +1107,22 @@ function createLayeredTreeFoliageGeometry() {
         .96
       );
       branchArms++;
-      const tip = origin.clone().addScaledVector(branchDirection, branchLength * .82);
-      const tuftDirection = new THREE.Vector3(radial.x * .30, .92, radial.z * .30).normalize();
-      appendCone(
-        tier.tuftRadius,
-        tier.tuftHeight,
-        5,
-        tip,
-        tuftDirection,
-        tier.light * 1.06,
-        1.02
-      );
-      needleClusters++;
+      for (let sprayIndex = 0; sprayIndex < needleSprays.length; sprayIndex++) {
+        const spray = needleSprays[sprayIndex];
+        const center = origin.clone().addScaledVector(branchDirection, branchLength * spray.at);
+        appendNeedleCluster(
+          spray.length,
+          spray.width,
+          center,
+          branchDirection,
+          tier.light * spray.tone,
+          angle + sprayIndex * .71
+        );
+        needleClusters++;
+      }
     }
   }
+  needleClusterBase.dispose();
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
@@ -1103,6 +1131,7 @@ function createLayeredTreeFoliageGeometry() {
     branchWhorls: tiers.length,
     branchArms,
     needleClusters,
+    needleSpraysPerArm: needleSprays.length,
     triangleCount: positions.length / 9
   };
   geometry.computeBoundingSphere();
@@ -1227,6 +1256,7 @@ window.__BLUE_ALERTS_VEGETATION = Object.freeze({
   branchWhorls: treeFoliageGeometry.userData.branchWhorls,
   branchArms: treeFoliageGeometry.userData.branchArms,
   needleClusters: treeFoliageGeometry.userData.needleClusters,
+  needleSpraysPerArm: treeFoliageGeometry.userData.needleSpraysPerArm,
   foliageTriangles: treeFoliageGeometry.userData.triangleCount,
   rockInstances: battlefieldRocks.count,
   renderGroups: 3,

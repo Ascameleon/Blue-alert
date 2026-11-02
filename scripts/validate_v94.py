@@ -216,6 +216,9 @@ def main():
         "needleClusters",
         "new THREE.Quaternion()",
         "new THREE.ConeGeometry(radius, height, segments, 1)",
+        "function appendNeedleCluster(",
+        "new THREE.DodecahedronGeometry(1, 0)",
+        "needleSpraysPerArm: needleSprays.length",
         "geometry.userData",
         "function createLegacyLayeredTreeFoliageGeometry()",
     )
@@ -224,6 +227,8 @@ def main():
         raise SystemExit("FAIL: instanced evergreen asset is missing authored branch/needle geometry: " + ", ".join(missing))
     if "foliageTriangles: treeFoliageGeometry.userData.triangleCount" not in source:
         raise SystemExit("FAIL: evergreen geometry complexity must be exposed for browser acceptance")
+    if "const tuftDirection" in tree_section or "tier.tuftHeight" in tree_section:
+        raise SystemExit("FAIL: evergreen needle mass must not regress to isolated vertical cone spikes")
     if "if (!firstTreeFocus) firstTreeFocus = { x, z, scale };" not in source:
         raise SystemExit("FAIL: deterministic evergreen visual focus must track an accepted placed tree")
     required_tree_qa = (
