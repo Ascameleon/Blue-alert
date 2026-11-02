@@ -12,7 +12,7 @@ This log distinguishes runtime integration, static checks, browser rendering, CI
   - Three ribbed fuel silos with ladders, warning plates and transfer pipe.
   - Cargo apron with 18 instanced, color-varied crates and 8 instanced hazard barrels.
 - Performance choices: cached shared box/cylinder geometry; instancing for repeated cargo; desktop-only shadow casting; no external assets, downloads or paid services.
-- Gameplay safety: all clusters and props are tagged `blocksMovement:false`; placement and pathfinding systems remain unchanged.
+- Gameplay safety: all clusters and props are tagged `blocksMovement:false`; four clearance zones exclude the substation, gantry, silos and cargo apron from deterministic scrub, tree and rock placement. Placement and pathfinding systems remain unchanged.
 - Regression coverage: desktop and 390x844 mobile browser assertions for runtime diagnostics, cluster count, instanced counts and non-blocking flag. A dedicated desktop camera focus captures the gantry as visual evidence.
 - Static validator: source-contract checks for each cluster and instanced set; existing inline-script syntax validation remains active.
 
