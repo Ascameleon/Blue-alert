@@ -45,3 +45,12 @@ The existing \`createTank(THREE, { team, variant, scale })\` API and V94 combat 
 - Cause: the initial file replacement inserted the new constructor before the legacy constructor body instead of replacing the complete function block.
 - Correction: replace the entire \`createTank\` function region, retaining the following \`createInfantry\` export; fix commit \`602ec00be216d6d27c5f6277fdc33e036cbed86f\`.
 - The failed run is retained as evidence; no test is claimed from it. A new workflow run must validate the corrected branch head.
+
+
+### Browser-test correction — mobile preview state
+
+- Corrected runtime syntax validation passed in workflow \`41376956514\` through the standalone V94 build and static model checks.
+- The desktop BLUE SENTINEL and RED BASTION previews rendered and their faction assertions passed. The browser test then failed because the preview was still set to the control tower when the mobile tank assertion began.
+- Correction: explicitly select the tank asset and assert the BLUE SENTINEL state before capturing either mobile faction screenshot; fix commit \`3c736a55fbd46794c6c4c11ce36dc9590757e1c3\`.
+- The desktop screenshots from the failed attempt were inspected: the two turret profiles are visibly distinct, and the track shoes/glacis/engine details render. The failure was in test setup, not a reported model-render exception.
+- A fresh workflow run is required; the failed run is not counted as a pass.
