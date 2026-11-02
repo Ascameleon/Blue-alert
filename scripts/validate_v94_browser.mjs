@@ -560,6 +560,11 @@ try {
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
 
+  // Restore the QA-only combat gate after every controlled desktop VFX/building probe.
+  // The live gameplay simulation is not left suppressed when this browser page closes.
+  const desktopCombatResume = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeCombat());
+  assert.equal(desktopCombatResume?.combatSuppressed, false,
+    'desktop QA must restore autonomous combat after all controlled gameplay probes');
 
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
