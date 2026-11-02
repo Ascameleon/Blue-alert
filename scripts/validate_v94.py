@@ -293,7 +293,7 @@ def main():
         raise SystemExit("FAIL: infantry QA must verify hand-to-rifle alignment and forward muzzle axis: " + ", ".join(missing))
 
     combat_qa_start = source.index("window.__BLUE_ALERTS_COMBAT_QA__ = Object.freeze({")
-    combat_qa_end = source.index("window.__BLUE_ALERTS_TANK_SURFACE_QA__", combat_qa_start)
+    combat_qa_end = source.index("window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__", combat_qa_start)
     combat_qa_section = source[combat_qa_start:combat_qa_end]
     required_infantry_fire = ("fireInfantry()", "muzzleError", "projectileStart", "flashVisible")
     missing = [token for token in required_infantry_fire if token not in combat_qa_section]

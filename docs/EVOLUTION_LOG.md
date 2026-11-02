@@ -407,3 +407,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - OpenRTS checkout and three compatibility patch steps passed. Native OpenRTS build, browser rendering, desktop/mobile gameplay captures and their tests were skipped because the V94 static check stopped the workflow.
 - Artifacts: none. No screenshot evidence was produced by this run. Baseline accepted evidence remains workflow #41445930709, artifact `openrts-graphical-smoke-test` ID `13141329066` and standalone HTML artifact ID `13141618566`.
 - This is a validation correction only; the infantry visual change remains unaccepted and no version/release is created.
+
+
+### Exact-head validation attempt 2 — 8a3181f135020be3f2bca9e866bd657357766c59
+
+- Workflow: [#41491858485](https://github.com/Ascameleon/Blue-alert/actions/runs/41491858485).
+- `scripts/validate_prototype.py`: passed.
+- `scripts/validate_v94.py`: reached the new infantry QA checks, then failed while extracting the combat-QA section because the boundary used a stale marker (`window.__BLUE_ALERTS_TANK_SURFACE_QA__`) that does not exist in this V94 runtime. Corrected the section boundary to the actual next QA block, `window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__`.
+- OpenRTS checkout and compatibility patch steps passed. Native OpenRTS build, browser rendering and desktop/mobile gameplay captures were skipped after the static-validator exception.
+- Artifacts: none; no screenshot evidence was produced by this run.
+- The runtime/model change remains unaccepted. No release/version was created.
