@@ -100,6 +100,20 @@ def main():
     missing = [feature for feature in required_tank_features if feature not in model]
     if missing:
         raise SystemExit("FAIL: faction tank signatures missing: " + ", ".join(missing))
+    required_tank_surface_features = (
+        "TANK_SURFACE_TEXTURE_CACHE", "createTankSurfaceTextures",
+        "TANK_ARMOR_MICROSCUFF_PBR_V1", "tank-ceramic-paint-mottle",
+        "tank-brushed-metal-albedo", "tank-roughness-variation",
+        "tank-armor-microscuff-relief", "tank-brushed-metal-relief",
+        "surfaceFinish=true", "setSurfaceFinish",
+        "material.roughnessMap=active?tankSurfaceTextures.roughnessMap:null",
+    )
+    missing = [feature for feature in required_tank_surface_features if feature not in model]
+    if missing:
+        raise SystemExit("FAIL: original tank PBR surface pipeline missing: " + ", ".join(missing))
+    for token in ("tankSurfaceFinishEnabled", "setTankSurfaceFinish", "TANK_ARMOR_MICROSCUFF_PBR_V1"):
+        if token not in preview:
+            raise SystemExit("FAIL: tank preview surface A/B diagnostics missing: " + token)
 
     if "camera.position.set(a==='landscape'?22:a==='infantry'?2.75:8" not in preview or "infantryArmorParts" not in preview:
         raise SystemExit("FAIL: infantry preview must use close framing and expose actual armor mesh diagnostics")
