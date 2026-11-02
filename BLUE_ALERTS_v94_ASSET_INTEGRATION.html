@@ -717,6 +717,10 @@ function addIndustrialLogisticsSet() {
   return {
     root, clusters:[substation,gantry,silos,cargo],
     counts:{ cargoCrates:crates.count, hazardBarrels:barrels.count },
+    exclusionZones:[
+      {x:-72,z:-47,rx:14,rz:10}, {x:-5,z:-51,rx:16,rz:10},
+      {x:72,z:-46,rx:15,rz:10}, {x:5,z:56,rx:12,rz:11}
+    ],
     focus:{
       base:{x:-18,z:4}, substation:{x:-72,z:-47},
       gantry:{x:-5,z:-51}, silos:{x:72,z:-46}, cargo:{x:5,z:56}
@@ -724,12 +728,18 @@ function addIndustrialLogisticsSet() {
   };
 }
 const industrialYard = addIndustrialLogisticsSet();
+function insideIndustrialSet(x,z,padding=0) {
+  return industrialYard.exclusionZones.some(zone =>
+    Math.abs(x-zone.x) <= zone.rx+padding && Math.abs(z-zone.z) <= zone.rz+padding
+  );
+}
 window.__BLUE_ALERTS_ENVIRONMENT = Object.freeze({
   id:'industrial-logistics-yard-v94',
   runtimeIntegrated:true,
   clusterCount:industrialYard.clusters.length,
   cargoCrates:industrialYard.counts.cargoCrates,
   hazardBarrels:industrialYard.counts.hazardBarrels,
+  clearanceZones:industrialYard.exclusionZones.length,
   blocksMovement:false
 });
 if (new URLSearchParams(location.search).get('environment') === '1') {
@@ -765,7 +775,7 @@ function addBattlefieldDressing() {
   for (let i = 0; i < tuftCount; i++) {
     const x = -94 + terrainHash(i, 31) * 188;
     const z = -70 + terrainHash(i, 73) * 140;
-    if (Math.abs(z) < 8 || insideBuildZone(x, z, 0)) continue;
+    if (Math.abs(z) < 8 || insideBuildZone(x, z, 0) || insideIndustrialSet(x, z, 8)) continue;
     const scale = 0.55 + terrainHash(i, 97) * 0.85;
     for (let blade = 0; blade < 2; blade++) {
       dummy.position.set(x + (blade ? 0.09 : -0.09), 0.025, z + (blade ? -0.06 : 0.06));
@@ -897,7 +907,7 @@ for (let i = 0; i < (isMobile ? 100 : 160); i++) {
   const x = (terrainRandom() - 0.5) * 185;
   const z = (terrainRandom() - 0.5) * 145;
   if (Math.abs(z) < 7) continue;
-  if (insideBuildZone(x, z, 0) || (Math.abs(x) < 55 && Math.abs(z) < 35)) continue;
+  if (insideBuildZone(x, z, 0) || (Math.abs(x) < 55 && Math.abs(z) < 35) || insideIndustrialSet(x, z, 5)) continue;
   const sc = 0.5 + terrainRandom() * 1.4;
   addCyl(scene, x, 0.4 * sc, z, 0.1 * sc, 0.16 * sc, 0.85 * sc, mkMat(0x4a3820), 6);
   const crown = new THREE.Mesh(new THREE.ConeGeometry(sc * 0.85, 2.3 * sc, 6), i % 3 ? MAT.tree : MAT.tree2);
@@ -909,7 +919,7 @@ for (let i = 0; i < (isMobile ? 100 : 160); i++) {
 for (let i = 0; i < (isMobile ? 48 : 80); i++) {
   const x = (terrainRandom() - 0.5) * 180;
   const z = (terrainRandom() - 0.5) * 140;
-  if (Math.abs(z) < 6 || insideBuildZone(x, z, 0)) continue;
+  if (Math.abs(z) < 6 || insideBuildZone(x, z, 0) || insideIndustrialSet(x, z, 3)) continue;
   const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15 + terrainRandom() * 0.45, 0), MAT.rock);
   r.position.set(x, 0.1, z);
   r.scale.y = 0.4 + terrainRandom() * 0.5;
