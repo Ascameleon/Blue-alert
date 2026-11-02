@@ -101,3 +101,26 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Standalone V94 artifact `13115625268` was extracted and verified as a 200,752-byte single HTML file. The model module is embedded; Three.js 0.160.0 still loads from a CDN, so the renderer requires internet access.
 - Evidence boundary: CI desktop/mobile are browser emulation, not a physical Samsung test. OpenRTS is a separate native engine smoke test and does not import the Three.js V94 vegetation.
 - PR #29 remains open and draft against `main`; no merge was performed. Main remains at `1b0768b56bc61976391bc6fd930faa3a336e2e7c`.
+
+
+## Cycle — deterministic terrain albedo and micro-relief pass (2026-11-02)
+
+- Source branch: \`feat/blue-alerts-industrial-yard-runtime-20261102\`, based on the existing V94 industrial-yard work; base \`main\` remains \`a4df919e04665f2159a99113bece2c9cf6e96ec6\`.
+- Before this change, the exact-head PR #29 workflow \`41386295965\` succeeded on \`a4df919e04665f2159a99113bece2c9cf6e96ec6\`. I inspected its decoded job log and the actual desktop gameplay, industrial-yard and 390×844 mobile screenshots. The road, industrial gantry and instanced vegetation rendered, but the ground still read as a largely uniform flat green plane at normal gameplay zoom.
+- The existing deterministic vertex-color field and road/vegetation/industrial dressing are retained.
+- Added deterministic procedural surface textures generated locally from the existing seeded terrain noise:
+  - 512×512 albedo and grayscale bump maps on desktop.
+  - 256×256 maps and reduced bump strength on mobile.
+  - Warm soil flecks, exposed-stone mottling and multi-frequency grain modulate the existing vertex-color field.
+  - The bump map adds subtle surface micro-relief without displacing the ground mesh or changing unit/building elevations, pathfinding, collision, construction pads or resource placement.
+  - Mipmaps and capped anisotropy keep texture sampling bounded; no downloaded textures or external services.
+- Added read-only terrain material diagnostics and a QA camera focus for dedicated desktop/mobile terrain screenshots.
+- Changed files:
+  - \`BLUE_ALERTS_v94_ASSET_INTEGRATION.html\`
+  - \`scripts/validate_v94.py\`
+  - \`scripts/validate_v94_browser.mjs\`
+  - \`docs/EVOLUTION_LOG.md\`
+- Regression coverage now requires the correct desktop/mobile texture resolutions, albedo/bump maps, positive deterministic checksum, and dedicated terrain-detail captures.
+- Exact-head CI for the new commit is pending. No browser, standalone build, OpenRTS/native or screenshot result is claimed for this revision until its own workflow completes.
+- Physical Samsung testing is not performed. Mobile validation remains 390×844 browser emulation; OpenRTS remains a separate native-engine smoke test and does not consume the V94 Three.js terrain.
+- Budget remains 0: no paid APIs, assets, purchases or services.

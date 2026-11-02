@@ -85,6 +85,12 @@ def main():
         "vertexColors: true",
         "terrain-ground",
         "window.__BLUE_ALERTS_TERRAIN",
+        "function createTerrainSurfaceTextures(size)",
+        "terrainSurfaceTextures.albedo",
+        "terrainSurfaceTextures.bump",
+        "terrainMaterial.bumpScale",
+        "terrainTextureResolution: terrainSurfaceTextures.size",
+        "terrainTextureChecksum: terrainSurfaceTextures.checksum",
         "function createLayeredTreeFoliageGeometry",
         "battlefield-trees-trunks-instanced",
         "battlefield-trees-foliage-instanced",
@@ -178,6 +184,8 @@ def main():
         raise SystemExit("FAIL: terrain prop placement must be deterministic")
     if "vertexColors: true" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic vertex color variation")
+    if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.bumpMap = terrainSurfaceTextures.bump" not in terrain_section:
+        raise SystemExit("FAIL: terrain must use deterministic albedo and micro-bump textures")
 
     parser = ScriptCollector()
     parser.feed(source)

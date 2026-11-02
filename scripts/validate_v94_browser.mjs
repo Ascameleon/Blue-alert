@@ -134,6 +134,7 @@ try {
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
+  assert.ok(desktopMetrics.terrain?.albedoMap && desktopMetrics.terrain.bumpMap && desktopMetrics.terrain.textureResolution === 512 && desktopMetrics.terrain.bumpScale >= 0.07 && desktopMetrics.terrain.textureChecksum > 0, 'desktop terrain must use a deterministic 512px albedo and micro-bump surface');
   assert.ok(desktopMetrics.terrainDressing?.scrubInstances >= 160 && desktopMetrics.terrainDressing.roadMarkers === 26,
     'desktop battlefield must include instanced scrub and reflective supply-road markers');
   assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
@@ -336,6 +337,10 @@ try {
   assert.equal(industrialFocus?.name, 'gantry', 'industrial yard visual focus must be available for evidence capture');
   await desktop.waitForTimeout(650);
   await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
+  const terrainFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
+  assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must be available');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
 
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
@@ -366,6 +371,7 @@ try {
   assert.ok(mobileMetrics.canvasRect.width >= 380 && mobileMetrics.canvasRect.height >= 600, 'mobile battlefield must retain a usable touch area');
   assert.ok(mobileMetrics.startOverlayHidden && !mobileMetrics.fallback && !mobileMetrics.runtimeError && !mobileMetrics.startupError, 'mobile game must start in the 3D runtime without fallback/errors');
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
+  assert.ok(mobileMetrics.terrain?.albedoMap && mobileMetrics.terrain.bumpMap && mobileMetrics.terrain.textureResolution === 256 && mobileMetrics.terrain.bumpScale > 0.04 && mobileMetrics.terrain.textureChecksum > 0, 'mobile terrain must use a deterministic 256px albedo and reduced micro-bump surface');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&
@@ -586,10 +592,14 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     mobileBuildingStage2.hp > 0 && mobileBuildingStage2.scorchMark && mobileBuildingStage2.flamesSpawned > 0,
     'mobile critical building damage must show scorch and fire while the building remains alive');
   await mobile.screenshot({ path: output + '/mobile-v94-building-critical-390x844.png', fullPage: true });
+  const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
+  assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must be available');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
@@ -603,7 +613,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     combatRig,
     muzzleError,
     successfulThree,
-    screenshots: ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']
+    screenshots: ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png']
   }, null, 2));
 } catch (error) {
   console.error(error);

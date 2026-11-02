@@ -563,9 +563,72 @@ for (let i = 0; i < terrainPositions.count; i++) {
   color.toArray(terrainColors, i * 3);
 }
 terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
+function createTerrainSurfaceTextures(size) {
+  const albedoPixels = new Uint8Array(size * size * 4);
+  const bumpPixels = new Uint8Array(size * size * 4);
+  let checksum = 2166136261;
+  const channel = value => Math.max(0, Math.min(255, Math.round(value)));
+  for (let py = 0; py < size; py++) {
+    const worldZ = ((py + 0.5) / size - 0.5) * 160;
+    for (let px = 0; px < size; px++) {
+      const worldX = ((px + 0.5) / size - 0.5) * 200;
+      const broad = terrainNoise(worldX + 29, worldZ - 17, 0.075);
+      const medium = terrainNoise(worldX - 11, worldZ + 23, 0.32);
+      const fine = terrainNoise(worldX + 7, worldZ - 5, 1.25);
+      const fleck = terrainHash(px + 701, py - 307);
+      const soil = terrainSmoothstep(0.48, 0.72, broad * 0.62 + medium * 0.38);
+      const exposedStone = terrainSmoothstep(0.70, 0.91, medium * 0.68 + fleck * 0.32) *
+        (1 - terrainSmoothstep(0.32, 0.62, broad));
+      const grain = (fine - 0.5) * 13 + (fleck - 0.5) * 9;
+      const warm = soil * 0.54;
+      const stony = exposedStone * 0.42;
+      const offset = (py * size + px) * 4;
+      const red = channel(240 + warm * 15 - stony * 7 + grain);
+      const green = channel(244 - warm * 17 - stony * 8 + grain * 0.72);
+      const blue = channel(235 - warm * 27 - stony * 3 + grain * 0.46);
+      albedoPixels[offset] = red;
+      albedoPixels[offset + 1] = green;
+      albedoPixels[offset + 2] = blue;
+      albedoPixels[offset + 3] = 255;
+
+      const relief = channel(128 + (broad - 0.5) * 28 + (medium - 0.5) * 46 +
+        (fine - 0.5) * 18 + (fleck - 0.5) * 22);
+      bumpPixels[offset] = relief;
+      bumpPixels[offset + 1] = relief;
+      bumpPixels[offset + 2] = relief;
+      bumpPixels[offset + 3] = 255;
+      if ((px & 15) === 0 && (py & 3) === 0) {
+        checksum = Math.imul(checksum ^ red ^ (green << 8) ^ (blue << 16), 16777619);
+      }
+    }
+  }
+  const makeTexture = (pixels, colorSpace) => {
+    const texture = new THREE.DataTexture(pixels, size, size, THREE.RGBAFormat);
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.generateMipmaps = true;
+    texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), isMobile ? 2 : 8);
+    if (colorSpace) texture.colorSpace = colorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  };
+  return {
+    size,
+    albedo: makeTexture(albedoPixels, THREE.SRGBColorSpace),
+    bump: makeTexture(bumpPixels, THREE.NoColorSpace),
+    checksum: checksum >>> 0
+  };
+}
+const terrainSurfaceTextures = createTerrainSurfaceTextures(isMobile ? 256 : 512);
 const terrainMaterial = new THREE.MeshStandardMaterial({
   color: 0xffffff, vertexColors: true, roughness: 1, metalness: 0
 });
+terrainMaterial.map = terrainSurfaceTextures.albedo;
+terrainMaterial.bumpMap = terrainSurfaceTextures.bump;
+terrainMaterial.bumpScale = isMobile ? 0.045 : 0.075;
+terrainMaterial.needsUpdate = true;
 const ground = new THREE.Mesh(terrainGeometry, terrainMaterial);
 ground.name = 'terrain-ground';
 ground.rotation.x = -Math.PI / 2;
@@ -575,9 +638,25 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   seed: 0x424c5545,
   vertexCount: terrainPositions.count,
   colorCount: terrainColors.length / 3,
-  vertexColors: ground.material.vertexColors
+  vertexColors: ground.material.vertexColors,
+  albedoMap: !!terrainMaterial.map,
+  bumpMap: !!terrainMaterial.bumpMap,
+  textureResolution: terrainSurfaceTextures.size,
+  textureChecksum: terrainSurfaceTextures.checksum,
+  bumpScale: terrainMaterial.bumpScale,
+  anisotropy: terrainSurfaceTextures.albedo.anisotropy
 });
-
+window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
+  focus() {
+    camTarget.set(32, 0, 44);
+    camDist = isMobile ? 14 : 19;
+    return {
+      textureResolution: terrainSurfaceTextures.size,
+      bumpScale: terrainMaterial.bumpScale,
+      checksum: terrainSurfaceTextures.checksum
+    };
+  }
+});
 // Road
 addBox(scene, 0, 0.015, 0, 200, 0.03, 5.0, MAT.concrete);
 addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
