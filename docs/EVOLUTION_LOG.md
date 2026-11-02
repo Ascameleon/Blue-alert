@@ -475,3 +475,22 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - This preserves all live firing, muzzle alignment, projectile, explosion, cleanup, building-damage and gameplay assertions. No production runtime code, combat contract, effect lifetime or acceptance threshold was changed.
 - Changed files: `scripts/validate_v94_browser.mjs` (code/test); `docs/EVOLUTION_LOG.md` (this evidence record).
 - OpenRTS build/launch and native selection/movement/attack were skipped because the web browser job failed first; no OpenRTS failure is inferred. Mobile model-preview is 390×844 emulation, not a physical Samsung test. Budget remains 0 €. No version/release.
+
+### Restrained tank-surface refinement and exact-head review — 2026-11-02
+
+- Accepted base remains `main` at `462b6d448c810485b597effcf3e60c708dbbd48e`; working branch is `art/v94-tank-surface-finish-20261102`; PR #46 remains draft and unmerged.
+- Runtime/material commit: `51ec5cb8a55a433c23d850faaef244d633c170e3`. Changed file in this commit: `game-data/models/blue-alert-models.js`.
+- Reworked the existing procedural tank surface maps to remove the hard-edged camouflage read: 22 soft diffuse paint-fade fields replace the previous 46 irregular polygon patches; contact grime is reduced to 14 low-opacity directional streaks; handling scratches are reduced to 150 sparse marks; roughness and bump contrast are restrained. The same original geometry, faction base colors, material bindings, turret hierarchy, muzzle attachment, movement and combat contracts remain in place. This is still a procedural material treatment, not a new high-detail authored tank mesh.
+- Exact-head workflow [41484376870](https://github.com/Ascameleon/Blue-alert/actions/runs/41484376870), run #346, tested PR head `51ec5cb8a55a433c23d850faaef244d633c170e3` and completed with failure in the desktop V94 browser suite. Prototype, V94 static validation, expanded model-kit validation, imported V93 validation, scenario validation, standalone HTML build and desktop/mobile model-preview browser rendering passed. The desktop mission-objective, projectile-impact, unit-death, explosion-lifecycle and full transient-VFX cleanup probes also passed before the building-damage stage-1 probe timed out.
+- Failure detail: `fireToStage(1)` spawned six real projectiles toward a healthy enemy turret; after the 7-second wall-clock wait, the target remained at 300/300 HP, with six projectiles still pending and no stage-1 smoke. This is not yet diagnosed as a game-runtime defect or merely a slow-browser timeout; the next QA correction must capture simulation frame/time plus projectile positions, remaining lifetimes and target distance before changing the wait allowance. The pass condition must remain real target damage and visible smoke.
+- Visual artifact [13161312128](https://github.com/Ascameleon/Blue-alert/actions/runs/41484376870/artifacts/13161312128) was downloaded and inspected. Actual same-runtime A/B files:
+  - `model-preview/desktop-blue-sentinel-tank-surface-baseline.png`
+  - `model-preview/desktop-blue-sentinel-tank-surface-detail.png`
+  - `model-preview/mobile-blue-sentinel-tank-surface-baseline-390x844.png`
+  - `model-preview/mobile-blue-sentinel-tank-surface-detail-390x844.png`
+  - `v94-browser/desktop-v94-tank-surface-baseline.png`
+  - `v94-browser/desktop-v94-tank-surface-detail.png`
+  - `v94-browser/desktop-v94-gameplay.png`
+- Visual verdict: the preview A/B pairs show a cleaner, less camouflage-like finish, but the material delta is restrained; the desktop live-game A/B change is subtle at tactical scale. The live-game mobile A/B capture was not reached because the desktop browser sequence failed first. This is not yet a sufficiently compelling material improvement for acceptance or release. PR #46 stays draft; no merge, game version or release is authorized.
+- OpenRTS build/launch and native selection/movement/attack were skipped after the browser failure; no OpenRTS failure is inferred. Mobile preview is 390×844 browser emulation, not a physical Samsung test. Budget remains 0 €; no paid APIs, assets, credits or services were used.
+- The documentation update is a separate commit after workflow #346 completed. A new exact-head workflow is required for the resulting branch head; no further branch write is allowed while that run is pending or in progress.
