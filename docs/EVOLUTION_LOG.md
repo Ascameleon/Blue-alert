@@ -143,3 +143,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - The gameplay cleanup assertion and FPS threshold were not relaxed. Desktop remains 512×512; mobile remains 256×256 with anisotropy capped at 2.
 - Failure retained: workflow \`41387802169\` on exact head \`ae891cbe08ccb9d8da18c39521f221bb29d5760e\`. It did not reach OpenRTS build or native interaction tests.
 - The albedo-only performance correction and a fresh exact-head workflow are required before this terrain pass can be accepted.
+
+## Cycle — faction-specific BLUE SENTINEL and RED BASTION tanks (2026-11-02)
+
+- Reconciled the existing tank-model branch with the verified industrial-yard mainline at `241bc45c1e76af6a4ad5b94dd9554469071a7e11`; no existing project files or branch history were discarded.
+- The existing V94 `createTank(THREE, { team, variant, scale })` constructor now gives BLUE SENTINEL and RED BASTION distinct turret profiles and layered, chamfered hull armor.
+- Added sloped glacis, engine grilles, fenders, return rollers, wheel hubs, 36 instanced tread shoes, 60 instanced wheel fasteners and faction-specific turret details.
+- Repeated chassis parts are batched with InstancedMesh; the browser acceptance suite enforces the 60-draw-call ceiling and geometry budget on desktop and mobile.
+- Model documentation and static/browser regression checks accompany the runtime change.
+- Prior isolated exact-head workflow `41379372338` passed on the original PR head. This reconciliation creates a new exact head; the combined industrial-yard + tank suite must pass before merge.
+- No paid assets, APIs or services. Physical Samsung testing is not claimed; mobile remains 390×844 browser emulation.

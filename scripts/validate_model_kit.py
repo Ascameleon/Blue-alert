@@ -22,6 +22,7 @@ REQUIRED_PREVIEW = (
     "a==='aircraft'", "a==='helicopter'", "a==='drone'",
     "a==='projectile'", "a==='explosion'", "a==='muzzleFlash'",
     "a==='harvester'", "a==='citadel'", "a==='relay'", "a==='ore'",
+    "BLUE SENTINEL", "RED BASTION",
 )
 
 def node_check(source: str, label: str) -> None:
@@ -48,6 +49,23 @@ def main():
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
+    required_tank_features = (
+        "factionProfile", "BLUE_SENTINEL", "RED_BASTION", "front-glacis",
+        "engine-deck-grilles-instanced", "reactive-armor-tiles-instanced",
+        "return-rollers-instanced", "road-wheels-instanced", "wheel-hubs-instanced",
+        "wheel-hub-caps-instanced", "track-shoe-instanced", "wheel-bolts-instanced",
+        "blue-turret-cheeks-instanced", "red-turret-cheeks-instanced",
+        "red-bastion-side-plates-instanced", "red-bastion-cupola",
+        "heavy-turret-reinforcements-instanced",
+        "beveledBoxGeometry", "beveledBox", "new THREE.ExtrudeGeometry",
+        "geometry.userData.beveledArmor", "cornerCut",
+    )
+    missing = [feature for feature in required_tank_features if feature not in model]
+    if missing:
+        raise SystemExit("FAIL: faction tank signatures missing: " + ", ".join(missing))
+
+    if "BLUE_MODELS.createTank" not in game:
+        raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
     for token in ("blue-alert-models.js?v=4", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
