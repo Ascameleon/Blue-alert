@@ -107,15 +107,22 @@ def main():
     if missing:
         raise SystemExit("FAIL: expected v94 3D/game features missing: " + ", ".join(missing))
 
+    model_source = MODEL_LIBRARY.read_text(encoding="utf-8")
     required_tank_surface_features = (
         "TANK_SURFACE_TEXTURE_CACHE", "createTankSurfaceTextures",
         "TANK_ARMOR_MICROSCUFF_PBR_V1", "tankSurfaceBindings",
-        "g.userData.tankModel = tank;", "window.__BLUE_ALERTS_TANK_SURFACE_QA__",
         "setSurfaceFinish", "surfaceTextureCount", "surfaceMaterialCount",
     )
-    missing = [feature for feature in required_tank_surface_features if feature not in source]
+    missing = [feature for feature in required_tank_surface_features if feature not in model_source]
     if missing:
-        raise SystemExit("FAIL: live procedural tank surface finish is missing: " + ", ".join(missing))
+        raise SystemExit("FAIL: procedural tank PBR surface pipeline is missing: " + ", ".join(missing))
+    required_live_tank_surface_features = (
+        "g.userData.tankModel = tank;", "window.__BLUE_ALERTS_TANK_SURFACE_QA__",
+        "setEnabled(enabled)",
+    )
+    missing = [feature for feature in required_live_tank_surface_features if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: live V94 tank surface QA integration is missing: " + ", ".join(missing))
 
     required_combat_features = (
         "tank.rotation.y = -Math.PI / 2;",
