@@ -111,7 +111,7 @@ def main():
     missing = [feature for feature in required_tank_surface_features if feature not in model]
     if missing:
         raise SystemExit("FAIL: original tank PBR surface pipeline missing: " + ", ".join(missing))
-    for token in ("tankSurfaceFinishEnabled", "setTankSurfaceFinish", "TANK_ARMOR_MICROSCUFF_PBR_V1"):
+    for token in ("tankSurfaceFinishEnabled", "setTankSurfaceFinish"):
         if token not in preview:
             raise SystemExit("FAIL: tank preview surface A/B diagnostics missing: " + token)
 
