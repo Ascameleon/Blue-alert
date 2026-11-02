@@ -102,16 +102,38 @@ const createTankSurfaceTextures = (THREE, isRed) => {
     return texture;
   };
   const armorMap=makeTexture(faction+'-tank-ceramic-paint-mottle',ctx=>{
-    ctx.fillStyle='#f3f3f3';ctx.fillRect(0,0,256,256);
-    const shades=['#c4c4c4','#d5d5d5','#e5e5e5','#bdbdbd'];
-    for(let i=0;i<34;i++){
-      const cx=random()*256,cy=random()*256,rx=9+random()*24,ry=5+random()*15;
+    ctx.fillStyle='#f2f2f2';ctx.fillRect(0,0,256,256);
+    const shades=['#666666','#7c7c7c','#929292','#aaaaaa','#c7c7c7'];
+    // Broad, irregular paint fade patches read at RTS camera distance without
+    // turning the armor into a noisy camouflage pattern.
+    for(let i=0;i<46;i++){
+      const cx=random()*256,cy=random()*256,rx=12+random()*30,ry=7+random()*19;
       ctx.beginPath();
-      for(let p=0;p<9;p++){const a=p/9*Math.PI*2,w=.72+random()*.48,x=cx+Math.cos(a)*rx*w,y=cy+Math.sin(a)*ry*w;if(p===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
-      ctx.closePath();ctx.globalAlpha=.10+random()*.12;ctx.fillStyle=shades[Math.floor(random()*shades.length)];ctx.fill();
+      for(let p=0;p<11;p++){
+        const a=p/11*Math.PI*2,w=.68+random()*.62;
+        const x=cx+Math.cos(a)*rx*w,y=cy+Math.sin(a)*ry*w;
+        if(p===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.closePath();ctx.globalAlpha=.24+random()*.17;
+      ctx.fillStyle=shades[Math.floor(random()*shades.length)];ctx.fill();
     }
-    ctx.globalAlpha=.12;ctx.fillStyle='#686868';
-    for(let i=0;i<2600;i++){const size=.45+random()*1.2;ctx.fillRect(random()*256,random()*256,size,size);}
+    // Soft grime blooms break up large flat panels while remaining faction-neutral.
+    for(let i=0;i<18;i++){
+      const x=random()*256,y=random()*256,r=7+random()*23;
+      const gradient=ctx.createRadialGradient(x,y,1,x,y,r);
+      gradient.addColorStop(0,'rgba(48,48,48,0.20)');
+      gradient.addColorStop(1,'rgba(48,48,48,0)');
+      ctx.globalAlpha=1;ctx.fillStyle=gradient;
+      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+    }
+    // Directional paint scratches and chipped edges, visible on the hull and turret.
+    for(let i=0;i<230;i++){
+      const x=random()*256,y=random()*256,length=3+random()*27,angle=(random()-.5)*.42;
+      ctx.globalAlpha=.15+random()*.19;
+      ctx.strokeStyle=random()>.64?'#414141':'#ffffff';
+      ctx.lineWidth=.4+random()*1.05;
+      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(angle)*length,y+Math.sin(angle)*length);ctx.stroke();
+    }
     ctx.globalAlpha=1;
   },true);
   const metalMap=makeTexture(faction+'-tank-brushed-metal-albedo',ctx=>{
@@ -121,17 +143,17 @@ const createTankSurfaceTextures = (THREE, isRed) => {
   },true);
   const roughnessMap=makeTexture(faction+'-tank-roughness-variation',ctx=>{
     ctx.fillStyle='#e8e8e8';ctx.fillRect(0,0,256,256);
-    for(let i=0;i<5200;i++){const v=Math.round(178+random()*72);ctx.fillStyle='rgb('+v+','+v+','+v+')';const size=.8+random()*1.4;ctx.fillRect(random()*256,random()*256,size,size);}
+    for(let i=0;i<5200;i++){const v=Math.round(112+random()*143);ctx.fillStyle='rgb('+v+','+v+','+v+')';const size=.8+random()*1.4;ctx.fillRect(random()*256,random()*256,size,size);}
   });
   const armorBump=makeTexture(faction+'-tank-armor-microscuff-relief',ctx=>{
     ctx.fillStyle='#808080';ctx.fillRect(0,0,256,256);
-    for(let i=0;i<145;i++){const x=random()*256,y=random()*256;ctx.globalAlpha=.20+random()*.24;ctx.strokeStyle=random()>.5?'#c6c6c6':'#555555';ctx.lineWidth=.4+random()*.9;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(random()-.5)*18,y+(random()-.5)*4);ctx.stroke();}
-    for(let i=0;i<48;i++){ctx.globalAlpha=.12+random()*.16;ctx.fillStyle=random()>.5?'#c4c4c4':'#555555';ctx.beginPath();ctx.ellipse(random()*256,random()*256,1+random()*3,.7+random()*1.8,random(),0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<220;i++){const x=random()*256,y=random()*256;ctx.globalAlpha=.30+random()*.25;ctx.strokeStyle=random()>.5?'#d0d0d0':'#454545';ctx.lineWidth=.65+random()*1.25;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(random()-.5)*18,y+(random()-.5)*4);ctx.stroke();}
+    for(let i=0;i<76;i++){ctx.globalAlpha=.18+random()*.22;ctx.fillStyle=random()>.5?'#c4c4c4':'#555555';ctx.beginPath();ctx.ellipse(random()*256,random()*256,1+random()*3,.7+random()*1.8,random(),0,Math.PI*2);ctx.fill();}
     ctx.globalAlpha=1;
   });
   const metalBump=makeTexture(faction+'-tank-brushed-metal-relief',ctx=>{
     ctx.fillStyle='#808080';ctx.fillRect(0,0,256,256);
-    for(let y=0;y<256;y+=3){ctx.globalAlpha=.16+random()*.12;ctx.strokeStyle=y%2?'#bdbdbd':'#555555';ctx.lineWidth=.45+random()*.45;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(256,y+(random()-.5)*2);ctx.stroke();}
+    for(let y=0;y<256;y+=2){ctx.globalAlpha=.28+random()*.18;ctx.strokeStyle=y%2?'#bdbdbd':'#555555';ctx.lineWidth=.45+random()*.45;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(256,y+(random()-.5)*2);ctx.stroke();}
     ctx.globalAlpha=1;
   });
   const maps={armorMap,metalMap,roughnessMap,armorBump,metalBump};
@@ -157,11 +179,11 @@ export function createTank(THREE, options={}) {
 
   const tankSurfaceTextures=createTankSurfaceTextures(THREE,isRed);
   const tankSurfaceBindings=[
-    {material:hull,map:tankSurfaceTextures?.armorMap||null,bump:tankSurfaceTextures?.armorBump||null,bumpScale:.0045},
-    {material:armor,map:tankSurfaceTextures?.armorMap||null,bump:tankSurfaceTextures?.armorBump||null,bumpScale:.006},
-    {material:heavyArmor,map:tankSurfaceTextures?.armorMap||null,bump:tankSurfaceTextures?.armorBump||null,bumpScale:.005},
-    {material:metal,map:tankSurfaceTextures?.metalMap||null,bump:tankSurfaceTextures?.metalBump||null,bumpScale:.003},
-    {material:edge,map:tankSurfaceTextures?.metalMap||null,bump:tankSurfaceTextures?.metalBump||null,bumpScale:.0025}
+    {material:hull,map:tankSurfaceTextures?.armorMap||null,bump:tankSurfaceTextures?.armorBump||null,bumpScale:.014},
+    {material:armor,map:tankSurfaceTextures?.armorMap||null,bump:tankSurfaceTextures?.armorBump||null,bumpScale:.017},
+    {material:heavyArmor,map:tankSurfaceTextures?.armorMap||null,bump:tankSurfaceTextures?.armorBump||null,bumpScale:.015},
+    {material:metal,map:tankSurfaceTextures?.metalMap||null,bump:tankSurfaceTextures?.metalBump||null,bumpScale:.009},
+    {material:edge,map:tankSurfaceTextures?.metalMap||null,bump:tankSurfaceTextures?.metalBump||null,bumpScale:.008}
   ];
   let surfaceState={enabled:false,surfaceFinish:'UNTEXTURED_FALLBACK',surfaceTextureCount:0,surfaceMaterialCount:0};
   const setSurfaceFinish=enabled=>{
