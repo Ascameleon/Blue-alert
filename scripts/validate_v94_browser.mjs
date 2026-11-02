@@ -137,6 +137,21 @@ try {
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.equal(desktopMetrics.camera?.defaultDistance, 38, 'desktop opening camera must use the closer tactical framing');
   assert.equal(desktopMetrics.camera?.distance, 38, 'desktop opening camera must start at the authored tactical distance');
+  const desktopTankFocus=await desktop.evaluate(()=>window.__BLUE_ALERTS_TANK_SURFACE_QA__?.focus());
+  assert.ok(desktopTankFocus?.camera,'desktop live tank surface focus must be available');
+  const desktopTankBaseline=await desktop.evaluate(()=>window.__BLUE_ALERTS_TANK_SURFACE_QA__?.setEnabled(false));
+  assert.equal(desktopTankBaseline?.enabled,false);
+  assert.ok(desktopTankBaseline?.tankCount>=2,'desktop live game must expose multiple procedural tanks');
+  assert.deepEqual(desktopTankBaseline?.camera,desktopTankFocus.camera,'desktop tank surface baseline must preserve the focused camera pose');
+  await desktop.waitForTimeout(350);
+  await desktop.screenshot({path:output+'/desktop-v94-tank-surface-baseline.png',fullPage:true});
+  const desktopTankDetail=await desktop.evaluate(()=>window.__BLUE_ALERTS_TANK_SURFACE_QA__?.setEnabled(true));
+  assert.equal(desktopTankDetail?.enabled,true);
+  assert.deepEqual(desktopTankDetail?.camera,desktopTankBaseline.camera,'desktop tank surface detail must preserve the same camera pose');
+  assert.ok(desktopTankDetail.results.every(result=>result.surfaceFinish==='TANK_ARMOR_MICROSCUFF_PBR_V1'),'desktop live tanks must bind the original armor/metal PBR maps');
+  await desktop.waitForTimeout(350);
+  await desktop.screenshot({path:output+'/desktop-v94-tank-surface-detail.png',fullPage:true});
+
   assert.ok(desktopMetrics.battlefieldWear?.shoulderShading === 'per-segment-uniform-low-contrast' &&
     desktopMetrics.battlefieldWear?.roadShoulderSegments === 100 &&
     desktopMetrics.battlefieldWear.accessSpur &&
@@ -511,6 +526,21 @@ try {
   });
   await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true });
   const mobileMetrics = await metrics(mobile);
+  const mobileTankFocus=await mobile.evaluate(()=>window.__BLUE_ALERTS_TANK_SURFACE_QA__?.focus());
+  assert.ok(mobileTankFocus?.camera,'mobile live tank surface focus must be available');
+  const mobileTankBaseline=await mobile.evaluate(()=>window.__BLUE_ALERTS_TANK_SURFACE_QA__?.setEnabled(false));
+  assert.equal(mobileTankBaseline?.enabled,false);
+  assert.ok(mobileTankBaseline?.tankCount>=2,'mobile live game must expose multiple procedural tanks');
+  assert.deepEqual(mobileTankBaseline?.camera,mobileTankFocus.camera,'mobile tank surface baseline must preserve the focused camera pose');
+  await mobile.waitForTimeout(350);
+  await mobile.screenshot({path:output+'/mobile-v94-tank-surface-baseline-390x844.png',fullPage:true});
+  const mobileTankDetail=await mobile.evaluate(()=>window.__BLUE_ALERTS_TANK_SURFACE_QA__?.setEnabled(true));
+  assert.equal(mobileTankDetail?.enabled,true);
+  assert.deepEqual(mobileTankDetail?.camera,mobileTankBaseline.camera,'mobile tank surface detail must preserve the same camera pose');
+  assert.ok(mobileTankDetail.results.every(result=>result.surfaceFinish==='TANK_ARMOR_MICROSCUFF_PBR_V1'),'mobile live tanks must bind the original armor/metal PBR maps');
+  await mobile.waitForTimeout(350);
+  await mobile.screenshot({path:output+'/mobile-v94-tank-surface-detail-390x844.png',fullPage:true});
+
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
       const r = el.getBoundingClientRect();
