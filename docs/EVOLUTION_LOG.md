@@ -189,3 +189,16 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Test correction commit: `035a6aa51449b760a41e5258107ba38cf53e398a`.
 - Exact-head CI must complete on the resulting branch head before PR #36 can be merged. The previous failed run did not reach OpenRTS build/native interaction; no pass is inferred from earlier isolated infantry or mission branches.
 - Mobile browser validation remains 390×844 emulation, not a physical Samsung test. OpenRTS is a separate native engine and does not import the V94 Three.js infantry meshes. Budget remains 0 €.
+
+
+## Cycle — faction infantry hero-render pass (2026-11-02)
+
+- Base: latest `main` at `dfccd5abbc83744e49bbd6607a1dafeda64f2e52`; branch: `feat/blue-alerts-infantry-hero-render-20261102`.
+- User reference review identified a clear visual gap: the in-game rifleman still read as a toy-like block figure, unlike the requested armored, sealed-mask tactical soldier. No generic search image is used as project evidence.
+- Reworked the existing original Three.js infantry mesh in place: faceted helmet crown and brow armor; sealed angular respirator faceplate; twin cyan/amber optics; paired filter housings with vent details and curved breathing hoses; layered beveled chest and rib armor; reinforced angular shoulder plates, articulated knee guards and boots; and additional rifle rail, optic/handguard and ejection details.
+- Preserved the existing outer unit transform, named arm/leg pivots, deterministic gait API, team profiles, weapon reference and V94 combat integration. The mesh remains procedural and license-safe; this pass does not yet claim photorealistic or AAA quality.
+- Updated the model preview camera to frame the full soldier larger on desktop and portrait screens, and added a machine-readable list of the actual mask/armor mesh names for screenshot QA.
+- Bumped the V94 model-module cache key and standalone builder expectation from `v5` to `v6` so deployments cannot silently reuse the old model module.
+- Static validator now requires the actual gas-mask, respirator, beveled armor and weapon-detail mesh identifiers.
+- Changed files: `game-data/models/blue-alert-models.js`, `game-data/models/preview.html`, `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/build_single_html.mjs`, `scripts/validate_v94.py`, and this log.
+- Evidence boundary at commit time: implementation committed, exact-head CI not yet completed. No browser render, screenshot, gameplay, OpenRTS/native or physical Samsung pass is claimed until the fresh workflow finishes and its artifacts are inspected. Budget remains 0 €.
