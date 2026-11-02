@@ -96,6 +96,14 @@ def main():
         "battlefield-trees-foliage-instanced",
         "battlefield-rocks-instanced",
         "window.__BLUE_ALERTS_VEGETATION",
+        "function createBattlefieldCraterGeometry()",
+        "function addBattlefieldCraterSet()",
+        "BA_BattlefieldCraters",
+        "window.__BLUE_ALERTS_CRATERS",
+        "window.__BLUE_ALERTS_CRATER_QA",
+        "shapeProfile: 'bowl-lip-ejecta-v2'",
+        "radialSegments: 32",
+        "radialRings: 9",
         "foliageTiers: 3",
         "blocksMovement: false",
     )
@@ -203,6 +211,32 @@ def main():
     if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
 
+    crater_start = source.index("function createBattlefieldCraterGeometry()")
+    crater_end = source.index("window.__BLUE_ALERTS_VEGETATION", crater_start)
+    crater_section = source[crater_start:crater_end]
+    required_crater_features = (
+        "const segments = 32;",
+        "height: .205",
+        "new THREE.BufferGeometry()",
+        "geometry.computeVertexNormals()",
+        "new THREE.InstancedMesh(craterGeometry, craterMaterial, valid.length)",
+        "new THREE.InstancedMesh(rockGeometry, rockMaterial, valid.length * debrisPerCrater)",
+        "craterMesh.computeBoundingSphere()",
+        "debrisMesh.computeBoundingSphere()",
+        "insideBuildZone",
+        "insideIndustrialSet",
+        "shapeProfile: 'bowl-lip-ejecta-v2'",
+        "setVisible(visible)",
+        "pathProbe()",
+        "blocksMovement: false",
+    )
+    missing = [token for token in required_crater_features if token not in crater_section]
+    if missing:
+        raise SystemExit("FAIL: battlefield crater geometry/safety contract missing: " + ", ".join(missing))
+    if crater_section.count("new THREE.InstancedMesh(") != 2:
+        raise SystemExit("FAIL: battlefield crater system must remain within two instanced render groups")
+
+
     kill_start = source.index("function killUnit(u)")
     kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
     kill_section = source[kill_start:kill_end]
@@ -226,6 +260,13 @@ def main():
         "spawnedExplosionLife",
         "freezeNewCombat",
         "resumeCombat",
+        "desktopCraterFocus",
+        "mobileCraterFocus",
+        "desktop-v94-battlefield-baseline.png",
+        "desktop-v94-battlefield-craters.png",
+        "mobile-v94-battlefield-baseline-390x844.png",
+        "mobile-v94-battlefield-craters-390x844.png",
+        "pathProbe()",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:

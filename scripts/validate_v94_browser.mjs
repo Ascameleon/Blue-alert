@@ -422,6 +422,26 @@ try {
   assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must be available');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
+  const desktopCraterFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.focus());
+  assert.equal(desktopCraterFocus?.shapeProfile, 'bowl-lip-ejecta-v2', 'desktop crater surface must use the concave bowl/lip profile');
+  assert.equal(desktopCraterFocus?.craterCount, 8, 'desktop battlefield must contain eight validated impact bowls');
+  assert.equal(desktopCraterFocus?.debrisCount, 32, 'desktop crater ejecta must be batched into the shared debris group');
+  assert.equal(desktopCraterFocus?.geometryVertexCount, 289, 'desktop crater geometry must retain its authored radial resolution');
+  assert.equal(desktopCraterFocus?.geometryTriangleCount, 544, 'desktop crater geometry must retain its authored radial topology');
+  assert.equal(desktopCraterFocus?.clearanceVerified, true, 'desktop crater placements must clear build pads, road and industrial footprints');
+  assert.equal(desktopCraterFocus?.boundsReady, true, 'desktop crater and ejecta instance bounds must be computed');
+  assert.equal(desktopCraterFocus?.blocksMovement, false, 'desktop crater scenery must remain non-blocking');
+  const desktopCraterPath = await desktop.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.pathProbe());
+  assert.ok(desktopCraterPath?.pathLength > 0, 'desktop pathfinding must remain available across the crater field');
+  assert.equal(await desktop.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.setVisible(false)), false,
+    'desktop crater baseline capture must hide only the visual crater group');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-battlefield-baseline.png', fullPage: true });
+  assert.equal(await desktop.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.setVisible(true)), true,
+    'desktop crater visual must be restored for the matched comparison');
+  await desktop.waitForTimeout(350);
+  await desktop.screenshot({ path: output + '/desktop-v94-battlefield-craters.png', fullPage: true });
+  console.log('DESKTOP_BATTLEFIELD_CRATERS ' + JSON.stringify({ focus: desktopCraterFocus, path: desktopCraterPath }));
 
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
@@ -759,10 +779,30 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must be available');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
+  const mobileCraterFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.focus());
+  assert.equal(mobileCraterFocus?.shapeProfile, 'bowl-lip-ejecta-v2', 'mobile crater surface must use the concave bowl/lip profile');
+  assert.equal(mobileCraterFocus?.craterCount, 8, 'mobile battlefield must contain eight validated impact bowls');
+  assert.equal(mobileCraterFocus?.debrisCount, 32, 'mobile crater ejecta must be batched into the shared debris group');
+  assert.equal(mobileCraterFocus?.geometryVertexCount, 289, 'mobile crater geometry must retain its authored radial resolution');
+  assert.equal(mobileCraterFocus?.geometryTriangleCount, 544, 'mobile crater geometry must retain its authored radial topology');
+  assert.equal(mobileCraterFocus?.clearanceVerified, true, 'mobile crater placements must clear build pads, road and industrial footprints');
+  assert.equal(mobileCraterFocus?.boundsReady, true, 'mobile crater and ejecta instance bounds must be computed');
+  assert.equal(mobileCraterFocus?.blocksMovement, false, 'mobile crater scenery must remain non-blocking');
+  const mobileCraterPath = await mobile.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.pathProbe());
+  assert.ok(mobileCraterPath?.pathLength > 0, 'mobile pathfinding must remain available across the crater field');
+  assert.equal(await mobile.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.setVisible(false)), false,
+    'mobile crater baseline capture must hide only the visual crater group');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-battlefield-baseline-390x844.png', fullPage: true });
+  assert.equal(await mobile.evaluate(() => window.__BLUE_ALERTS_CRATER_QA?.setVisible(true)), true,
+    'mobile crater visual must be restored for the matched comparison');
+  await mobile.waitForTimeout(350);
+  await mobile.screenshot({ path: output + '/mobile-v94-battlefield-craters-390x844.png', fullPage: true });
+  console.log('MOBILE_BATTLEFIELD_CRATERS ' + JSON.stringify({ focus: mobileCraterFocus, path: mobileCraterPath }));
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-battlefield-baseline.png', 'desktop-v94-battlefield-craters.png', 'mobile-v94-battlefield-baseline-390x844.png', 'mobile-v94-battlefield-craters-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
@@ -780,7 +820,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       desktop: { baseline: desktopCameraBaseline, improved: desktopCameraCloser },
       mobile: { baseline: mobileCameraBaseline, improved: mobileCameraCloser }
     },
-    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png']
+    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-battlefield-baseline.png', 'desktop-v94-battlefield-craters.png', 'mobile-v94-battlefield-baseline-390x844.png', 'mobile-v94-battlefield-craters-390x844.png']
   }, null, 2));
 } catch (error) {
   console.error(error);

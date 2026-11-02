@@ -302,3 +302,15 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Added a QA-only `freezeNewCombat` / `resumeCombat` switch around desktop and mobile cleanup probes. It prevents new unit/turret shots during the isolated cleanup window while existing projectiles, explosions, muzzle flashes and impact effects continue their normal lifecycle. The switch is exposed only by the `?qa=1` diagnostics and is restored after the probe; live gameplay behavior is unchanged.
 - Camera evidence now waits for the opening HUD to settle, then captures the original 48-unit frame and the closer desktop 38 / mobile 40 frame from the same runtime, target, yaw, pitch, lighting and viewport. The browser test asserts the camera pose is unchanged and the framing scale delta is at least 20% desktop / 15% mobile.
 - No merge, version or release is claimed until the corrected exact-head workflow and both A/B screenshot pairs are inspected.
+
+
+## Cycle — concave battlefield impact bowls and ejecta (2026-11-02)
+
+- Base: current accepted main commit `2d178e61e1a6e000b4840a95dc487697529f0ecc`; isolated branch: `art/v94-battlefield-crater-bowl-20261102`.
+- Ported the battlefield-damage concept from the older terrain branch onto current main without merging its 52-commit divergence or replacing current V94 assets.
+- Rebuilt the crater surface as one shared 32-segment, nine-ring radial mesh: a dark shallow floor, continuous sloped bowl, irregular raised lip, and tapered ejecta shoulder. The geometry has 289 vertices / 544 triangles and is instanced across eight safe battlefield positions.
+- Reused the existing field-rock geometry for 32 small ejecta fragments in one second InstancedMesh. Total crater system: two render groups; no per-crater material/geometry allocation.
+- Placement checks keep the crater bounds outside build pads, supply-road corridor and industrial footprints. Crater groups are visual-only, non-colliding and excluded from pathfinding; desktop/mobile QA probes verify a route remains available through the focal crater area.
+- Added matched same-runtime A/B captures: baseline with only the crater group hidden, then the same camera, viewport, lighting and gameplay state with the crater group visible. Required at desktop and 390×844 mobile sizes.
+- Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, `docs/EVOLUTION_LOG.md`.
+- Exact-head browser/OpenRTS workflow is pending. No visual improvement, release or version is claimed until the new desktop/mobile captures are inspected and compared. Mobile remains browser emulation, not physical Samsung testing. Budget remains 0 €.
