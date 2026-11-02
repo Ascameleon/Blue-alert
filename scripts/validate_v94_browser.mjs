@@ -781,11 +781,26 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   // Keep the mobile page foregrounded: Chromium may throttle requestAnimationFrame on a background page.
   await mobile.bringToFront();
   await mobile.waitForFunction(() => document.visibilityState === 'visible', null, { timeout: 3000 });
+  // Stop unrelated AI fire and drain pre-existing effects before measuring one controlled
+  // shot. Without this isolation, an old muzzle flash can expire in the same frame that
+  // the new flash appears, hiding the +1 in the aggregate live-effect count.
+  const mobileShotFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  assert.ok(mobileShotFreeze?.combatSuppressed === true && mobileShotFreeze?.combatOrdersCleared === true,
+    'mobile controlled-fire QA must isolate the shooter from unrelated AI combat');
+  await mobile.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+    return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+      state.modelMuzzleFlashes === 0;
+  }, null, { timeout: 15000, polling: 50 });
   const mobileShot = await mobile.evaluate(() => {
     const qa = window.__BLUE_ALERTS_COMBAT_QA__;
     const baseline = qa.state();
     return { ...qa.fire(), baseline };
   });
+  assert.equal(mobileShot.baseline.activeProjectiles, 0,
+    'mobile controlled-fire QA must start without in-flight projectiles');
+  assert.equal(mobileShot.baseline.modelMuzzleFlashes, 0,
+    'mobile controlled-fire QA must start without pre-existing muzzle flashes');
   assert.equal(mobileShot.modelProjectiles, mobileShot.baseline.modelProjectiles + 1,
     'mobile QA fire must add exactly one procedural projectile to the live simulation');
   assert.equal(mobileShot.modelMuzzleFlashes, mobileShot.baseline.modelMuzzleFlashes + 1,
