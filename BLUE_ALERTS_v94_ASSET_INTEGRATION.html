@@ -3937,6 +3937,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     modelMuzzleFlashes: fx.filter(e => e.kind === 'model-muzzle').length + visibleModelMuzzleFlashCount(),
     modelExplosions: fx.filter(e => e.kind === 'model-explosion').length,
     modelExplosionLives: fx.filter(e => e.kind === 'model-explosion').map(e => e.life),
+    modelExplosionPositions: fx.filter(e => e.kind === 'model-explosion').map(e => ({ x: e.mesh.position.x, z: e.mesh.position.z })),
     impactRings: fx.filter(e => e.kind === 'impact-ring').length,
     impactSparks: fx.filter(e => e.kind === 'impact-spark').length,
     impactSequence,
@@ -3970,6 +3971,8 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);
       if (!target) throw new Error('Combat QA requires a living red combat unit.');
       const targetKind = target.kind, hpBefore = target.hp, killsBefore = kills, creditsBefore = credits;
+      const targetPosition = { x: target.g.position.x, z: target.g.position.z };
+      const existingExplosionMeshes = new Set(fx.filter(e => e.kind === 'model-explosion').map(e => e.mesh));
       const attachedFlash = target.g?.userData?.flash || null;
       if (attachedFlash) {
         target.flashT = 0.12;
@@ -3979,8 +3982,10 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       camTarget.set(target.g.position.x, 0, target.g.position.z);
       camDist = Math.min(camDist, 26);
       applyDamage(target, hpBefore, 1);
+      const spawnedExplosion = fx.find(e => e.kind === 'model-explosion' && !existingExplosionMeshes.has(e.mesh)) || null;
       return {
         targetKind, targetDead: target.dead, targetRemoved: !scene.children.includes(target.g),
+        targetPosition, explosionSpawned: !!spawnedExplosion, spawnedExplosionLife: spawnedExplosion?.life ?? null,
         flashWasActive, flashHidden: !attachedFlash?.visible, flashTimer: target.flashT,
         killsDelta: kills - killsBefore, creditsDelta: credits - creditsBefore,
         ...combatState()
