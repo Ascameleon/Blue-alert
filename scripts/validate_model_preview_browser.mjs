@@ -103,6 +103,7 @@ try {
   await page.waitForTimeout(450);
   const blueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(blueInfantry.factionProfile,'BLUE_SENTINEL_RIFLEMAN','blue infantry must use the Sentinel faction profile');
+  assert.ok(blueInfantry.cameraDistance<8,'blue infantry preview camera must frame the model closely: '+blueInfantry.cameraDistance);
   assert.ok(blueInfantry.namedParts.includes('sentinel-visor') && blueInfantry.namedParts.includes('infantry-assault-rifle') &&
     blueInfantry.namedParts.includes('left-leg-pivot') && blueInfantry.namedParts.includes('right-leg-pivot'),
     'blue infantry must render its visor, rifle and independent leg pivots');
@@ -132,6 +133,7 @@ try {
     'red infantry must retain comparable detail and the same draw-call ceiling');
   assert.ok(redInfantry.boundsMinY>=-0.03,
     'red infantry combat boots must not sink below the ground plane: '+redInfantry.boundsMinY);
+  assert.ok(redInfantry.cameraDistance<8,'red infantry preview camera must frame the model closely: '+redInfantry.cameraDistance);
   await page.screenshot({path:output+'/desktop-red-bastion-infantry.png',fullPage:true});
 
   await page.selectOption('#asset','turret');
@@ -174,7 +176,7 @@ try {
   await page.waitForTimeout(350);
   const mobileBlueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.ok(mobileBlueInfantry.canvasWidth>=300 && mobileBlueInfantry.canvasHeight>=400 &&
-    mobileBlueInfantry.hasAnimationRig && mobileBlueInfantry.drawCalls<=60,
+    mobileBlueInfantry.hasAnimationRig && mobileBlueInfantry.drawCalls<=60 && mobileBlueInfantry.cameraDistance<8,
     'blue infantry must remain readable and animated in the mobile preview');
   await page.screenshot({path:output+'/mobile-blue-sentinel-infantry-390x844.png',fullPage:true});
   await page.selectOption('#team','red');
