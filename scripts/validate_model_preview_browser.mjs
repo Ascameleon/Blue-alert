@@ -153,6 +153,9 @@ try {
       targets
     };
   });
+  await page.selectOption('#asset','controlTower');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='controlTower' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=30,null,{timeout:10000});
+  await page.waitForTimeout(350);
   await page.screenshot({path:output+'/mobile-control-tower-390x844.png',fullPage:true});
   await page.selectOption('#asset','turret');
   await page.waitForTimeout(450);
