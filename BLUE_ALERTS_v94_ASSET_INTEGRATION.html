@@ -3877,13 +3877,26 @@ if (new URLSearchParams(location.search).get('combat-rig') === '1' || new URLSea
 }
 
 if (new URLSearchParams(location.search).get('qa') === '1') {
+  const cameraQaSnapshot = () => ({
+    distance: Number(camDist.toFixed(2)),
+    defaultDistance: DEFAULT_CAMERA_DISTANCE,
+    mobile: isMobile,
+    target: [Number(camTarget.x.toFixed(2)), Number(camTarget.z.toFixed(2))],
+    yaw: Number(camYaw.toFixed(3)),
+    pitch: Number(camPitch.toFixed(3))
+  });
   window.__BLUE_ALERTS_CAMERA_QA__ = Object.freeze({
-    snapshot: () => ({
-      distance: Number(camDist.toFixed(2)),
-      defaultDistance: DEFAULT_CAMERA_DISTANCE,
-      mobile: isMobile,
-      target: [Number(camTarget.x.toFixed(2)), Number(camTarget.z.toFixed(2))]
-    })
+    snapshot: cameraQaSnapshot,
+    setDistance(distance) {
+      const next = Number(distance);
+      if (!Number.isFinite(next) || next < 16 || next > 95) {
+        throw new RangeError('Camera QA distance must stay within the player zoom range 16–95.');
+      }
+      camDist = next;
+      camVelX = 0;
+      camVelZ = 0;
+      return cameraQaSnapshot();
+    }
   });
   const infantryProbe = () => {
     let unit = units.find(candidate => !candidate.dead && candidate.team === 1 &&
