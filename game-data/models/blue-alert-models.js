@@ -553,6 +553,16 @@ export function createInfantry(THREE, options={}) {
   const metal = mat(THREE, 0x87928f, .42, .64);
   const skin = mat(THREE, 0x9e795f, .92, .02);
   const optic = mat(THREE, isRed ? 0xf0a15b : 0x7bd5ed, .2, .68);
+  const lens = new THREE.MeshStandardMaterial({
+    color: isRed ? 0xffa36b : 0x79d7ed,
+    metalness: .05,
+    roughness: .16,
+    transparent: true,
+    opacity: .78,
+    depthWrite: false,
+    emissive: new THREE.Color(isRed ? 0x2c1000 : 0x042b3c),
+    emissiveIntensity: .22
+  });
   const accent = mat(THREE, isRed ? 0xd7834f : 0x65bcd6, .42, .36);
   const rifleMat = mat(THREE, 0x242b2d, .76, .32);
   const rubber = mat(THREE, 0x171d20, .98, .01);

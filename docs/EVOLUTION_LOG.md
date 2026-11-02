@@ -417,3 +417,12 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - OpenRTS checkout and compatibility patch steps passed. Native OpenRTS build, browser rendering and desktop/mobile gameplay captures were skipped after the static-validator exception.
 - Artifacts: none; no screenshot evidence was produced by this run.
 - The runtime/model change remains unaccepted. No release/version was created.
+
+
+### Exact-head validation attempt 3 — c56b537cd8a2c666d297b9559d091c728e2704b5
+
+- Workflow: [#41492006653](https://github.com/Ascameleon/Blue-alert/actions/runs/41492006653).
+- Static V94 validation, model-kit validation, scenario validation and standalone single-file build passed. The build produced a 277,075-byte HTML in the runner workspace; the upload step was not reached.
+- The model-preview browser test failed at `scripts/validate_model_preview_browser.mjs:114` because the new optic-lens meshes referenced an undeclared `lens` material. The browser error was `ReferenceError: lens is not defined`; the test timed out waiting for the infantry preview.
+- Corrected by defining a dedicated faction-tinted, low-roughness transparent glass material for the two optic lenses. The previous run's artifact [#13165125772](https://github.com/Ascameleon/Blue-alert/actions/runs/41492006653/artifacts/13165125772) contains only the scenario report and baseline tank/turret captures; it contains no infantry or V94 gameplay screenshots.
+- V94 desktop/mobile gameplay rendering, live firing checks, OpenRTS compilation and native interaction smoke tests were skipped because the model-preview step failed. No visual improvement is accepted yet.
