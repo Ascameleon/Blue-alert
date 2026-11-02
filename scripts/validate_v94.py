@@ -244,7 +244,7 @@ def main():
     qa_start = source.index("const combatState =")
     qa_end = source.index("if (new URLSearchParams(location.search).get('qa') === '1')", qa_start)
     qa_section = source[qa_start:qa_end]
-    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition", "qaSuppressCombat", "freezeNewCombat", "resumeCombat")
+    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition", "qaSuppressCombat", "freezeNewCombat", "resumeCombat", "qaSuppressEconomyRewards", "freezeEconomyRewards", "resumeEconomyRewards")
     missing = [token for token in required_qa if token not in qa_section]
     if missing:
         raise SystemExit("FAIL: combat QA must track the exact death explosion: " + ", ".join(missing))
@@ -258,6 +258,10 @@ def main():
         "spawnedExplosionLife",
         "freezeNewCombat",
         "resumeCombat",
+        "desktopEconomyFreeze",
+        "mobileEconomyFreeze",
+        "freezeEconomyRewards",
+        "resumeEconomyRewards",
         "desktopTreeBaseline",
         "mobileTreeBaseline",
         "desktop-v94-woodland-tree-baseline.png",
