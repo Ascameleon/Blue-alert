@@ -407,6 +407,18 @@ try {
   const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 && desktopInfantryGait.walkAmount > 0.2 && Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04, 'desktop V94 infantry arms and legs must animate in response to real movement');
   await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
+  const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
+  assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
+    desktopTreeDetail.needleClusters >= 17 && desktopTreeDetail.foliageTriangles >= 350,
+    'desktop live V94 must expose a complete instanced evergreen asset for close visual inspection');
+  const desktopTreeBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
+  assert.equal(desktopTreeBaseline, 'legacy', 'desktop A/B baseline must restore the previous three-cone evergreen geometry');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-baseline.png', fullPage: true });
+  assert.equal(await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(false)), 'detailed',
+    'desktop A/B comparison must restore the detailed branch-and-needle geometry on the same instanced mesh');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-detail.png', fullPage: true });
   const missionVictory = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.destroyEnemyCitadel());
   assert.ok(missionVictory.enemyCitadelDestroyed && missionVictory.complete &&
     missionVictory.completedCount === 3 && missionVictory.progressPercent === 100,
@@ -427,18 +439,7 @@ try {
   assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must be available');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
-  const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
-  assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
-    desktopTreeDetail.needleClusters >= 17 && desktopTreeDetail.foliageTriangles >= 350,
-    'desktop live V94 must expose a complete instanced evergreen asset for close visual inspection');
-  const desktopTreeBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
-  assert.equal(desktopTreeBaseline, 'legacy', 'desktop A/B baseline must restore the previous three-cone evergreen geometry');
-  await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-baseline.png', fullPage: true });
-  assert.equal(await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(false)), 'detailed',
-    'desktop A/B comparison must restore the detailed branch-and-needle geometry on the same instanced mesh');
-  await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-detail.png', fullPage: true });
+
 
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
