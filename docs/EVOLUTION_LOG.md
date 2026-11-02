@@ -397,3 +397,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Added desktop/mobile live-game checks for grip retention during movement and projectile-origin alignment. Existing model-preview checks remain in place and exercise the same updated model kit.
 - Exact-head validation and screenshots are pending. No game version/release is created; no external or paid assets/services are used; budget remains 0 €.
 - Evidence boundaries: desktop/mobile screenshots are browser-engine captures; 390×844 is mobile emulation, not a physical Samsung test. OpenRTS is a separate native engine and does not import these Three.js infantry meshes.
+
+
+### Exact-head validation attempt 1 — 4a8a25b4bdd8fe0ba651e92cf620434c33eb2014
+
+- Workflow: [#41491563715](https://github.com/Ascameleon/Blue-alert/actions/runs/41491563715).
+- `scripts/validate_prototype.py`: passed.
+- `scripts/validate_v94.py`: failed on a validator-scope mistake: it searched for the model-kit profile literal inside the V94 runtime QA section. The runtime correctly exposes the profile as `weaponGripProfile`; the literal remains owned by the model kit. Corrected the static check to inspect the runtime property name instead.
+- OpenRTS checkout and three compatibility patch steps passed. Native OpenRTS build, browser rendering, desktop/mobile gameplay captures and their tests were skipped because the V94 static check stopped the workflow.
+- Artifacts: none. No screenshot evidence was produced by this run. Baseline accepted evidence remains workflow #41445930709, artifact `openrts-graphical-smoke-test` ID `13141329066` and standalone HTML artifact ID `13141618566`.
+- This is a validation correction only; the infantry visual change remains unaccepted and no version/release is created.
