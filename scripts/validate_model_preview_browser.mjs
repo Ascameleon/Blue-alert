@@ -128,6 +128,10 @@ try {
     'blue infantry must retain its detailed geometry budget: '+blueInfantry.triangleCount+' triangles');
   assert.ok(blueInfantry.boundsMinY>=-0.03,
     'blue infantry combat boots must not sink below the ground plane: '+blueInfantry.boundsMinY);
+  assert.ok(blueInfantry.renderOptimization?.savedDrawCalls>=25,
+    'blue infantry must batch at least 25 static draw calls without crossing rig pivots: '+JSON.stringify(blueInfantry.renderOptimization));
+  assert.ok(blueInfantry.meshCount<60,
+    'blue infantry mesh count must reflect the static geometry batching: '+blueInfantry.meshCount);
   assert.ok(blueInfantry.drawCalls<=60,
     'blue infantry must stay within the 60-draw-call mobile preview ceiling: '+blueInfantry.drawCalls);
   assert.ok(blueInfantry.animationPhase>0 && blueInfantry.walkAmount>=0.8,
@@ -142,6 +146,8 @@ try {
     redInfantry.namedParts.includes('bastion-jaw-guard') &&
     redInfantry.namedParts.includes('right-bastion-pauldron'),
     'red infantry must render reinforced Bastion helmet and shoulder armor');
+  assert.ok(redInfantry.renderOptimization?.savedDrawCalls>=25,
+    'red infantry must batch static geometry while preserving faction detail: '+JSON.stringify(redInfantry.renderOptimization));
   assert.ok(redInfantry.meshCount>=blueInfantry.meshCount-3 && redInfantry.drawCalls<=60,
     'red infantry must retain comparable detail and the same draw-call ceiling');
   assert.ok(redInfantry.boundsMinY>=-0.03,
