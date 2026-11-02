@@ -196,13 +196,20 @@ try {
   assert.equal(desktopShot.modelMuzzleFlashes, 1, 'desktop live combat must show the procedural muzzle flash');
   await desktop.waitForTimeout(35);
   await desktop.screenshot({ path: output + '/desktop-v94-projectile-vfx.png', fullPage: true });
-  await desktop.waitForFunction(() => {
-    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-    return state && state.impactRings > 0 && state.impactSparks > 0;
-  }, null, { timeout: 4000, polling: 50 });
+  try {
+    await desktop.waitForFunction(sequence => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.impactSequence > sequence && state.impactRings > 0 && state.impactSparks > 0;
+    }, desktopShot.impactSequence, { timeout: 6000, polling: 50 });
+  } catch (error) {
+    const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('DESKTOP_IMPACT_TIMEOUT ' + JSON.stringify({ shot: desktopShot, state }));
+    throw error;
+  }
   const desktopImpact = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   console.log('DESKTOP_PROJECTILE_IMPACT ' + JSON.stringify(desktopImpact));
-  assert.ok(desktopImpact.impactRings > 0 && desktopImpact.impactSparks > 0, 'desktop projectile hit must create a shock ring and sparks');
+  assert.ok(desktopImpact.lastImpactEvent?.id > desktopShot.impactSequence && desktopImpact.lastImpactEvent.ringCount === 1 && desktopImpact.lastImpactEvent.sparkCount >= 4,
+    'desktop projectile hit must record a real shock ring and spark burst');
   await desktop.screenshot({ path: output + '/desktop-v94-impact-vfx.png', fullPage: true });
 
   const desktopKill = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
@@ -438,13 +445,20 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.equal(mobileShot.modelMuzzleFlashes, 1, 'mobile live combat must show the procedural muzzle flash');
   await mobile.waitForTimeout(35);
   await mobile.screenshot({ path: output + '/mobile-v94-projectile-vfx-390x844.png', fullPage: true });
-  await mobile.waitForFunction(() => {
-    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-    return state && state.impactRings > 0 && state.impactSparks > 0;
-  }, null, { timeout: 9000, polling: 50 });
+  try {
+    await mobile.waitForFunction(sequence => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.impactSequence > sequence && state.impactRings > 0 && state.impactSparks > 0;
+    }, mobileShot.impactSequence, { timeout: 9000, polling: 50 });
+  } catch (error) {
+    const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('MOBILE_IMPACT_TIMEOUT ' + JSON.stringify({ shot: mobileShot, state }));
+    throw error;
+  }
   const mobileImpact = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   console.log('MOBILE_PROJECTILE_IMPACT ' + JSON.stringify(mobileImpact));
-  assert.ok(mobileImpact.impactRings > 0 && mobileImpact.impactSparks > 0, 'mobile projectile hit must create a shock ring and sparks');
+  assert.ok(mobileImpact.lastImpactEvent?.id > mobileShot.impactSequence && mobileImpact.lastImpactEvent.ringCount === 1 && mobileImpact.lastImpactEvent.sparkCount >= 4,
+    'mobile projectile hit must record a real shock ring and spark burst');
   await mobile.screenshot({ path: output + '/mobile-v94-impact-vfx-390x844.png', fullPage: true });
 
   const mobileKill = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
