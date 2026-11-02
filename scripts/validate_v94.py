@@ -240,6 +240,30 @@ def main():
     if missing:
         raise SystemExit("FAIL: evergreen A/B QA must switch the same InstancedMesh between legacy and detailed geometry: " + ", ".join(missing))
 
+
+    wear_start = source.index("function addBattlefieldWear()")
+    wear_end = source.index("const battlefieldWear = addBattlefieldWear()", wear_start)
+    wear_section = source[wear_start:wear_end]
+    required_wear_features = (
+        "logistics-road-worn-shoulders",
+        "gantry-access-concrete-spur",
+        "gantry-access-asphalt",
+        "logistics-tire-wear",
+        "worn-asphalt-repair-patches",
+        "road-and-spur-crack-lines",
+        "logistics-road-drain-grates",
+        "gantry-apron-worn-safety-bars",
+        "window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA",
+        "focusRoad()",
+        "focusCorridor()",
+        "setVisible(visible)",
+    )
+    missing = [feature for feature in required_wear_features if feature not in wear_section]
+    if missing:
+        raise SystemExit("FAIL: logistics corridor wear is missing connected road/gantry detail: " + ", ".join(missing))
+    if "blocksMovement: false" not in wear_section:
+        raise SystemExit("FAIL: battlefield wear must remain visual-only and non-blocking")
+
     kill_start = source.index("function killUnit(u)")
     kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
     kill_section = source[kill_start:kill_end]
@@ -273,6 +297,14 @@ def main():
         "mobile-v94-woodland-tree-baseline-390x844.png",
         "setLegacy(true)",
         "setLegacy(false)",
+        "battlefieldWear",
+        "focusRoad()",
+        "focusCorridor()",
+        "setVisible(false)",
+        "desktop-v94-road-wear-baseline.png",
+        "desktop-v94-road-wear-detail.png",
+        "mobile-v94-road-wear-baseline-390x844.png",
+        "mobile-v94-road-wear-detail-390x844.png",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
