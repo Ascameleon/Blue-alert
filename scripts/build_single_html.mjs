@@ -10,7 +10,7 @@ const outputDir = resolve(root, 'dist');
 const outputPath = resolve(outputDir, 'BLUE_ALERTS_V94_BUILD_ZONE_JOUABLE.html');
 const html = await readFile(sourcePath, 'utf8');
 const model = await readFile(modelPath, 'utf8');
-const importPattern = /await import\('\.\/game-data\/models\/blue-alert-models\.js\?v=6'\)/;
+const importPattern = /await import\('\.\/game-data\/models\/blue-alert-models\.js\?v=7'\)/;
 assert.match(html, importPattern, 'expected the versioned local BLUE_MODELS import');
 assert.match(model, /export\s+(?:async\s+)?function\s+createBuilding/, 'model module must expose createBuilding');
 assert.match(model, /export\s+(?:async\s+)?function\s+createTank/, 'model module must expose createTank');
