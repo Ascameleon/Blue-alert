@@ -209,10 +209,29 @@ def main():
     if "u.flashT = 0;" not in kill_section or "setMuzzleFlashIntensity(u.g.userData.flash, 0)" not in kill_section:
         raise SystemExit("FAIL: dead units must synchronously hide their attached turret muzzle flash")
 
+    cache_start = source.index("const createExplosionAnimationParts = mesh =>")
+    cache_end = source.index("function spawnParticle", cache_start)
+    cache_section = source[cache_start:cache_end]
+    required_cache = ("mesh.traverse(", "basePosition", "baseScale", "transparentMaterials", "direction", "return parts")
+    missing = [token for token in required_cache if token not in cache_section]
+    if missing:
+        raise SystemExit("FAIL: explosion animation cache is missing spawn-time data: " + ", ".join(missing))
+
+    fx_start = source.index("// ── FX ──")
+    fx_end = source.index("// ── Progressive building damage", fx_start)
+    fx_section = source[fx_start:fx_end]
+    explosion_start = fx_section.index("if (e.kind === 'model-explosion')")
+    explosion_end = fx_section.index("} else if (e.kind === 'model-muzzle')", explosion_start)
+    explosion_update = fx_section[explosion_start:explosion_end]
+    if "e.animationParts" not in explosion_update or ".traverse(" in explosion_update:
+        raise SystemExit("FAIL: per-frame explosion updates must use cached parts, not scene traversal")
+    if "animationProfile: 'cached-parts-v1'" not in source:
+        raise SystemExit("FAIL: model explosions must expose the cached-parts-v1 runtime profile")
+
     qa_start = source.index("const combatState =")
     qa_end = source.index("if (new URLSearchParams(location.search).get('qa') === '1')", qa_start)
     qa_section = source[qa_start:qa_end]
-    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition")
+    required_qa = ("modelExplosionPositions", "modelExplosionAnimationSnapshots", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "spawnedExplosionAnimationParts", "targetPosition")
     missing = [token for token in required_qa if token not in qa_section]
     if missing:
         raise SystemExit("FAIL: combat QA must track the exact death explosion: " + ", ".join(missing))
@@ -224,6 +243,10 @@ def main():
         "desktopExplosionIndex",
         "mobileExplosionIndex",
         "spawnedExplosionLife",
+        "spawnedExplosionAnimationParts",
+        "desktopAnimationSnapshot.checksum",
+        "mobileAnimationSnapshot.checksum",
+        "cached explosion animation-part profile",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
