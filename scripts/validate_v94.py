@@ -211,7 +211,22 @@ def main():
     for index, (script_type, code) in enumerate(parser.scripts, start=1):
         check_js(code, script_type == "module", f"HTML script #{index}")
 
-    check_js(MODEL_LIBRARY.read_text(encoding="utf-8"), True, "v94 model library")
+    model_source = MODEL_LIBRARY.read_text(encoding="utf-8")
+    required_hero_infantry = (
+        "SENTINEL_BASTION_HERO_ARMOR_V2",
+        "faceted-helmet-shell",
+        "gas-mask-faceplate",
+        "respirator-filter-housing",
+        "respirator-breathing-hose",
+        "angular-pauldron",
+        "articulated-knee-guard",
+        "rifle-top-rail",
+        "updateInfantryAnimation",
+    )
+    missing = [feature for feature in required_hero_infantry if feature not in model_source]
+    if missing:
+        raise SystemExit("FAIL: hero infantry geometry missing: " + ", ".join(missing))
+    check_js(model_source, True, "v94 model library")
     print(
         f"PASS: {HTML}; {len(parser.scripts)} inline script(s), "
         f"model library {MODEL_LIBRARY.stat().st_size} bytes; JavaScript syntax valid."
