@@ -1264,13 +1264,18 @@ window.__BLUE_ALERTS_CRATERS = Object.freeze({
 });
 window.__BLUE_ALERTS_CRATER_QA = Object.freeze({
   focus() {
-    camTarget.set(44, 0, 26);
+    // Portrait framing centers the western crater so the mobile evidence shows
+    // the impact bowl, not only the nearby debris pile.
+    const point = isMobile
+      ? { x: 36, z: 24, distance: 12.5 }
+      : { x: 44, z: 26, distance: 13.5 };
+    camTarget.set(point.x, 0, point.z);
     camYaw = .4;
     camPitch = .72;
-    camDist = isMobile ? 9.5 : 13.5;
+    camDist = point.distance;
     camVelX = 0;
     camVelZ = 0;
-    return window.__BLUE_ALERTS_CRATERS;
+    return { ...window.__BLUE_ALERTS_CRATERS, focus: point };
   }
 });
 
