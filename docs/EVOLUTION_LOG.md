@@ -294,3 +294,11 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Acceptance: desktop and 390×844 mobile death tests assert at least 20 cached animated parts, the `cached-parts-v1` profile, a changed transform checksum after animation, and complete removal of cached snapshots after cleanup. Static validation forbids scene traversal in the per-frame model-explosion branch while requiring spawn-time caching.
 - Exact-head desktop/mobile WebGL, gameplay, standalone build, OpenRTS and native checks are pending. No performance improvement or merge is claimed before CI measurements and screenshots are inspected.
 - Budget remains 0 €; original procedural geometry only. Physical Samsung validation remains outstanding.
+
+
+### Exact-head validation correction — 2026-11-02
+
+- Workflow [41417014795](https://github.com/Ascameleon/Blue-alert/actions/runs/41417014795) on the initial cached-explosion branch head failed at the static V94 acceptance validator before browser or OpenRTS checks.
+- The job log identified a validator/test-description mismatch: the validator required the phrase `cached explosion animation-part profile`, while the existing desktop/mobile assertions already checked `profile === 'cached-parts-v1'` but used different human-readable messages.
+- Updated only the two assertion messages to explicitly identify the cached explosion animation-part profile. The runtime logic, assertion predicates, minimum part count, checksum-change requirement, cleanup checks and existing global VFX checks are unchanged.
+- Correction commit: `272ee21dcb51a11da3e9467bc72df6d2f765aaeb`. A fresh exact-head workflow must pass all static, desktop/mobile WebGL/gameplay, standalone HTML, OpenRTS build, graphical and native-input checks before this PR can be integrated. No visual or performance improvement is claimed yet.
