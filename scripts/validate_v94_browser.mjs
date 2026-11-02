@@ -195,6 +195,8 @@ try {
     desktopMetrics.environment.clearanceZones === 4 &&
     desktopMetrics.environment.blocksMovement === false,
     'desktop V94 must contain four non-blocking industrial clusters, 18 instanced crates and eight barrels');
+  const desktopEconomyFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeEconomyRewards());
+  assert.ok(desktopEconomyFreeze?.economyRewardsFrozen, 'desktop construction-cost QA must freeze asynchronous reward credits');
   const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
   assert.ok(buildBefore, 'build-zone QA diagnostics must be available');
   assert.ok(buildBefore.hq.modelsLoaded, 'the procedural model library must load from inside the single HTML file');
@@ -244,6 +246,8 @@ try {
     assert.equal(rejected.credits, afterValidCredits,
       'an invalid placement must not consume credits');
   }
+  const desktopEconomyResume = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeEconomyRewards());
+  assert.equal(desktopEconomyResume?.economyRewardsFrozen, false, 'desktop construction-cost QA must restore economy rewards after the placement assertions');
 
   await desktop.locator('#btnSound').click();
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : OFF', 'desktop sound toggle must respond');
@@ -613,6 +617,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
 
   // Real touch placement on the 390x844 mobile viewport.
+  const mobileEconomyFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeEconomyRewards());
+  assert.ok(mobileEconomyFreeze?.economyRewardsFrozen, 'mobile construction-cost QA must freeze asynchronous reward credits');
   const mobilePlacementBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
   const mobileBuildPoint = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-24, -12));
   assert.ok(mobileBuildPoint.visible, 'mobile construction target must be visible above the bottom HUD');
@@ -625,6 +631,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     'a real mobile touch must place exactly one power station');
   assert.equal(mobileBuildAfter.credits, mobilePlacementBefore.credits - 350,
     'a real mobile touch placement must deduct the configured power-station cost');
+  const mobileEconomyResume = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeEconomyRewards());
+  assert.equal(mobileEconomyResume?.economyRewardsFrozen, false, 'mobile construction-cost QA must restore economy rewards after the placement assertion');
 
   const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(mobileCombatBefore?.livingBlueCombatUnits > 0 && mobileCombatBefore?.livingRedCombatUnits > 0, 'mobile combat QA must find live units on both factions');
