@@ -15,7 +15,7 @@ REQUIRED_EXPORTS = (
 )
 REQUIRED_MODEL = (
     "BLUE_SENTINEL_RIFLEMAN", "RED_BASTION_RIFLEMAN",
-    "infantry-assault-rifle", "infantry-torso-rig", "left-leg-pivot", "right-leg-pivot",
+    "infantry-assault-rifle", "infantry-torso-rig", "makeArm", "makeLeg",
 )
 REQUIRED_PREVIEW = (
     "updateInfantryAnimation",
