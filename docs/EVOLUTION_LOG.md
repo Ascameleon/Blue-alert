@@ -119,3 +119,12 @@ The existing V94 `createUnit(..., 'infantry')` path now loads the faction-specif
 - Physical Samsung test: not performed.
 - OpenRTS smoke tests exercise its separate native engine path; they do not prove that the Three.js infantry meshes are imported into OpenRTS.
 - No merge or deployment claim is made. The change remains on its feature branch pending exact-head CI evidence and review.
+
+
+### Static-validator correction — first exact-head CI attempt
+
+- Workflow `41382789517` reached the expanded model-kit validator and failed because faction mesh names were incorrectly searched in `preview.html` instead of `blue-alert-models.js`.
+- The failure occurred before Playwright, standalone build or OpenRTS steps; no browser/native result is claimed from that run.
+- Corrected the validator to check faction profile and rig-part tokens in the model source, while keeping preview-only hooks in the preview contract.
+- Fix commit: `d68f53cfe0dfbdcf7e4e74d689c9d1f068e528ff`.
+- A fresh exact-head workflow is required before this cycle can be marked verified.
