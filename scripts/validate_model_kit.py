@@ -13,9 +13,12 @@ REQUIRED_EXPORTS = (
     "createDrone", "createProjectile", "createExplosion", "createMuzzleFlash",
     "createHarvester", "createCitadel", "createRelay", "createOreNode",
 )
-REQUIRED_PREVIEW = (
-    "updateInfantryAnimation", "BLUE_SENTINEL_RIFLEMAN", "RED_BASTION_RIFLEMAN",
+REQUIRED_MODEL = (
+    "BLUE_SENTINEL_RIFLEMAN", "RED_BASTION_RIFLEMAN",
     "infantry-assault-rifle", "infantry-torso-rig", "left-leg-pivot", "right-leg-pivot",
+)
+REQUIRED_PREVIEW = (
+    "updateInfantryAnimation",
     "Avion d’attaque", "Hélicoptère d’assaut", "Drone de reconnaissance",
     "Projectile", "Explosion", "Flash de bouche", "createMuzzleFlash", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion",
@@ -47,6 +50,9 @@ def main():
     missing = [name for name in REQUIRED_EXPORTS if f"export function {name}" not in model]
     if missing:
         raise SystemExit("FAIL: missing model exports: " + ", ".join(missing))
+    missing = [name for name in REQUIRED_MODEL if name not in model]
+    if missing:
+        raise SystemExit("FAIL: faction infantry model is missing: " + ", ".join(missing))
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
