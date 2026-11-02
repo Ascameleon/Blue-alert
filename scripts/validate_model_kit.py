@@ -59,6 +59,8 @@ def main():
         "gas-mask-optic-lens", "respirator-filter-housing", "respirator-filter-cap",
         "respirator-filter-vent", "respirator-breathing-hose", "gas-mask-chin-guard",
         "angular-pauldron", "articulated-knee-guard", "rifle-top-rail", "rifle-ejection-port",
+        "createInfantrySurfaceTextures", "FIELDWEAVE_CERAMIC_MICROSCUFF_V1", "fabricBump", "armorBump", "metalBump",
+        "head.scale.setScalar(.82)", "helmet-shell above is the sole crown surface",
     )
     missing = [name for name in REQUIRED_HERO_PARTS if name not in model]
     if missing:
@@ -67,6 +69,8 @@ def main():
     missing = [name for name in REQUIRED_BATCHING if name not in model]
     if missing:
         raise SystemExit("FAIL: infantry render batching contract missing: " + ", ".join(missing))
+    if "surfaceFinish" not in preview or "surfaceTextureCount" not in preview or "surfaceMaterialCount" not in preview:
+        raise SystemExit("FAIL: preview must expose real infantry PBR surface-map diagnostics")
     if "mergedPartNames" not in preview or "renderOptimization" not in preview:
         raise SystemExit("FAIL: preview must retain source part names and render-batching diagnostics")
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
