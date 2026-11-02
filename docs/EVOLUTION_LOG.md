@@ -236,3 +236,14 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - PR #38 was merged with full commit history preserved: [`b6c35a9d428c67105b81bc614987535adaa8d2b4`](https://github.com/Ascameleon/Blue-alert/commit/b6c35a9d428c67105b81bc614987535adaa8d2b4).
 - Post-merge main workflows `41401367522` (OpenRTS/browser validation) and `41401367526` (web deployment) were in progress at the time of this log entry; no conclusion is inferred until they finish.
 - No physical Samsung test is claimed. The Three.js renderer remains CDN-loaded; internet access is required. No paid assets, APIs, services or purchases; budget 0 €.
+
+
+## Cycle — deterministic death-explosion acceptance (2026-11-02)
+
+- Latest main observed: `a58a561a2277bcefa5045a4d954fc74dc0e734ac`; mainline OpenRTS workflow `41401367522` passed, including Java build, graphical launch, 12/12 native unit movement and real selection/move/attack input.
+- PR #38's dead-unit muzzle-flash fix was merged as `b6c35a9d428c67105b81bc614987535adaa8d2b4`; its exact-head workflow `41400732657` passed desktop/mobile V94, standalone build and OpenRTS/native checks.
+- PR #37 exact-head workflow `41401898591` failed at the mobile unit-death assertion. The log showed the target was dead/removed, kill reward was awarded, flash was hidden and timer was zero, but the global model-explosion count was 2 with lives `[0.7112, 1.8]`. An unrelated live combat explosion made the old `=== 1` assertion incorrect; no product death-effect failure was observed.
+- Added read-only world-position diagnostics for model explosions. The QA helper now tracks the newly spawned explosion by object identity and reports its position and initial lifetime.
+- Desktop/mobile acceptance now captures the immediate pre-death count, requires exactly one additional explosion from the death call, and verifies that specific explosion advances at the destroyed unit's coordinates. Concurrent combat effects no longer invalidate the death-specific assertion.
+- Static validation now requires the target-specific QA diagnostics and both desktop/mobile acceptance paths.
+- This is a correction on the existing dedicated hero-infantry branch. Fresh exact-head browser, WebGL, standalone build, OpenRTS and native checks are still required; no pass or merge is claimed yet.
