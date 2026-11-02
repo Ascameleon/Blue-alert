@@ -106,8 +106,14 @@ try {
   assert.ok(blueInfantry.namedParts.includes('sentinel-visor') && blueInfantry.namedParts.includes('infantry-assault-rifle') &&
     blueInfantry.namedParts.includes('left-leg-pivot') && blueInfantry.namedParts.includes('right-leg-pivot'),
     'blue infantry must render its visor, rifle and independent leg pivots');
-  assert.ok(blueInfantry.triangleCount>=1200 && blueInfantry.drawCalls<=60,
-    'blue infantry detail must remain within the lightweight preview budget');
+  console.log('BLUE_SENTINEL_INFANTRY_METRICS '+JSON.stringify({
+    meshCount:blueInfantry.meshCount,triangleCount:blueInfantry.triangleCount,
+    drawCalls:blueInfantry.drawCalls,animationPhase:blueInfantry.animationPhase
+  }));
+  assert.ok(blueInfantry.triangleCount>=1200,
+    'blue infantry must retain its detailed geometry budget: '+blueInfantry.triangleCount+' triangles');
+  assert.ok(blueInfantry.drawCalls<=60,
+    'blue infantry must stay within the 60-draw-call mobile preview ceiling: '+blueInfantry.drawCalls);
   assert.ok(blueInfantry.animationPhase>0 && blueInfantry.walkAmount>=0.8,
     'preview gait must advance its deterministic animation rig');
   await page.screenshot({path:output+'/desktop-blue-sentinel-infantry.png',fullPage:true});
