@@ -89,6 +89,8 @@ def main():
         "terrainSurfaceTextures.albedo",
                         "textureResolution: terrainSurfaceTextures.size",
         "textureChecksum: terrainSurfaceTextures.checksum",
+        "soilCoverage: terrainSurfaceTextures.soilCoverage",
+        "roadRutsCoverage: terrainSurfaceTextures.roadRutsCoverage",
         "surfaceMode: 'procedural-soil-stone-ruts'",
         "function createLayeredTreeFoliageGeometry",
         "battlefield-trees-trunks-instanced",

@@ -153,3 +153,6 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Desktop remains 512×512 and mobile 256×256; all patch placement is derived from the existing fixed terrain seed.
 - The current refinement is committed in the next branch revision. Exact-head browser/OpenRTS validation and new visual captures are pending; no pass is claimed for that revision yet.
 - Prior successful performance evidence from the exact-head run: 2026-11-02T04:28:30.7852501Z MOBILE_VFX_CLEANUP_PERFORMANCE {"elapsedMs":1527,"framesAdvanced":43,"simulatedSeconds":1.813,"averageFps":28.2}
+
+
+- Added deterministic coverage diagnostics for soil patches and the two road-shoulder ruts. Desktop/mobile browser acceptance now asserts both coverage ratios, in addition to texture resolution, checksum and surface mode.

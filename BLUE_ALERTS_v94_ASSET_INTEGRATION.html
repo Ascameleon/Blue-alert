@@ -566,6 +566,8 @@ terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3
 function createTerrainSurfaceTextures(size) {
   const albedoPixels = new Uint8Array(size * size * 4);
   let checksum = 2166136261;
+  let soilSampleCount = 0;
+  let roadRutSampleCount = 0;
   const channel = value => Math.max(0, Math.min(255, Math.round(value)));
   for (let py = 0; py < size; py++) {
     const worldZ = ((py + 0.5) / size - 0.5) * 160;
@@ -583,6 +585,8 @@ function createTerrainSurfaceTextures(size) {
       const rutSouth = 1 - terrainSmoothstep(0.14, 0.62,
         Math.abs(worldZ - (-4.9 + Math.sin(worldX * 0.03 + 1.4) * 0.32)));
       const roadRuts = Math.max(rutNorth, rutSouth);
+      if (soil > 0.65) soilSampleCount++;
+      if (roadRuts > 0.55) roadRutSampleCount++;
       const grain = (fine - 0.5) * 18 + (fleck - 0.5) * 12;
       const offset = (py * size + px) * 4;
       const red = channel(250 - soil * 62 - exposedStone * 38 - roadRuts * 34 + grain);
@@ -613,7 +617,9 @@ function createTerrainSurfaceTextures(size) {
   return {
     size,
     albedo: makeTexture(albedoPixels, THREE.SRGBColorSpace),
-    checksum: checksum >>> 0
+    checksum: checksum >>> 0,
+    soilCoverage: soilSampleCount / (size * size),
+    roadRutsCoverage: roadRutSampleCount / (size * size)
   };
 }
 const terrainSurfaceTextures = createTerrainSurfaceTextures(isMobile ? 256 : 512);
@@ -636,6 +642,8 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   surfaceMode: 'procedural-soil-stone-ruts',
   textureResolution: terrainSurfaceTextures.size,
   textureChecksum: terrainSurfaceTextures.checksum,
+  soilCoverage: terrainSurfaceTextures.soilCoverage,
+  roadRutsCoverage: terrainSurfaceTextures.roadRutsCoverage,
   anisotropy: terrainSurfaceTextures.albedo.anisotropy
 });
 window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
