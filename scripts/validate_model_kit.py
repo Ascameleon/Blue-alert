@@ -74,6 +74,8 @@ def main():
         "leftAnkle.rotation.x", "rightAnkle.rotation.x", "rig.pelvis.position.y",
         "-upper-arm-loft", "-forearm-loft", "-thigh-loft", "-calf-loft",
         "-glove-palm", "leftKnee.rotation.x", "rightKnee.rotation.x",
+        "ANATOMICAL_GLOVE_WRAP_V1", "SCULPTED_FIELD_BOOT_V1",
+        "-glove-finger-", "-sculpted-combat-boot", "-boot-lace-",
     )
     missing = [name for name in REQUIRED_ANATOMY if name not in model]
     if missing:

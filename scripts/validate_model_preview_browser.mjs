@@ -131,6 +131,15 @@ try {
     'infantry preview must animate the pelvis and at least one ankle during locomotion');
   assert.equal(blueInfantry.weaponGripProfile,'TWO_HAND_FORWARD_READY_V1',
     'infantry weapon and hand pose must use the two-hand ready alignment');
+  assert.equal(blueInfantry.handGeometryProfile,'ANATOMICAL_GLOVE_WRAP_V1',
+    'infantry hands must use shaped palms and curved tapered fingers');
+  assert.equal(blueInfantry.bootGeometryProfile,'SCULPTED_FIELD_BOOT_V1',
+    'infantry boots must transition through a shaped shaft, toe and outsole');
+  for(const name of ['left-glove-finger-0','left-glove-finger-3','right-glove-thumb',
+    'left-sculpted-combat-boot','right-sculpted-combat-boot',
+    'left-boot-lace-0','right-boot-eyelet']) {
+    assert.ok(blueInfantry.namedParts.includes(name),'sculpted infantry detail missing: '+name);
+  }
   assert.deepEqual(blueInfantry.jointDiagnostics,{
     pelvis:true,leftElbow:true,rightElbow:true,leftKnee:true,rightKnee:true,leftAnkle:true,rightAnkle:true
   },'pelvis, both elbows, both knees and both ankles must be real articulated rig pivots');

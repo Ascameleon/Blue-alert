@@ -524,3 +524,15 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Artifact [13181025903](https://github.com/Ascameleon/Blue-alert/actions/runs/41528060616/artifacts/13181025903) was downloaded and inspected. It contains `blue-alerts-scenario-report.json`, `model-preview/baseline-turret-mobile-390x844.png`, `model-preview/baseline-turret.png`, and `model-preview/desktop-blue-sentinel-tank.png`; it contains no new infantry desktop/mobile screenshots. The failed assertion occurred before the infantry screenshot capture, so this cycle's pelvis/ankle visual change is not yet accepted.
 - The workflow stopped before live V94 desktop/mobile gameplay captures and before its OpenRTS build/launch/native interaction stages. The successful OpenRTS results from #358 are historical evidence for its earlier head only, not validation of `155c35fafd67511f5de0874aac532918180fb56a`.
 - The branch was not written during any active workflow. The next validation must run on the final branch HEAD after this code/test and documentation update. No merge, version or release. Budget: 0 €.
+
+
+## Cycle — sculpted infantry gloves and field boots (2026-11-03)
+
+- Base: `f5e9d8bc504b499c753e09e03fcfbe1645abfdef` on `art/v94-infantry-forward-grip-20261102`; accepted `main` remains `462b6d448c810485b597effcf3e60c708dbbd48e`.
+- Replaced the infantry glove's bead-like palm/finger primitives with a tapered loft palm, four curved finger tubes and a curved thumb. Kept the existing hand pivots and weapon grip sockets unchanged.
+- Replaced the squared boot block with a shaped loft shell, profiled outsole and rounded toe cap; added crossed laces and armor-matched eyelets. Existing ankle pivots and planted-foot animation remain unchanged.
+- Added explicit hand/boot geometry profiles to model diagnostics and desktop/mobile preview assertions. The static model-kit and V94 validators now require these profiles and sculpted part names.
+- Files prepared for this atomic code/test update: `game-data/models/blue-alert-models.js`, `game-data/models/preview.html`, `scripts/validate_model_preview_browser.mjs`, `scripts/validate_model_kit.py`, `scripts/validate_v94.py`, and `docs/EVOLUTION_LOG.md`.
+- Exact-head validation and fresh desktop/390×844 mobile screenshots are pending. No visual acceptance is claimed until the running V94 preview/game captures are inspected against the accepted-main baseline. OpenRTS remains a separate native-engine validation.
+- The previous model preview used 60 meshes and 56 draw calls; the new hand geometry is batched inside each hand pivot, while boot laces/eyelets reuse the existing dark/armor material groups. The exact preview budgets remain `meshCount <= 60` and `drawCalls <= 60`; the browser workflow must confirm them.
+- No version/release created; no external or paid assets/services; budget remains 0 €. The final commit SHA will be appended only after this exact-head workflow completes, followed by a documentation-only exact-head validation as required.

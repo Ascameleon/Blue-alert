@@ -147,6 +147,8 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     rightAnkleLift:current?.userData?.animationRig?.rightAnkle
       ? Number((current.userData.animationRig.rightAnkle.position.y+.28).toFixed(4)) : null,
     weaponGripProfile:current?.userData?.weaponGripProfile||null,
+    handGeometryProfile:current?.userData?.handGeometryProfile||null,
+    bootGeometryProfile:current?.userData?.bootGeometryProfile||null,
     jointDiagnostics:{
       pelvis:!!current?.userData?.animationRig?.pelvis,
       leftElbow:!!current?.userData?.animationRig?.leftElbow,

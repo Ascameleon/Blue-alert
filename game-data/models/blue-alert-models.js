@@ -724,12 +724,36 @@ export function createInfantry(THREE, options={}) {
     hand.name = label + '-hand-rig';
     hand.position.set(0,-.16,.19);
     elbow.add(hand);
-    sphere(THREE, hand, label + '-glove-palm', .057, [0,0,0], rubber, [.92,.72,1.18]);
+    const palmGeometry = createInfantryLoftGeometry(THREE, [
+      [-.052,.031,.030,0,.010],[-.034,.043,.037,0,.012],
+      [-.008,.047,.040,0,.012],[.018,.036,.032,0,.004]
+    ], 14);
+    const palm = new THREE.Mesh(palmGeometry, rubber);
+    palm.name = label + '-glove-palm';
+    palm.castShadow = true; palm.receiveShadow = true; hand.add(palm);
+    // Four curved, tapered glove fingers wrap around the weapon instead of
+    // reading as separate spherical beads at tactical-camera distance.
     for(let finger=0;finger<4;finger++) {
-      sphere(THREE, hand, label + '-glove-finger', .021,
-        [(finger-1.5)*.025,-.038,.045], rubber, [.82,1.25,.78]);
+      const x = (finger - 1.5) * .024;
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(x,-.012,.034),
+        new THREE.Vector3(x*1.08,-.033,.060),
+        new THREE.Vector3(x*1.05,-.054,.054),
+        new THREE.Vector3(x*.98,-.059,.022)
+      ]);
+      const digit = new THREE.Mesh(new THREE.TubeGeometry(curve, 9, .0105, 7, false), rubber);
+      digit.name = label + '-glove-finger-' + finger;
+      digit.castShadow = true; hand.add(digit);
     }
-    sphere(THREE, hand, label + '-glove-thumb', .026, [side*-.06,-.005,.005], rubber, [.9,1.1,.85]);
+    const thumbCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side*-.045,.002,.005),
+      new THREE.Vector3(side*-.067,-.008,.025),
+      new THREE.Vector3(side*-.060,-.030,.048),
+      new THREE.Vector3(side*-.030,-.044,.052)
+    ]);
+    const thumb = new THREE.Mesh(new THREE.TubeGeometry(thumbCurve, 9, .012, 7, false), rubber);
+    thumb.name = label + '-glove-thumb';
+    thumb.castShadow = true; hand.add(thumb);
     if (isRed) {
       beveledBox(THREE, pivot, label + '-bastion-pauldron', [.17,.095,.15],
         [side*.012,-.035,.025], accent, [0,0,side*-.08], .012);
@@ -769,9 +793,42 @@ export function createInfantry(THREE, options={}) {
     ankle.position.set(0,-.28,.005);
     knee.add(ankle);
     beveledBox(THREE,ankle,label+'-ankle-cuff',[.145,.16,.13],[0,.045,.005],armor,[0,0,0],.012);
-    beveledBox(THREE,ankle,label+'-reinforced-combat-boot',[.17,.13,.24],[0,-.03,.08],rubber,[0,0,0],.016);
-    beveledBox(THREE,ankle,label+'-reinforced-combat-boot-sole',[.18,.025,.25],[0,-.097,.085],dark,[0,0,0],.008);
-    beveledBox(THREE,ankle,label+'-reinforced-combat-boot-toe-cap',[.145,.065,.105],[0,-.02,.18],armor,[0,0,0],.012);
+    // A shaped boot transitions from the upright ankle shaft into a forward
+    // toe box; the outsole follows the same profile rather than a square block.
+    const bootGeometry = createInfantryLoftGeometry(THREE, [
+      [-.096,.073,.132,0,.102],[-.078,.080,.145,0,.104],
+      [-.044,.074,.136,0,.090],[-.004,.061,.112,0,.056],
+      [.038,.054,.083,0,.020],[.086,.052,.070,0,.002]
+    ], 18);
+    const boot = new THREE.Mesh(bootGeometry, rubber);
+    boot.name = label + '-sculpted-combat-boot';
+    boot.castShadow = true; boot.receiveShadow = true; ankle.add(boot);
+    const soleGeometry = createInfantryLoftGeometry(THREE, [
+      [-.120,.077,.145,0,.105],[-.112,.082,.151,0,.105],
+      [-.096,.078,.145,0,.105]
+    ], 18);
+    const sole = new THREE.Mesh(soleGeometry, dark);
+    sole.name = label + '-reinforced-combat-boot-sole';
+    sole.castShadow = true; sole.receiveShadow = true; ankle.add(sole);
+    sphere(THREE,ankle,label+'-reinforced-combat-boot-toe-cap',.066,[0,-.034,.178],armor,[1,.50,.78]);
+    // Low-profile crossed laces and reinforced eyelets are merged with the
+    // existing sole/armor material groups to keep the mobile draw-call budget.
+    for(let lace=0;lace<3;lace++) {
+      const y=.042-lace*.027, z=.078-lace*.004;
+      const laceCurve=new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-.030,y,z),
+        new THREE.Vector3(-.008,y-.010,z+.027),
+        new THREE.Vector3(.030,y,z+.004)
+      ]);
+      const laceMesh=new THREE.Mesh(new THREE.TubeGeometry(laceCurve,8,.0048,5,false),dark);
+      laceMesh.name=label+'-boot-lace-'+lace;
+      laceMesh.castShadow=true; ankle.add(laceMesh);
+      for(const sideEyelet of [-1,1]) {
+        const eyelet=sphere(THREE,ankle,label+'-boot-eyelet',.008,
+          [sideEyelet*.035,y+.002,z+.015],armor,[1,1,.65]);
+        eyelet.castShadow=false;
+      }
+    }
     return { pivot, knee, ankle };
   };
   const leftLeg = makeLeg(-1, 'left');
@@ -886,6 +943,8 @@ export function createInfantry(THREE, options={}) {
     animationJointProfile:'PELVIS_SHOULDER_ELBOW_HIP_KNEE_ANKLE_V2',
     locomotionProfile:'PLANTED_FOOT_WEIGHT_SHIFT_V1',
     weaponGripProfile:'TWO_HAND_FORWARD_READY_V1',
+    handGeometryProfile:'ANATOMICAL_GLOVE_WRAP_V1',
+    bootGeometryProfile:'SCULPTED_FIELD_BOOT_V1',
     armorDetailParts: renderOptimization.sourceMeshCount,
     surfaceFinish: surfaceTextures ? 'FIELDWEAVE_CERAMIC_MICROSCUFF_V2' : 'UNTEXTURED_FALLBACK',
     surfaceTextureCount: surfaceTextures ? Object.values(surfaceTextures).filter(Boolean).length : 0,
