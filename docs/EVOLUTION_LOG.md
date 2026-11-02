@@ -333,3 +333,12 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Moved the desktop evergreen focus and legacy/detail pair to immediately after the live infantry-gait capture and before the citadel-destruction mission-completion test. The gameplay page remains active and unobscured; later mission, industrial-yard and terrain checks continue unchanged.
 - Mobile A/B already runs before any full victory overlay and remains in its existing live mobile sequence.
 - Exact-head browser, standalone, OpenRTS/native checks and inspection of all four tree screenshots remain pending. No visual acceptance or merge is claimed.
+
+
+### Mobile construction-cost assertion isolation — 2026-11-02
+
+- Exact-head workflow [41432551605](https://github.com/Ascameleon/Blue-alert/actions/runs/41432551605) completed desktop V94 gameplay, desktop tree A/B capture, mission, combat/VFX and building-damage checks, then failed at the mobile power-station cost assertion: actual credits were 4,735 versus expected 4,650. The placement itself succeeded; asynchronous combat/harvester income changed the credit balance during the touch assertion.
+- Root cause: the test compared the whole live credit balance while the mobile simulation continued granting kill and resource-delivery rewards. This made an exact construction-cost assertion timing-dependent.
+- Added a QA-only economy-reward freeze around desktop and mobile construction-cost checks. It gates only reward-credit additions from enemy kills, building kills and harvester deliveries; the build transaction still deducts its configured 350 credits, mission delivery accounting and the live production gameplay path remain unchanged unless the explicit QA hook is called.
+- The browser checks still require exactly one placed power station and exactly 350 credits deducted, and now assert that reward credits are restored immediately after each placement test. Static validation requires the new QA hooks. No gameplay cost, test threshold or production balance was changed.
+- The failed run's desktop A/B screenshots show a plainly visible geometric difference between the legacy three-cone silhouette and the new branch/needle form. The detailed form is still angular and needs visual-quality review; mobile A/B captures and a full exact-head passing workflow remain outstanding. No merge or release is authorized.
