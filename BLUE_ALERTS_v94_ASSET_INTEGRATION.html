@@ -2045,6 +2045,7 @@ function createUnit(x, z, team, kind) {
       tank.rotation.y = -Math.PI / 2;
       g.add(tank);
       g.userData.turret = tank.userData.turret || null;
+      g.userData.tankModel = tank;
       if (g.userData.turret && BLUE_MODELS.createMuzzleFlash) {
         const muzzleFlash = BLUE_MODELS.createMuzzleFlash(THREE, {
           team: team === 1 ? 'blue' : 'red',
@@ -4479,6 +4480,24 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
 }
 
 if (new URLSearchParams(location.search).get('qa') === '1') {
+  const tankCameraSnapshot=()=>({
+    target:[Number(camTarget.x.toFixed(3)),0,Number(camTarget.z.toFixed(3))],
+    yaw:Number(camYaw.toFixed(4)),pitch:Number(camPitch.toFixed(4)),distance:Number(camDist.toFixed(3))
+  });
+  window.__BLUE_ALERTS_TANK_SURFACE_QA__=Object.freeze({
+    focus(){
+      const unit=units.find(u=>!u.dead&&u.team===1&&u.kind==='light'&&u.g?.userData?.tankModel);
+      if(!unit)throw new Error('Tank surface QA requires a live blue light tank.');
+      camTarget.set(unit.g.position.x,0,unit.g.position.z);
+      camDist=18;camYaw=.55;camPitch=.78;camVelX=0;camVelZ=0;
+      return {unitId:unit.id,camera:tankCameraSnapshot()};
+    },
+    setEnabled(enabled){
+      const tanks=units.filter(u=>!u.dead&&u.g?.userData?.tankModel);
+      const results=tanks.map(unit=>unit.g.userData.tankModel.userData.setSurfaceFinish(!!enabled));
+      return {enabled:!!enabled,tankCount:tanks.length,results,camera:tankCameraSnapshot()};
+    }
+  });
   let buildingProbeTarget = null;
   const buildingDamageSnapshot = () => {
     const target = buildingProbeTarget;
