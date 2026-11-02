@@ -130,6 +130,8 @@ try {
     'red infantry must render reinforced Bastion helmet and shoulder armor');
   assert.ok(redInfantry.meshCount>=blueInfantry.meshCount-3 && redInfantry.drawCalls<=60,
     'red infantry must retain comparable detail and the same draw-call ceiling');
+  assert.ok(redInfantry.boundsMinY>=-0.03,
+    'red infantry combat boots must not sink below the ground plane: '+redInfantry.boundsMinY);
   await page.screenshot({path:output+'/desktop-red-bastion-infantry.png',fullPage:true});
 
   await page.selectOption('#asset','turret');
