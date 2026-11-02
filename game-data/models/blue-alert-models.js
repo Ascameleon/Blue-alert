@@ -142,7 +142,6 @@ export function createInfantry(THREE, options={}) {
   ]);
   for (const side of [-1, 1]) {
     box(THREE, torso, 'carrier-shoulder-strap', [.065, .31, .045], [side * .125, .055, .18], cloth, [0, 0, side * -.12]);
-    sphere(THREE, torso, 'chest-fastener', .026, [side * .16, .105, .202], metal, [1, 1, .55]);
   }
 
   // Helmet and face have faction-specific silhouettes, not just recoloured cloth.
@@ -167,7 +166,6 @@ export function createInfantry(THREE, options={}) {
   }
   for (const side of [-1, 1]) {
     sphere(THREE, head, 'helmet-optic', .037, [side * .075, .02, .19], optic, [1, .72, .48]);
-    box(THREE, head, 'ear-protection', [.065, .11, .09], [side * .16, -.035, -.015], dark);
   }
 
   // Independent shoulder, elbow, hip and knee pivots make a real deterministic
@@ -179,7 +177,6 @@ export function createInfantry(THREE, options={}) {
     g.add(pivot);
     sphere(THREE, pivot, label + '-shoulder-pad', .14, [0, -.055, .015], armor, [.9, .78, 1.05]);
     box(THREE, pivot, label + '-upper-arm', [.145, .29, .15], [side * .012, -.17, .015], uniform, [0, 0, side * -.08]);
-    box(THREE, pivot, label + '-elbow-pad', [.15, .105, .17], [side * .012, -.315, .075], dark);
     box(THREE, pivot, label + '-forearm', [.125, .25, .145], [side * .012, -.405, .105], cloth, [0, 0, side * .035]);
     box(THREE, pivot, label + '-wrist-guard', [.14, .075, .16], [side * .012, -.52, .12], armor);
     sphere(THREE, pivot, label + '-glove', .075, [side * .012, -.575, .145], rubber, [1, .72, 1.12]);
@@ -201,9 +198,7 @@ export function createInfantry(THREE, options={}) {
     box(THREE, pivot, label + '-thigh', [.155, .29, .17], [0, -.145, 0], cloth);
     box(THREE, pivot, label + '-knee-pad', [.17, .13, .19], [0, -.285, .075], armor);
     box(THREE, pivot, label + '-shin', [.14, .25, .15], [0, -.405, .025], uniform);
-    box(THREE, pivot, label + '-ankle-guard', [.155, .09, .18], [0, -.51, .06], dark);
     box(THREE, pivot, label + '-combat-boot', [.17, .13, .26], [0, -.57, .085], rubber);
-    box(THREE, pivot, label + '-boot-sole', [.175, .035, .27], [0, -.635, .095], dark);
     return pivot;
   };
   const leftLeg = makeLeg(-1, 'left');
@@ -218,7 +213,6 @@ export function createInfantry(THREE, options={}) {
   box(THREE, pack, 'backpack-top-flap', [.23, .075, .17], [0, .16, 0], armor);
   for (const side of [-1, 1]) {
     box(THREE, pack, 'backpack-side-pocket', [.09, .17, .13], [side * .17, -.015, .005], armor);
-    box(THREE, pack, 'pack-retention-strap', [.045, .31, .025], [side * .08, 0, .095], dark);
   }
   cylinder(THREE, pack, 'radio-antenna', .012, .018, .42, [-.105, .31, -.025], metal, 6);
   cylinder(THREE, pack, 'field-canteen', .065, .075, .18, [.18, -.11, -.025], dark, 8);
@@ -237,7 +231,6 @@ export function createInfantry(THREE, options={}) {
   cylinder(THREE, rifleGroup, 'rifle-muzzle', .032, .032, .055, [.58, .005, 0], dark, 8).rotation.z = -Math.PI / 2;
   box(THREE, rifleGroup, 'rifle-optic', [.085, .07, .065], [.045, .075, 0], optic);
   box(THREE, rifleGroup, 'rifle-magazine', [.09, .15, .065], [.02, -.095, .015], dark, [0, 0, -.12]);
-  box(THREE, rifleGroup, 'rifle-trigger-guard', [.07, .045, .025], [.12, -.055, .045], metal);
   addMarking(THREE, torso, .17, .12, .205, team);
 
   const animationRig = {
