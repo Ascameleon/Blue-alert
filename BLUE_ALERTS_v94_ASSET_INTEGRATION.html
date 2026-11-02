@@ -1764,6 +1764,31 @@ function disposeObject3D(root) {
   for (const material of materials) material.dispose();
 }
 
+function collectFxParts(root) {
+  const parts = [];
+  if (!root?.traverse) return parts;
+  root.traverse(object => {
+    if (!object.isMesh) return;
+    const materials = Array.isArray(object.material)
+      ? object.material
+      : (object.material ? [object.material] : []);
+    const basePosition = { x: object.position.x, y: object.position.y, z: object.position.z };
+    const length = Math.hypot(basePosition.x, basePosition.z);
+    parts.push({
+      object,
+      name: object.name,
+      materials,
+      basePosition,
+      baseScale: { x: object.scale.x, y: object.scale.y, z: object.scale.z },
+      baseRotationZ: object.rotation.z,
+      baseOpacity: materials[0]?.opacity ?? 1,
+      directionX: length > 0.001 ? basePosition.x / length : 0,
+      directionZ: length > 0.001 ? basePosition.z / length : 1
+    });
+  });
+  return parts;
+}
+
 function spawnParticle(pos, color, big) {
   if (big && BLUE_MODELS?.createExplosion) {
     const seed = (Math.abs(Math.trunc(pos.x * 73856093 + pos.z * 19349663)) >>> 0) || 23;
@@ -1771,7 +1796,7 @@ function spawnParticle(pos, color, big) {
     mesh.position.copy(pos);
     scene.add(mesh);
     const life = mesh.userData?.lifetimeSeconds || 1.8;
-    fx.push({ mesh, life, max: life, kind: 'model-explosion' });
+    fx.push({ mesh, life, max: life, kind: 'model-explosion', parts: collectFxParts(mesh) });
     return;
   }
   const geo = new THREE.SphereGeometry(big ? 0.45 : 0.12, 6, 5);
@@ -1842,7 +1867,7 @@ function fireProjectile(shooter, target) {
     flash.position.copy(start);
     flash.rotation.y = Math.atan2(-dir.z, dir.x);
     scene.add(flash);
-    fx.push({ mesh: flash, life: 0.18, max: 0.18, kind: 'model-muzzle' });
+    fx.push({ mesh: flash, life: 0.18, max: 0.18, kind: 'model-muzzle', parts: collectFxParts(flash) });
   }
 
   let ball;
@@ -2939,53 +2964,43 @@ function tick() {
       e.life -= dt;
       if (e.kind === 'model-explosion') {
         const progress = Math.min(1, Math.max(0, 1 - e.life / e.max));
-        e.mesh.traverse(object => {
-          if (!object.isMesh) return;
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          if (!object.userData.__fxBase) {
-            object.userData.__fxBase = {
-              position: object.position.clone(),
-              scale: object.scale.clone(),
-              rotationZ: object.rotation.z,
-              opacity: materials[0]?.opacity ?? 1
-            };
-          }
-          const base = object.userData.__fxBase;
-          if (object.name === 'fireball-core') {
-            object.scale.copy(base.scale).multiplyScalar(1 + progress * 0.5);
-            for (const material of materials) if (material.transparent) material.opacity = base.opacity * (1 - progress);
-          } else if (object.name === 'hot-core') {
-            object.scale.copy(base.scale).multiplyScalar(1 - progress * 0.35);
-            for (const material of materials) if (material.transparent) material.opacity = base.opacity * (1 - progress);
-          } else if (object.name === 'shockwave-ring') {
-            object.scale.setScalar(1 + progress * 2.4);
-            for (const material of materials) if (material.transparent) material.opacity = base.opacity * (1 - progress);
-          } else if (object.name === 'smoke-puff') {
-            object.position.set(base.position.x, base.position.y + progress * 0.85, base.position.z);
-            object.scale.copy(base.scale).multiplyScalar(1 + progress * 1.3);
-            for (const material of materials) if (material.transparent) material.opacity = base.opacity * (1 - progress);
-          } else if (object.name === 'explosion-spark') {
-            const direction = base.position.clone().setY(0);
-            if (direction.lengthSq() < 0.001) direction.set(0, 0, 1);
-            direction.normalize();
+        for (const part of e.parts) {
+          const object = part.object;
+          const materials = part.materials;
+          if (part.name === 'fireball-core') {
+            object.scale.set(part.baseScale.x * (1 + progress * 0.5), part.baseScale.y * (1 + progress * 0.5), part.baseScale.z * (1 + progress * 0.5));
+            for (const material of materials) if (material.transparent) material.opacity = part.baseOpacity * (1 - progress);
+          } else if (part.name === 'hot-core') {
+            const scale = 1 - progress * 0.35;
+            object.scale.set(part.baseScale.x * scale, part.baseScale.y * scale, part.baseScale.z * scale);
+            for (const material of materials) if (material.transparent) material.opacity = part.baseOpacity * (1 - progress);
+          } else if (part.name === 'shockwave-ring') {
+            const scale = 1 + progress * 2.4;
+            object.scale.set(part.baseScale.x * scale, part.baseScale.y * scale, part.baseScale.z * scale);
+            for (const material of materials) if (material.transparent) material.opacity = part.baseOpacity * (1 - progress);
+          } else if (part.name === 'smoke-puff') {
+            const scale = 1 + progress * 1.3;
+            object.position.set(part.basePosition.x, part.basePosition.y + progress * 0.85, part.basePosition.z);
+            object.scale.set(part.baseScale.x * scale, part.baseScale.y * scale, part.baseScale.z * scale);
+            for (const material of materials) if (material.transparent) material.opacity = part.baseOpacity * (1 - progress);
+          } else if (part.name === 'explosion-spark') {
             object.position.set(
-              base.position.x + direction.x * progress * 0.65,
-              base.position.y + progress * 0.75,
-              base.position.z + direction.z * progress * 0.65
+              part.basePosition.x + part.directionX * progress * 0.65,
+              part.basePosition.y + progress * 0.75,
+              part.basePosition.z + part.directionZ * progress * 0.65
             );
-            object.rotation.z = base.rotationZ + progress * 3.5;
-            for (const material of materials) if (material.transparent) material.opacity = 1 - progress;
+            object.rotation.z = part.baseRotationZ + progress * 3.5;
+            for (const material of materials) if (material.transparent) material.opacity = part.baseOpacity * (1 - progress);
           }
-        });
+        }
       } else if (e.kind === 'model-muzzle') {
         const progress = Math.min(1, Math.max(0, 1 - e.life / e.max));
         e.mesh.scale.setScalar(0.95 + progress * 0.35);
-        e.mesh.traverse(object => {
-          if (!object.isMesh) return;
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          if (object.userData.__fxBaseOpacity === undefined) object.userData.__fxBaseOpacity = materials[0]?.opacity ?? 1;
-          for (const material of materials) if (material.transparent) material.opacity = object.userData.__fxBaseOpacity * (1 - progress);
-        });
+        for (const part of e.parts) {
+          for (const material of part.materials) {
+            if (material.transparent) material.opacity = part.baseOpacity * (1 - progress);
+          }
+        }
       } else {
         e.mesh.scale.multiplyScalar(e.smoke ? 1.015 : 1.06);
         e.mat.opacity = Math.max(0, (e.life / e.max) * (e.smoke ? 0.4 : 1));
