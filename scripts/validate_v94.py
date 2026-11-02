@@ -124,6 +124,24 @@ def main():
     if missing:
         raise SystemExit("FAIL: live combat VFX/death lifecycle missing: " + ", ".join(missing))
 
+
+    required_environment_features = (
+        "function addIndustrialLogisticsSet()",
+        "BA_IndustrialLogisticsYard",
+        "BA_Substation",
+        "BA_LoadingGantry",
+        "BA_FuelSilos",
+        "BA_CargoStacks",
+        "instanced-cargo-crates",
+        "instanced-hazard-barrels",
+        "window.__BLUE_ALERTS_ENVIRONMENT",
+        "runtimeIntegrated:true",
+        "blocksMovement:false",
+    )
+    missing = [feature for feature in required_environment_features if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: V94 industrial environment integration missing: " + ", ".join(missing))
+
     required_building_damage_features = (
         "function spawnImpact(",
         "kind: 'impact-ring'",
