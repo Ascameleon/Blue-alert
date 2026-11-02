@@ -137,6 +137,15 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     surfaceTextureCount:current?.userData?.surfaceTextureCount||0,
     surfaceMaterialCount:current?.userData?.surfaceMaterialCount||0,
     headScale:current?.userData?.headScale??null,
+    bodyGeometryProfile:current?.userData?.bodyGeometryProfile||null,
+    animationJointProfile:current?.userData?.animationJointProfile||null,
+    weaponGripProfile:current?.userData?.weaponGripProfile||null,
+    jointDiagnostics:{
+      leftElbow:!!current?.userData?.animationRig?.leftElbow,
+      rightElbow:!!current?.userData?.animationRig?.rightElbow,
+      leftKnee:!!current?.userData?.animationRig?.leftKnee,
+      rightKnee:!!current?.userData?.animationRig?.rightKnee
+    },
     cameraDistance:camera.position.length(),
     boundsMinY:bounds?.min.y??null,
     namedParts,
