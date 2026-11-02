@@ -35,3 +35,18 @@ This log distinguishes runtime integration, static checks, browser rendering, CI
 - CI mobile emulation is not a physical Samsung test. No physical Android device test is claimed.
 - The OpenRTS screenshot is a separate native engine smoke test; it is not evidence that the V94 HTML scene and OpenRTS are one merged runtime.
 
+
+## Cycle 5 — final verification
+
+- Exact tested PR head: `5d0fd9ad3c17447f6c29094a01fd50446c1e3b14`.
+- GitHub Actions workflow: [`41372113986`](https://github.com/Ascameleon/Blue-alert/actions/runs/41372113986) — **success**.
+- Static V94 HTML validation, model-kit validation, scenario XML validation and standalone playable HTML build: passed.
+- Playwright desktop and 390x844 mobile browser tests: passed. Coverage included WebGL startup, build-zone placement/rejection, combat projectile impacts, unit death/explosion lifecycle, building damage stages, mobile layout/touch targets, environment cluster diagnostics and mobile cleanup performance.
+- OpenRTS build: passed.
+- OpenRTS scenario smoke test: 12/12 units moved.
+- Native input smoke test: real left-click selection, right-click movement and right-click attack each produced verified state changes.
+- Visual artifact: `openrts-graphical-smoke-test` (artifact `13109696371`); inspected `v94-browser/desktop-v94-industrial-yard.png` and `v94-browser/mobile-v94-gameplay-390x844.png`.
+- Standalone playable build: `blue-alerts-v94-build-zone-playable` (artifact `13109258207`); extracted and verified as `BLUE_ALERTS_V94_BUILD_ZONE_JOUABLE.html`.
+- The mobile cleanup measurement was 33.8 FPS in the CI-emulated 390x844 browser scenario only. It is not a full-game sustained FPS claim and does not substitute for a physical Samsung test.
+- The OpenRTS graphical/input smoke test remains a separate native engine test; it does not imply that the V94 HTML runtime has been ported into OpenRTS.
+- PR #29 remains open and draft; no merge to `main` was performed.
