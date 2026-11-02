@@ -149,6 +149,24 @@ try {
   assert.ok(desktopCameraBaseline.distance / desktopCameraCloser.distance >= 1.2, 'desktop A/B framing must create a clearly visible scale increase of at least 20%');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-tactical-camera-framing.png', fullPage: true });
+  const desktopLogisticsBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('gantry'));
+  assert.equal(desktopLogisticsBaseline?.name, 'gantry', 'desktop logistics baseline must focus the existing industrial gantry');
+  assert.equal(desktopLogisticsBaseline?.x, 8, 'desktop logistics baseline must preserve the gantry X coordinate');
+  assert.equal(desktopLogisticsBaseline?.z, -38, 'desktop logistics baseline must preserve the gantry Z coordinate');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-logistics-corridor-baseline.png', fullPage: true });
+  const desktopRoadBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focusRoad());
+  assert.equal(desktopRoadBaseline?.focus?.distance, 20, 'desktop road baseline must use the 20-unit camera focus');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-road-surface-baseline.png', fullPage: true });
+  const desktopCraterBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focusCrater());
+  assert.equal(desktopCraterBaseline?.focus?.x, 44, 'desktop crater baseline must preserve the landscape focus X');
+  assert.equal(desktopCraterBaseline?.focus?.z, 26, 'desktop crater baseline must preserve the landscape focus Z');
+  assert.equal(desktopCraterBaseline?.focus?.distance, 13.5, 'desktop crater baseline must preserve the landscape focus distance');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-crater-site-baseline.png', fullPage: true });
+  const desktopFocusReset = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('base'));
+  assert.equal(desktopFocusReset?.name, 'base', 'desktop QA camera must return to the default base view');
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
   const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
   assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
@@ -285,6 +303,8 @@ try {
   assert.ok(desktopKill.targetDead && desktopKill.targetRemoved && desktopKill.killsDelta === 1 && desktopKill.creditsDelta >= 50 && desktopKill.explosionSpawned && desktopKill.modelExplosions === desktopDeath.before.modelExplosions + 1, 'desktop unit destruction must remove the unit, award its kill/reward and add exactly one new procedural explosion');
   assert.ok(desktopKill.flashWasActive && desktopKill.flashHidden && desktopKill.flashTimer === 0,
     'desktop unit death must immediately hide its attached turret flash and clear its timer');
+  assert.ok(desktopKill.spawnedExplosionAnimationParts >= 20 && Number.isFinite(desktopKill.spawnedExplosionAnimationChecksum),
+    'desktop death explosion must cache its animated mesh parts before the frame loop');
   await desktop.bringToFront();
   try {
     await desktop.waitForFunction(({ frameCount, time, life, position }) => {
@@ -311,6 +331,11 @@ try {
   const desktopExplosionState = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   const desktopExplosionIndex = desktopExplosionState.modelExplosionPositions.findIndex(p => Math.abs(p.x - desktopKill.targetPosition.x) < 0.001 && Math.abs(p.z - desktopKill.targetPosition.z) < 0.001);
   assert.ok(desktopExplosionIndex >= 0, 'desktop death explosion must remain attached to its original target position');
+  const desktopAnimationSnapshot = desktopExplosionState.modelExplosionAnimationSnapshots.find(p => Math.abs(p.x - desktopKill.targetPosition.x) < 0.001 && Math.abs(p.z - desktopKill.targetPosition.z) < 0.001);
+  assert.ok(desktopAnimationSnapshot && desktopAnimationSnapshot.partCount >= 20 && desktopAnimationSnapshot.profile === 'cached-parts-v1',
+    'desktop death explosion must use the cached explosion animation-part profile');
+  assert.notEqual(desktopAnimationSnapshot.checksum, desktopKill.spawnedExplosionAnimationChecksum,
+    'desktop cached explosion parts must visibly animate after spawn');
   console.log('DESKTOP_EXPLOSION_LIFECYCLE ' + JSON.stringify({ before: desktopKill, after: desktopExplosionState }));
   assert.ok(desktopExplosionState.started && !desktopExplosionState.gameOver && desktopExplosionState.time > desktopKill.time, 'desktop simulation clock must advance while the explosion is alive');
   assert.ok(desktopExplosionState.frameCount >= desktopKill.frameCount + 2 && desktopExplosionState.lastFrameDelta > 0, 'desktop requestAnimationFrame loop must continue after unit destruction');
@@ -466,6 +491,27 @@ try {
   assert.ok(mobileCameraBaseline.distance / mobileCameraCloser.distance >= 1.15, 'mobile A/B framing must create a clearly visible scale increase of at least 15%');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-tactical-camera-framing-390x844.png', fullPage: false });
+  const mobileLogisticsBaseline = await mobile.evaluate(() => {
+    const focus = window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('gantry');
+    const camera = window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(22);
+    return { focus, camera };
+  });
+  assert.equal(mobileLogisticsBaseline?.focus?.name, 'gantry', 'mobile logistics baseline must focus the existing industrial gantry');
+  assert.equal(mobileLogisticsBaseline?.camera?.distance, 22, 'mobile logistics baseline must use the 22-unit portrait distance');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-logistics-corridor-baseline-390x844.png', fullPage: false });
+  const mobileRoadBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focusRoad());
+  assert.equal(mobileRoadBaseline?.focus?.distance, 16, 'mobile road baseline must use the 16-unit portrait focus');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-road-surface-baseline-390x844.png', fullPage: false });
+  const mobileCraterBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focusCrater());
+  assert.equal(mobileCraterBaseline?.focus?.x, 36, 'mobile crater baseline must preserve the portrait focus X');
+  assert.equal(mobileCraterBaseline?.focus?.z, 24, 'mobile crater baseline must preserve the portrait focus Z');
+  assert.equal(mobileCraterBaseline?.focus?.distance, 12.5, 'mobile crater baseline must preserve the portrait focus distance');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-crater-site-baseline-390x844.png', fullPage: false });
+  const mobileFocusReset = await mobile.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('base'));
+  assert.equal(mobileFocusReset?.name, 'base', 'mobile QA camera must return to the default base view');
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
   assert.ok(mobileMetrics.terrain?.albedoMap && mobileMetrics.terrain.surfaceMode === 'procedural-albedo-grain' && mobileMetrics.terrain.textureResolution === 256 && mobileMetrics.terrain.textureChecksum > 0 && mobileMetrics.terrain.anisotropy <= 2, 'mobile terrain must use a deterministic 256px procedural albedo surface with capped anisotropy');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
@@ -651,6 +697,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileKill.targetDead && mobileKill.targetRemoved && mobileKill.killsDelta === 1 && mobileKill.creditsDelta >= 50 && mobileKill.explosionSpawned && mobileKill.modelExplosions === mobileDeath.before.modelExplosions + 1, 'mobile unit destruction must remove the unit, award its kill/reward and add exactly one new procedural explosion');
   assert.ok(mobileKill.flashWasActive && mobileKill.flashHidden && mobileKill.flashTimer === 0,
     'mobile unit death must immediately hide its attached turret flash and clear its timer');
+  assert.ok(mobileKill.spawnedExplosionAnimationParts >= 20 && Number.isFinite(mobileKill.spawnedExplosionAnimationChecksum),
+    'mobile death explosion must cache its animated mesh parts before the frame loop');
   await mobile.bringToFront();
   try {
     await mobile.waitForFunction(({ frameCount, time, life, position }) => {
@@ -680,6 +728,11 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileExplosionState.frameCount >= mobileKill.frameCount + 2 && mobileExplosionState.lastFrameDelta > 0, 'mobile requestAnimationFrame loop must continue after unit destruction');
   const mobileExplosionIndex = mobileExplosionState.modelExplosionPositions.findIndex(p => Math.abs(p.x - mobileKill.targetPosition.x) < 0.001 && Math.abs(p.z - mobileKill.targetPosition.z) < 0.001);
   assert.ok(mobileExplosionIndex >= 0 && mobileExplosionState.modelExplosionLives[mobileExplosionIndex] < mobileKill.spawnedExplosionLife, 'mobile death explosion simulation lifetime must advance');
+  const mobileAnimationSnapshot = mobileExplosionState.modelExplosionAnimationSnapshots.find(p => Math.abs(p.x - mobileKill.targetPosition.x) < 0.001 && Math.abs(p.z - mobileKill.targetPosition.z) < 0.001);
+  assert.ok(mobileAnimationSnapshot && mobileAnimationSnapshot.partCount >= 20 && mobileAnimationSnapshot.profile === 'cached-parts-v1',
+    'mobile death explosion must use the cached explosion animation-part profile');
+  assert.notEqual(mobileAnimationSnapshot.checksum, mobileKill.spawnedExplosionAnimationChecksum,
+    'mobile cached explosion parts must visibly animate after spawn');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
   const mobileFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(mobileFreeze, 'mobile cleanup probe must freeze only new combat spawns while existing VFX expire');
@@ -696,6 +749,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     throw error;
   }
   const mobileClean = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  assert.equal(mobileClean.modelExplosionAnimationSnapshots.length, 0,
+    'mobile VFX cleanup must release every cached explosion animation set');
   await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeCombat());
   const mobileCleanupElapsedMs = Date.now() - mobileCleanupStartedAt;
   console.log('MOBILE_VFX_CLEANUP_PERFORMANCE ' + JSON.stringify({
@@ -762,7 +817,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-logistics-corridor-baseline.png', 'mobile-v94-logistics-corridor-baseline-390x844.png', 'desktop-v94-road-surface-baseline.png', 'mobile-v94-road-surface-baseline-390x844.png', 'desktop-v94-crater-site-baseline.png', 'mobile-v94-crater-site-baseline-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,

@@ -285,6 +285,25 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - OpenRTS remains a separate native engine and does not import these V94 Three.js infantry meshes. Mobile browser evidence is 390×844 emulation, not a physical Samsung test. Three.js remains CDN-loaded, so the browser build requires internet access for the renderer. No paid assets, APIs, credits or services; budget remains 0 €.
 
 
+## Cycle — cached model-explosion animation data (2026-11-02)
+
+- Base: merged main commit `05e9f7a74bf2e0340410d7a2d3f5a1d93bd4cdc1`; dedicated branch: `perf/v94-cached-explosion-animation-20261102`.
+- Verified performance signal from exact-head workflow [41411923975](https://github.com/Ascameleon/Blue-alert/actions/runs/41411923975): the 390×844 Chromium cleanup probe reported 16.4 FPS while waiting for model explosions and impact effects to expire. This is a synthetic CI browser measurement, not a physical Samsung benchmark.
+- Root cause selected for this pass: each live model explosion traversed its entire Three.js object tree every animation frame, allocated a materials array per mesh, and cloned a spark direction vector every frame.
+- Change: cache the explosion's named animated mesh references, base transforms, transparent materials/opacities and normalized spark directions once when the effect is spawned. The frame loop now updates the cached part list directly; effect geometry, lifetime, opacity curves and spawn visuals are retained.
+- Acceptance: desktop and 390×844 mobile death tests assert at least 20 cached animated parts, the `cached-parts-v1` profile, a changed transform checksum after animation, and complete removal of cached snapshots after cleanup. Static validation forbids scene traversal in the per-frame model-explosion branch while requiring spawn-time caching.
+- Exact-head desktop/mobile WebGL, gameplay, standalone build, OpenRTS and native checks are pending. No performance improvement or merge is claimed before CI measurements and screenshots are inspected.
+- Budget remains 0 €; original procedural geometry only. Physical Samsung validation remains outstanding.
+
+
+### Exact-head validation correction — 2026-11-02
+
+- Workflow [41417014795](https://github.com/Ascameleon/Blue-alert/actions/runs/41417014795) on the initial cached-explosion branch head failed at the static V94 acceptance validator before browser or OpenRTS checks.
+- The job log identified a validator/test-description mismatch: the validator required the phrase `cached explosion animation-part profile`, while the existing desktop/mobile assertions already checked `profile === 'cached-parts-v1'` but used different human-readable messages.
+- Updated only the two assertion messages to explicitly identify the cached explosion animation-part profile. The runtime logic, assertion predicates, minimum part count, checksum-change requirement, cleanup checks and existing global VFX checks are unchanged.
+- Correction commit: `272ee21dcb51a11da3e9467bc72df6d2f765aaeb`. A fresh exact-head workflow must pass all static, desktop/mobile WebGL/gameplay, standalone HTML, OpenRTS build, graphical and native-input checks before this PR can be integrated. No visual or performance improvement is claimed yet.
+
+
 ## Cycle — closer tactical opening camera framing (2026-11-02)
 
 - Base: current main `05e9f7a74bf2e0340410d7a2d3f5a1d93bd4cdc1`; branch: `art/v94-tactical-camera-framing-20261102`.
