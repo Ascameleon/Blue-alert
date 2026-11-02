@@ -132,6 +132,8 @@ try {
   await page.screenshot({path:output+'/desktop-control-tower.png',fullPage:true});
 
   await page.setViewportSize({width:390,height:844});
+  await page.selectOption('#asset','tank');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='tank' && window.__BLUE_ALERTS_PREVIEW__().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
   await page.waitForTimeout(400);
   await page.screenshot({path:output+'/mobile-blue-sentinel-tank-390x844.png',fullPage:true});
   await page.selectOption('#team','red');
