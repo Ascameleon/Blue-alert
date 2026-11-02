@@ -54,3 +54,12 @@ The existing \`createTank(THREE, { team, variant, scale })\` API and V94 combat 
 - Correction: explicitly select the tank asset and assert the BLUE SENTINEL state before capturing either mobile faction screenshot; fix commit \`3c736a55fbd46794c6c4c11ce36dc9590757e1c3\`.
 - The desktop screenshots from the failed attempt were inspected: the two turret profiles are visibly distinct, and the track shoes/glacis/engine details render. The failure was in test setup, not a reported model-render exception.
 - A fresh workflow run is required; the failed run is not counted as a pass.
+
+
+## Performance correction — instanced faction-tank detail
+
+- The first visually successful tank build measured **101 draw calls for one previewed tank** (99 mesh objects). That was too expensive to accept as a mobile-oriented result even though the V94 browser simulation passed.
+- Repeated parts are now batched into InstancedMesh groups: 7 engine grilles, 8 reactive-armor tiles, 6 return rollers, 12 road wheels, 12 hubs, 12 hub caps, 4 smoke dischargers, 36 track shoes and 60 wheel fasteners; faction turret cheeks/plates/smoke banks are also instanced.
+- Runtime optimization commit: \`387c2deed19a5473488422caabb807f623c6c9a9\`.
+- Preview diagnostics now expose the detail-instance counts. Regression checks enforce a compact mesh count and a maximum of 60 draw calls for one previewed tank; both factions must satisfy the same budget.
+- Validation for this optimization is pending; do not infer a draw-call reduction until the next exact-head browser preview run reports it.
