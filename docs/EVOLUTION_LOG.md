@@ -202,3 +202,11 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Static validator now requires the actual gas-mask, respirator, beveled armor and weapon-detail mesh identifiers.
 - Changed files: `game-data/models/blue-alert-models.js`, `game-data/models/preview.html`, `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/build_single_html.mjs`, `scripts/validate_v94.py`, and this log.
 - Evidence boundary at commit time: implementation committed, exact-head CI not yet completed. No browser render, screenshot, gameplay, OpenRTS/native or physical Samsung pass is claimed until the fresh workflow finishes and its artifacts are inspected. Budget remains 0 €.
+
+
+### Exact-head validation correction
+
+- First PR workflow: [41400032419](https://github.com/Ascameleon/Blue-alert/actions/runs/41400032419), head `ee29f35e10813f51e8da721d554efbf228164f95`, failed before browser rendering. The decoded job log identified a stale assertion in `scripts/validate_model_kit.py` still requiring `blue-alert-models.js?v=5` after the intentional runtime/builder cache bump to `v6`.
+- Updated the model-kit validator to require `v6` and assert the gas-mask, respirator, breathing-hose, angular pauldron, articulated knee guard, rifle details and close-up preview diagnostics. The resulting branch head is `85362bc7cac12ec83f95612b8978497aee5bcb54`.
+- Read-back verification confirms the branch contains the new model parts, close-up preview, v6 runtime import, v6 standalone bundler and matching validator. This is source-content verification only, not a successful test run.
+- A fresh exact-head browser/OpenRTS/native workflow has not yet produced a result for `85362bc7cac12ec83f95612b8978497aee5bcb54`; do not infer that the initial failure was cleared. No new screenshot or completed visual-quality claim is made. Physical Samsung testing remains outstanding.
