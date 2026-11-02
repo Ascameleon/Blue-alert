@@ -262,6 +262,8 @@ try {
   const desktopKill = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
   console.log('DESKTOP_UNIT_DEATH ' + JSON.stringify(desktopKill));
   assert.ok(desktopKill.targetDead && desktopKill.targetRemoved && desktopKill.killsDelta === 1 && desktopKill.creditsDelta >= 50 && desktopKill.modelExplosions === 1, 'desktop unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
+  assert.ok(desktopKill.flashWasActive && desktopKill.flashHidden && desktopKill.flashTimer === 0,
+    'desktop unit death must immediately hide its attached turret flash and clear its timer');
   await desktop.bringToFront();
   try {
     await desktop.waitForFunction(({ frameCount, time, life }) => {
@@ -599,6 +601,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileKill = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
   console.log('MOBILE_UNIT_DEATH ' + JSON.stringify(mobileKill));
   assert.ok(mobileKill.targetDead && mobileKill.targetRemoved && mobileKill.killsDelta === 1 && mobileKill.creditsDelta >= 50 && mobileKill.modelExplosions === 1, 'mobile unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
+  assert.ok(mobileKill.flashWasActive && mobileKill.flashHidden && mobileKill.flashTimer === 0,
+    'mobile unit death must immediately hide its attached turret flash and clear its timer');
   await mobile.bringToFront();
   try {
     await mobile.waitForFunction(({ frameCount, time, life }) => {
