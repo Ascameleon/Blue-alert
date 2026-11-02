@@ -217,6 +217,7 @@ def main():
         "new THREE.Quaternion()",
         "new THREE.ConeGeometry(radius, height, segments, 1)",
         "geometry.userData",
+        "if (!firstTreeFocus) firstTreeFocus = { x, z, scale };",
     )
     missing = [feature for feature in required_tree_features if feature not in tree_section]
     if missing:
