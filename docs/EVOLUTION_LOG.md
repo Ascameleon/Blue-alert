@@ -283,3 +283,14 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Visual review: the new tapered body, nested elbow/knee articulation, hands and walking pose are visible in the actual V94 model preview and live gait captures. The character remains a stylized procedural low-poly soldier and appears small at the normal RTS camera distance. **The commercial-grade modern target is not achieved.** No release/version was created and no PR was merged.
 - PR #37 remains open, mergeable and in draft with an accurately scoped title/body: [refine faction infantry anatomy and surface finish](https://github.com/Ascameleon/Blue-alert/pull/37). The previous successful exact head a8d5660b8dac9698016eb534f23b25090700a1f3 and current head are both preserved in the same PR lineage.
 - OpenRTS remains a separate native engine and does not import these V94 Three.js infantry meshes. Mobile browser evidence is 390×844 emulation, not a physical Samsung test. Three.js remains CDN-loaded, so the browser build requires internet access for the renderer. No paid assets, APIs, credits or services; budget remains 0 €.
+
+
+## Cycle — cached model-explosion animation data (2026-11-02)
+
+- Base: merged main commit `05e9f7a74bf2e0340410d7a2d3f5a1d93bd4cdc1`; dedicated branch: `perf/v94-cached-explosion-animation-20261102`.
+- Verified performance signal from exact-head workflow [41411923975](https://github.com/Ascameleon/Blue-alert/actions/runs/41411923975): the 390×844 Chromium cleanup probe reported 16.4 FPS while waiting for model explosions and impact effects to expire. This is a synthetic CI browser measurement, not a physical Samsung benchmark.
+- Root cause selected for this pass: each live model explosion traversed its entire Three.js object tree every animation frame, allocated a materials array per mesh, and cloned a spark direction vector every frame.
+- Change: cache the explosion's named animated mesh references, base transforms, transparent materials/opacities and normalized spark directions once when the effect is spawned. The frame loop now updates the cached part list directly; effect geometry, lifetime, opacity curves and spawn visuals are retained.
+- Acceptance: desktop and 390×844 mobile death tests assert at least 20 cached animated parts, the `cached-parts-v1` profile, a changed transform checksum after animation, and complete removal of cached snapshots after cleanup. Static validation forbids scene traversal in the per-frame model-explosion branch while requiring spawn-time caching.
+- Exact-head desktop/mobile WebGL, gameplay, standalone build, OpenRTS and native checks are pending. No performance improvement or merge is claimed before CI measurements and screenshots are inspected.
+- Budget remains 0 €; original procedural geometry only. Physical Samsung validation remains outstanding.
