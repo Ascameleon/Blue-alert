@@ -63,3 +63,15 @@ The existing \`createTank(THREE, { team, variant, scale })\` API and V94 combat 
 - Runtime optimization commit: \`387c2deed19a5473488422caabb807f623c6c9a9\`.
 - Preview diagnostics now expose the detail-instance counts. Regression checks enforce a compact mesh count and a maximum of 60 draw calls for one previewed tank; both factions must satisfy the same budget.
 - Validation for this optimization is pending; do not infer a draw-call reduction until the next exact-head browser preview run reports it.
+
+
+## Cycle — softened BLUE SENTINEL and RED BASTION armor silhouettes
+
+- Parent revision: `36886553c9cb3e21a8682890bfb4110ae199e085` on the existing faction-tank PR branch.
+- Runtime/model commit: `d7cf6019fadd82cb88ca148d8586b1dd7b50bafe`.
+- Scope: the same V94-loaded `createTank(THREE, { team, variant, scale })` model path; no detached render-only asset.
+- Visual correction: replaced plain rectangular primitives on the major hull, glacis, engine deck, turret shells, faction cheek plates, side skirts and heavy reinforcements with chamfered, bevel-extruded geometry. Repeated armor details stay instanced.
+- Preview framing: desktop tank preview moved closer while keeping a wider safety distance on narrow mobile viewports.
+- Regression coverage: static checks require the bevel geometry helper and V94 `BLUE_MODELS.createTank` integration; browser checks verify at least 12 bevelled armor parts on each faction, named hull/turret parts, triangle budget, and existing draw-call budget.
+- Existing gameplay contracts preserved: outer unit group, `userData.turret`, collision, HP, movement, targeting and weapons.
+- Validation boundary: source changes are committed to the existing PR branch. The exact-head GitHub Actions workflow must finish before this cycle can be marked CI-verified. Physical Samsung testing remains not performed. OpenRTS smoke tests validate its separate native engine path and do not import these Three.js tank meshes.
