@@ -135,6 +135,9 @@ def main():
         "instanced-cargo-crates",
         "instanced-hazard-barrels",
         "window.__BLUE_ALERTS_ENVIRONMENT",
+        "function insideIndustrialSet(",
+        "exclusionZones:[",
+        "clearanceZones:industrialYard.exclusionZones.length",
         "runtimeIntegrated:true",
         "blocksMovement:false",
     )
