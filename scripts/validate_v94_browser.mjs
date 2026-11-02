@@ -112,6 +112,7 @@ async function metrics(page) {
       startupError: !!document.getElementById('blueStartupError'),
       terrain: window.__BLUE_ALERTS_TERRAIN || null,
       terrainDressing: window.__BLUE_ALERTS_TERRAIN_DRESSING || null,
+      vegetation: window.__BLUE_ALERTS_VEGETATION || null,
       environment: window.__BLUE_ALERTS_ENVIRONMENT || null
     };
   });
@@ -135,6 +136,12 @@ try {
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
   assert.ok(desktopMetrics.terrainDressing?.scrubInstances >= 160 && desktopMetrics.terrainDressing.roadMarkers === 26,
     'desktop battlefield must include instanced scrub and reflective supply-road markers');
+  assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
+    desktopMetrics.vegetation.trunkInstances === desktopMetrics.vegetation.treeCount &&
+    desktopMetrics.vegetation.foliageInstances === desktopMetrics.vegetation.treeCount &&
+    desktopMetrics.vegetation.foliageTiers === 3 && desktopMetrics.vegetation.rockInstances >= 30 &&
+    desktopMetrics.vegetation.renderGroups === 3 && desktopMetrics.vegetation.blocksMovement === false,
+    'desktop vegetation must render layered tree silhouettes and field rocks in three non-blocking instanced groups');
   assert.ok(desktopMetrics.environment?.runtimeIntegrated &&
     desktopMetrics.environment.clusterCount === 4 &&
     desktopMetrics.environment.cargoCrates === 18 &&
@@ -359,6 +366,12 @@ try {
   assert.ok(mobileMetrics.canvasRect.width >= 380 && mobileMetrics.canvasRect.height >= 600, 'mobile battlefield must retain a usable touch area');
   assert.ok(mobileMetrics.startOverlayHidden && !mobileMetrics.fallback && !mobileMetrics.runtimeError && !mobileMetrics.startupError, 'mobile game must start in the 3D runtime without fallback/errors');
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
+  assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
+    mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
+    mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&
+    mobileMetrics.vegetation.foliageTiers === 3 && mobileMetrics.vegetation.rockInstances >= 15 &&
+    mobileMetrics.vegetation.renderGroups === 3 && mobileMetrics.vegetation.blocksMovement === false,
+    'mobile vegetation must preserve layered trees and instanced rocks without blocking gameplay');
   assert.ok(mobileMetrics.environment?.runtimeIntegrated &&
     mobileMetrics.environment.clusterCount === 4 &&
     mobileMetrics.environment.cargoCrates === 18 &&
