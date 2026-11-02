@@ -139,12 +139,22 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     headScale:current?.userData?.headScale??null,
     bodyGeometryProfile:current?.userData?.bodyGeometryProfile||null,
     animationJointProfile:current?.userData?.animationJointProfile||null,
+    locomotionProfile:current?.userData?.locomotionProfile||null,
+    pelvisBob:current?.userData?.animationRig?.pelvis
+      ? Number((current.userData.animationRig.pelvis.position.y-.75).toFixed(4)) : null,
+    leftAnkleLift:current?.userData?.animationRig?.leftAnkle
+      ? Number((current.userData.animationRig.leftAnkle.position.y+.28).toFixed(4)) : null,
+    rightAnkleLift:current?.userData?.animationRig?.rightAnkle
+      ? Number((current.userData.animationRig.rightAnkle.position.y+.28).toFixed(4)) : null,
     weaponGripProfile:current?.userData?.weaponGripProfile||null,
     jointDiagnostics:{
+      pelvis:!!current?.userData?.animationRig?.pelvis,
       leftElbow:!!current?.userData?.animationRig?.leftElbow,
       rightElbow:!!current?.userData?.animationRig?.rightElbow,
       leftKnee:!!current?.userData?.animationRig?.leftKnee,
-      rightKnee:!!current?.userData?.animationRig?.rightKnee
+      rightKnee:!!current?.userData?.animationRig?.rightKnee,
+      leftAnkle:!!current?.userData?.animationRig?.leftAnkle,
+      rightAnkle:!!current?.userData?.animationRig?.rightAnkle
     },
     cameraDistance:camera.position.length(),
     boundsMinY:bounds?.min.y??null,

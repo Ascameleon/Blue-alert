@@ -483,7 +483,11 @@ try {
   const infantryWalkStart = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
   await desktop.waitForFunction(start => {
     const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
-    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 && Math.abs(state.leftLeg - state.rightLeg) > 0.1;
+    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 &&
+      Math.abs(state.leftLeg - state.rightLeg) > 0.1 &&
+      state.locomotionProfile === 'PLANTED_FOOT_WEIGHT_SHIFT_V1' &&
+      (Math.abs(state.pelvisSway) > 0.002 || state.pelvisBob > 0.002) &&
+      Math.max(state.leftAnkleLift, state.rightAnkleLift) > 0.004;
   }, infantryWalkStart.position, { timeout: 5000, polling: 50 });
   assert.equal(infantryReady.weaponGripProfile, 'TWO_HAND_FORWARD_READY_V1',
     'desktop V94 rifleman must use the existing two-hand forward weapon rig');
@@ -497,6 +501,11 @@ try {
     desktopInfantryGait.leftGripError < .09 && desktopInfantryGait.rightGripError < .09 &&
     desktopInfantryGait.muzzleAxisDot > .99,
     'desktop V94 infantry gait must preserve both rifle grips and the forward muzzle axis while moving');
+  assert.ok(desktopInfantryGait.locomotionProfile === 'PLANTED_FOOT_WEIGHT_SHIFT_V1' &&
+    (Math.abs(desktopInfantryGait.pelvisSway) > 0.002 || desktopInfantryGait.pelvisBob > 0.002) &&
+    Math.max(desktopInfantryGait.leftAnkleLift, desktopInfantryGait.rightAnkleLift) > 0.004 &&
+    (Math.abs(desktopInfantryGait.leftAnklePitch) > 0.015 || Math.abs(desktopInfantryGait.rightAnklePitch) > 0.015),
+    'desktop live infantry must show weight shift, ankle lift and articulated foot pitch during locomotion');
   await desktop.locator('#toast').evaluate(el => { el.style.opacity = '0'; el.textContent = ''; });
   await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
   const desktopInfantryFire = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.fireInfantry());
@@ -940,7 +949,11 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileInfantryWalkStart = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
   await mobile.waitForFunction(start => {
     const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
-    return state && state.position[0] > start[0] + 0.25 && state.walkAmount > 0.15 && Math.abs(state.leftLeg - state.rightLeg) > 0.08;
+    return state && state.position[0] > start[0] + 0.25 && state.walkAmount > 0.15 &&
+      Math.abs(state.leftLeg - state.rightLeg) > 0.08 &&
+      state.locomotionProfile === 'PLANTED_FOOT_WEIGHT_SHIFT_V1' &&
+      (Math.abs(state.pelvisSway) > 0.002 || state.pelvisBob > 0.002) &&
+      Math.max(state.leftAnkleLift, state.rightAnkleLift) > 0.004;
   }, mobileInfantryWalkStart.position, { timeout: 6000, polling: 50 });
   assert.equal(mobileInfantryReady.weaponGripProfile, 'TWO_HAND_FORWARD_READY_V1',
     'mobile V94 rifleman must use the existing two-hand forward weapon rig');
@@ -953,6 +966,11 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     mobileInfantryGait.leftGripError < .09 && mobileInfantryGait.rightGripError < .09 &&
     mobileInfantryGait.muzzleAxisDot > .99,
     'mobile V94 infantry gait must preserve the rifle grip and forward muzzle axis while moving');
+  assert.ok(mobileInfantryGait.locomotionProfile === 'PLANTED_FOOT_WEIGHT_SHIFT_V1' &&
+    (Math.abs(mobileInfantryGait.pelvisSway) > 0.002 || mobileInfantryGait.pelvisBob > 0.002) &&
+    Math.max(mobileInfantryGait.leftAnkleLift, mobileInfantryGait.rightAnkleLift) > 0.004 &&
+    (Math.abs(mobileInfantryGait.leftAnklePitch) > 0.015 || Math.abs(mobileInfantryGait.rightAnklePitch) > 0.015),
+    'mobile live infantry must show weight shift, ankle lift and articulated foot pitch during locomotion');
   await mobile.locator('#toast').evaluate(el => { el.style.opacity = '0'; el.textContent = ''; });
   await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true });
   const mobileInfantryFire = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.fireInfantry());

@@ -546,6 +546,11 @@ export function createInfantry(THREE, options={}) {
   const g = new THREE.Group();
   g.name = 'BA_Infantry_' + factionProfile + '_' + role;
 
+  const pelvis = new THREE.Group();
+  pelvis.name = 'infantry-pelvis-rig';
+  pelvis.position.y = .75;
+  g.add(pelvis);
+
   const uniform = teamColor(THREE, team);
   const cloth = mat(THREE, isRed ? 0x51453d : 0x40545a, .9, .04);
   const armor = mat(THREE, isRed ? 0x75604e : 0x536f7a, .58, .28);
@@ -605,8 +610,8 @@ export function createInfantry(THREE, options={}) {
   // the outer V94 unit transform, hit area, selection ring or weapon controller.
   const torso = new THREE.Group();
   torso.name = 'infantry-torso-rig';
-  torso.position.y = 0.80;
-  g.add(torso);
+  torso.position.y = .05;
+  pelvis.add(torso);
   const anatomicalTorso = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
     [-.25,.135,.10],[-.20,.16,.115],[-.07,.175,.125],
     [.07,.195,.13],[.18,.21,.12],[.24,.175,.105]
@@ -641,8 +646,8 @@ export function createInfantry(THREE, options={}) {
   // Helmet and face have faction-specific silhouettes, not just recoloured cloth.
   const head = new THREE.Group();
   head.name = 'infantry-head-rig';
-  head.position.set(0, 1.17, 0);
-  g.add(head);
+  head.position.set(0, .42, 0);
+  pelvis.add(head);
   sphere(THREE, head, 'head', .13, [0, 0, 0], dark, [.86, 1.02, .88]);
   // Sculpted helmet shell: faceted crown, raised brow and side protection.
   const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 16, 10), cloth);
@@ -693,8 +698,8 @@ export function createInfantry(THREE, options={}) {
   const makeArm = (side, label) => {
     const pivot = new THREE.Group();
     pivot.name = label + '-arm-pivot';
-    pivot.position.set(side * .215, .99, .015);
-    g.add(pivot);
+    pivot.position.set(side * .215, .24, .015);
+    pelvis.add(pivot);
     sphere(THREE, pivot, label + '-shoulder-pad', .105, [0, -.045, .015], armor, [.95, .78, 1.02]);
     beveledBox(THREE,pivot,label+'-angular-pauldron',[.17,.12,.17],[side*.01,-.045,.025],armor,[0,0,side*-.08],.018);
     const upperArm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
@@ -759,8 +764,15 @@ export function createInfantry(THREE, options={}) {
     calf.name = label + '-calf-loft';
     calf.position.z=.005; calf.castShadow=true; calf.receiveShadow=true; knee.add(calf);
     beveledBox(THREE,knee,label+'-shin-armor',[.13,.19,.065],[0,-.15,.078],armor,[0,0,0],.012);
-    beveledBox(THREE,knee,label+'-reinforced-combat-boot',[.17,.13,.24],[0,-.31,.085],rubber,[0,0,0],.016);
-    return { pivot, knee };
+    const ankle = new THREE.Group();
+    ankle.name = label + '-ankle-pivot';
+    ankle.position.set(0,-.28,.005);
+    knee.add(ankle);
+    beveledBox(THREE,ankle,label+'-ankle-cuff',[.145,.16,.13],[0,.045,.005],armor,[0,0,0],.012);
+    beveledBox(THREE,ankle,label+'-reinforced-combat-boot',[.17,.13,.24],[0,-.03,.08],rubber,[0,0,0],.016);
+    beveledBox(THREE,ankle,label+'-reinforced-combat-boot-sole',[.18,.025,.25],[0,-.097,.085],dark,[0,0,0],.008);
+    beveledBox(THREE,ankle,label+'-reinforced-combat-boot-toe-cap',[.145,.065,.105],[0,-.02,.18],armor,[0,0,0],.012);
+    return { pivot, knee, ankle };
   };
   const leftLeg = makeLeg(-1, 'left');
   const rightLeg = makeLeg(1, 'right');
@@ -768,8 +780,8 @@ export function createInfantry(THREE, options={}) {
   // A compact assault pack, radio, antenna and field canteen finish the rear silhouette.
   const pack = new THREE.Group();
   pack.name = 'infantry-field-pack';
-  pack.position.set(0, .79, -.17);
-  g.add(pack);
+  pack.position.set(0, .04, -.17);
+  pelvis.add(pack);
   box(THREE, pack, 'radio-backpack', [.25, .34, .16], [0, 0, 0], cloth);
   box(THREE, pack, 'backpack-top-flap', [.23, .075, .17], [0, .16, 0], armor);
   for (const side of [-1, 1]) {
@@ -782,10 +794,10 @@ export function createInfantry(THREE, options={}) {
   // Two explicit sockets keep the right hand on the pistol grip and the left on the fore-end.
   const rifleGroup = new THREE.Group();
   rifleGroup.name = 'infantry-assault-rifle';
-  rifleGroup.position.set(0, .73, .24);
+  rifleGroup.position.set(0, -.02, .24);
   rifleGroup.rotation.y = -Math.PI / 2;
   rifleGroup.userData.weaponForwardAxis = '+Z';
-  g.add(rifleGroup);
+  pelvis.add(rifleGroup);
   const rifle = beveledBox(THREE, rifleGroup, 'rifle-receiver', [.48,.06,.075], [0,0,0], rifleMat, [0,0,0], .012);
   rifle.userData.keepSeparateForCombat = true;
   beveledBox(THREE, rifleGroup, 'rifle-stock', [.18,.085,.095], [-.3,-.005,-.005], dark, [0,0,0], .012);
@@ -853,12 +865,14 @@ export function createInfantry(THREE, options={}) {
   const renderOptimization = mergeInfantryStaticMeshes(THREE, g);
 
   const animationRig = {
+    pelvis,
     leftArm:leftArm.pivot, rightArm:rightArm.pivot,
     leftElbow:leftArm.elbow, rightElbow:rightArm.elbow,
     leftHand:leftArm.hand, rightHand:rightArm.hand,
     leftLeg:leftLeg.pivot, rightLeg:rightLeg.pivot,
     leftKnee:leftLeg.knee, rightKnee:rightLeg.knee,
-    torso, head, phase:0, walkAmount:0
+    leftAnkle:leftLeg.ankle, rightAnkle:rightLeg.ankle,
+    torso, head, weaponRig:rifleGroup, phase:0, walkAmount:0
   };
   g.userData = {
     kind: 'infantry', role, team, factionProfile, weapon: rifle,
@@ -869,7 +883,8 @@ export function createInfantry(THREE, options={}) {
     animationRig,
     renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V3',
     bodyGeometryProfile:'ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1',
-    animationJointProfile:'SHOULDER_ELBOW_HIP_KNEE_V1',
+    animationJointProfile:'PELVIS_SHOULDER_ELBOW_HIP_KNEE_ANKLE_V2',
+    locomotionProfile:'PLANTED_FOOT_WEIGHT_SHIFT_V1',
     weaponGripProfile:'TWO_HAND_FORWARD_READY_V1',
     armorDetailParts: renderOptimization.sourceMeshCount,
     surfaceFinish: surfaceTextures ? 'FIELDWEAVE_CERAMIC_MICROSCUFF_V2' : 'UNTEXTURED_FALLBACK',
@@ -890,6 +905,13 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
   rig.phase = (rig.phase || 0) + dt * (intensity > .02 ? 11 : 2.2);
   const swing = Math.sin(rig.phase) * .32 * intensity;
   const idle = Math.sin(rig.phase * .5) * .018;
+  const leftLift = Math.max(0, Math.sin(rig.phase + .45)) * .026 * intensity;
+  const rightLift = Math.max(0, Math.sin(rig.phase + Math.PI + .45)) * .026 * intensity;
+  if (rig.pelvis) {
+    rig.pelvis.position.y = .75 + Math.abs(Math.sin(rig.phase * 2)) * .014 * intensity;
+    rig.pelvis.rotation.z = Math.sin(rig.phase * 2) * .016 * intensity;
+    rig.pelvis.rotation.x = -.018 * intensity + Math.cos(rig.phase * 2) * .008 * intensity;
+  }
   rig.leftLeg.rotation.x = swing + idle;
   rig.rightLeg.rotation.x = -swing + idle;
   rig.leftKnee.rotation.x = Math.max(0, Math.sin(rig.phase + .35)) * .46 * intensity;
@@ -898,8 +920,22 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
   rig.rightArm.rotation.x = swing * .14 - .04 - idle;
   rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.045*intensity;
   rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.045*intensity;
-  rig.torso.rotation.z = idle * .55;
-  rig.head.rotation.x = idle * .25;
+  if (rig.leftAnkle) {
+    rig.leftAnkle.position.y = -.28 + leftLift;
+    rig.leftAnkle.rotation.x = -rig.leftLeg.rotation.x * .42 + leftLift * 1.8;
+  }
+  if (rig.rightAnkle) {
+    rig.rightAnkle.position.y = -.28 + rightLift;
+    rig.rightAnkle.rotation.x = -rig.rightLeg.rotation.x * .42 + rightLift * 1.8;
+  }
+  if (rig.torso) {
+    rig.torso.rotation.z = (rig.pelvis?.rotation.z || 0) * .28;
+    rig.torso.rotation.x = (rig.pelvis?.rotation.x || 0) * .22;
+  }
+  if (rig.head) {
+    rig.head.rotation.z = -(rig.pelvis?.rotation.z || 0) * .55;
+    rig.head.rotation.x = -(rig.pelvis?.rotation.x || 0) * .35 + idle * .25;
+  }
   rig.walkAmount = intensity;
   return true;
 }

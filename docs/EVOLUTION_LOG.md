@@ -500,3 +500,15 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Test-only correction commit: `15d39a2c11bcb78de17ec4a0c45752a5c3931855`. Before the mobile controlled-fire baseline is measured, the browser test now brings the page to the foreground, suppresses unrelated AI combat orders, waits for active projectiles and visible model muzzle flashes to drain, and asserts a zero-effect baseline before issuing the direct QA shot. The exact `+1` muzzle-flash assertion is retained; production combat, movement, damage and animation code are unchanged.
 - The documentation update is a separate child commit of the test correction. The final branch head must receive a fresh exact-head workflow before any further branch write, review acceptance or merge. The branch remains a draft PR and no game version/release is created.
 - Evidence boundaries: mobile 390×844 is browser emulation, not a physical Samsung test; the web V94 runtime and OpenRTS native engine are separate; OpenRTS has not been revalidated on this failed run. The soldier remains stylized procedural low-poly and still requires substantial anatomy, material, helmet/face, and animation refinement. Budget: 0 €.
+
+
+## Cycle — articulated infantry weight shift and ankle locomotion (2026-11-02)
+
+- Base/head before this cycle: `79a030225a2e136014632484c539df1a069d2b29` on `art/v94-infantry-forward-grip-20261102`; accepted main remains `462b6d448c810485b597effcf3e60c708dbbd48e`.
+- Consolidated the soldier's torso, head, shoulder pivots, field pack and forward rifle under a shared pelvis rig while preserving their original world-space placement at rest. The legs remain on the existing outer unit transform, preserving selection, collision and displacement contracts.
+- Added independent ankle pivots with overlapping ankle cuffs, reinforced soles and toe caps. The existing shin/calf geometry remains attached to the knee; only the boot assembly articulates at the ankle.
+- Reworked deterministic gait with restrained pelvis weight shift/bob, head counter-stabilization, alternating ankle lift and foot pitch. The rifle and both hand rigs move with the same pelvis parent so the two-hand socket alignment and muzzle-origin firing contract remain coherent.
+- Added model-preview diagnostics and static/browser assertions for the pelvis/ankle hierarchy, locomotion profile, pelvis movement, ankle lift/pitch, retained hand grips and forward muzzle axis on desktop and 390×844 mobile browser emulation.
+- Changed files: `game-data/models/blue-alert-models.js`, `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `game-data/models/preview.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, `scripts/validate_model_kit.py`, `scripts/validate_model_preview_browser.mjs`, and this log.
+- Validation status at commit time: pending exact-head GitHub Actions. No screenshot or quality acceptance is claimed until fresh desktop and 390×844 mobile gameplay captures from the exact tested HEAD are generated and inspected. OpenRTS remains a separate native-engine check.
+- No version/release created; no paid assets, APIs, credits or services; budget 0 €.

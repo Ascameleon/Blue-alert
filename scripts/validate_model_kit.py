@@ -67,8 +67,11 @@ def main():
         raise SystemExit("FAIL: hero infantry sculpt is missing: " + ", ".join(missing))
     REQUIRED_ANATOMY = (
         "createInfantryLoftGeometry", "ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1",
-        "anatomical-torso-loft", "SHOULDER_ELBOW_HIP_KNEE_V1",
-        "TWO_HAND_FORWARD_READY_V1", "-elbow-pivot", "-knee-pivot",
+        "anatomical-torso-loft", "PELVIS_SHOULDER_ELBOW_HIP_KNEE_ANKLE_V2",
+        "PLANTED_FOOT_WEIGHT_SHIFT_V1", "infantry-pelvis-rig",
+        "TWO_HAND_FORWARD_READY_V1", "-elbow-pivot", "-knee-pivot", "-ankle-pivot",
+        "-reinforced-combat-boot-sole", "-reinforced-combat-boot-toe-cap",
+        "leftAnkle.rotation.x", "rightAnkle.rotation.x", "rig.pelvis.position.y",
         "-upper-arm-loft", "-forearm-loft", "-thigh-loft", "-calf-loft",
         "-glove-palm", "leftKnee.rotation.x", "rightKnee.rotation.x",
     )
@@ -79,6 +82,9 @@ def main():
     missing = [name for name in REQUIRED_BATCHING if name not in model]
     if missing:
         raise SystemExit("FAIL: infantry render batching contract missing: " + ", ".join(missing))
+    for token in ("locomotionProfile", "pelvisBob", "leftAnkleLift", "rightAnkleLift", "leftAnkle", "rightAnkle"):
+        if token not in preview:
+            raise SystemExit(f"FAIL: model preview is missing infantry locomotion diagnostic {token}")
     if "surfaceFinish" not in preview or "surfaceTextureCount" not in preview or "surfaceMaterialCount" not in preview:
         raise SystemExit("FAIL: preview must expose real infantry PBR surface-map diagnostics")
     if "mergedPartNames" not in preview or "renderOptimization" not in preview:

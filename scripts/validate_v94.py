@@ -287,7 +287,8 @@ def main():
     infantry_qa_end = source.index("const visibleModelMuzzleFlashCount", infantry_qa_start)
     infantry_qa_section = source[infantry_qa_start:infantry_qa_end]
     required_infantry_qa = ("weaponGripProfile", "leftGripError", "rightGripError",
-                            "muzzleAxisDot", "camDist = 9.5")
+                            "muzzleAxisDot", "pelvisBob", "pelvisSway", "leftAnklePitch",
+                            "rightAnklePitch", "leftAnkleLift", "rightAnkleLift", "camDist = 9.5")
     missing = [token for token in required_infantry_qa if token not in infantry_qa_section]
     if missing:
         raise SystemExit("FAIL: infantry QA must verify hand-to-rifle alignment and forward muzzle axis: " + ", ".join(missing))
@@ -346,6 +347,12 @@ def main():
         "desktop-v94-infantry-fire.png",
         "mobile-v94-infantry-fire-390x844.png",
         "fireInfantry()",
+        "desktopInfantryGait.locomotionProfile",
+        "desktopInfantryGait.pelvisBob",
+        "desktopInfantryGait.leftAnkleLift",
+        "mobileInfantryGait.locomotionProfile",
+        "mobileInfantryGait.pelvisBob",
+        "mobileInfantryGait.leftAnkleLift",
         "muzzleError",
         "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
         "desktop-v94-industrial-yard.png",
@@ -364,7 +371,25 @@ def main():
     for index, (script_type, code) in enumerate(parser.scripts, start=1):
         check_js(code, script_type == "module", f"HTML script #{index}")
 
-    check_js(MODEL_LIBRARY.read_text(encoding="utf-8"), True, "v94 model library")
+    model_source = MODEL_LIBRARY.read_text(encoding="utf-8")
+    required_infantry_rig = (
+        "pelvis.name = 'infantry-pelvis-rig'",
+        "pelvis.add(torso)",
+        "pelvis.add(head)",
+        "pelvis.add(pivot)",
+        "label + '-ankle-pivot'",
+        "label+'-reinforced-combat-boot-sole'",
+        "label+'-reinforced-combat-boot-toe-cap'",
+        "locomotionProfile:'PLANTED_FOOT_WEIGHT_SHIFT_V1'",
+        "rig.pelvis.position.y = .75",
+        "rig.leftAnkle.position.y = -.28 + leftLift",
+        "rig.rightAnkle.position.y = -.28 + rightLift",
+    )
+    missing = [feature for feature in required_infantry_rig if feature not in model_source]
+    if missing:
+        raise SystemExit("FAIL: infantry must use the articulated pelvis/ankle locomotion rig: " + ", ".join(missing))
+
+    check_js(model_source, True, "v94 model library")
     print(
         f"PASS: {HTML}; {len(parser.scripts)} inline script(s), "
         f"model library {MODEL_LIBRARY.stat().st_size} bytes; JavaScript syntax valid."
