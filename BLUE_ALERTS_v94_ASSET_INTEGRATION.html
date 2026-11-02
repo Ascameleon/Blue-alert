@@ -678,6 +678,300 @@ addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
 for (let x = -95; x < 95; x += 6) addBox(scene, x, 0.055, 0, 2.4, 0.01, 0.12, MAT.line);
 
 
+// Battle-worn logistics corridor: connected road shoulders, service spur and wear.
+// All detail is procedural, deterministic and visual-only; it does not alter navigation.
+function addBattlefieldWear() {
+  const root = new THREE.Group();
+  root.name = 'battlefield-wear-v94';
+  root.userData = { kind: 'environment-wear', id: 'logistics-corridor-wear-v94', blocksMovement: false };
+  scene.add(root);
+
+  const shoulderPositions = [], shoulderColors = [];
+  const pushColoredQuad = (positions, colors, a, b, c, d, hex, seed) => {
+    const base = new THREE.Color(hex);
+    const verts = [a, b, c, a, c, d];
+    for (let i = 0; i < verts.length; i++) {
+      const v = verts[i];
+      positions.push(v[0], v[1], v[2]);
+      const shade = 0.88 + terrainHash(seed + i, 411) * 0.22;
+      const color = base.clone().multiplyScalar(shade);
+      colors.push(color.r, color.g, color.b);
+    }
+  };
+  const pushColoredTriangle = (positions, colors, a, b, c, hex, seed) => {
+    const base = new THREE.Color(hex);
+    for (let i = 0; i < 3; i++) {
+      const v = [a, b, c][i];
+      positions.push(v[0], v[1], v[2]);
+      const color = base.clone().multiplyScalar(0.90 + terrainHash(seed + i, 419) * 0.18);
+      colors.push(color.r, color.g, color.b);
+    }
+  };
+  for (const side of [-1, 1]) {
+    for (let segment = 0; segment < 50; segment++) {
+      const x0 = -100 + segment * 4;
+      const x1 = x0 + 4;
+      const inner0 = side * (2.58 + terrainHash(segment, 201 + side) * 0.08);
+      const inner1 = side * (2.58 + terrainHash(segment + 1, 201 + side) * 0.08);
+      const outer0 = side * (4.05 + terrainHash(segment, 231 + side) * 0.48);
+      const outer1 = side * (4.05 + terrainHash(segment + 1, 231 + side) * 0.48);
+      pushColoredQuad(
+        shoulderPositions, shoulderColors,
+        [x0, 0.038, inner0], [x1, 0.038, inner1],
+        [x1, 0.038, outer1], [x0, 0.038, outer0],
+        0x6a6148, segment * 7 + side * 29
+      );
+    }
+  }
+  // Concrete shoulders on the gantry service spur join the main road to the apron.
+  for (const side of [-1, 1]) {
+    const x0 = side < 0 ? 3.05 : 10.95;
+    const x1 = side < 0 ? 4.95 : 12.85;
+    pushColoredQuad(
+      shoulderPositions, shoulderColors,
+      [x0, 0.052, -2.6], [x1, 0.052, -2.6],
+      [x1, 0.052, -33.0], [x0, 0.052, -33.0],
+      0x77776a, side + 91
+    );
+  }
+  const shoulderGeometry = new THREE.BufferGeometry();
+  shoulderGeometry.setAttribute('position', new THREE.Float32BufferAttribute(shoulderPositions, 3));
+  shoulderGeometry.setAttribute('color', new THREE.Float32BufferAttribute(shoulderColors, 3));
+  shoulderGeometry.computeVertexNormals();
+  const shoulderMesh = new THREE.Mesh(
+    shoulderGeometry,
+    new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 })
+  );
+  shoulderMesh.name = 'logistics-road-worn-shoulders';
+  shoulderMesh.receiveShadow = !isMobile;
+  root.add(shoulderMesh);
+
+  // A raised, continuous access spur ties the road to the existing loading-gantry apron.
+  const spurBase = new THREE.Mesh(
+    new THREE.BoxGeometry(9.8, 0.035, 32),
+    new THREE.MeshStandardMaterial({ color: 0x66685f, roughness: 0.96, metalness: 0.02 })
+  );
+  spurBase.name = 'gantry-access-concrete-spur';
+  spurBase.position.set(8, 0.035, -18);
+  spurBase.receiveShadow = !isMobile;
+  root.add(spurBase);
+  const spurSurface = new THREE.Mesh(
+    new THREE.BoxGeometry(5.8, 0.025, 32),
+    new THREE.MeshStandardMaterial({ color: 0x343a3b, roughness: 0.98, metalness: 0.01 })
+  );
+  spurSurface.name = 'gantry-access-asphalt';
+  spurSurface.position.set(8, 0.065, -18);
+  spurSurface.receiveShadow = !isMobile;
+  root.add(spurSurface);
+
+  // Tire wear is drawn as broken, slightly irregular twin tracks, not solid black rails.
+  const tirePositions = [];
+  const pushTireX = (x0, x1, z, width, seed) => {
+    const drift = (terrainHash(seed, 501) - 0.5) * 0.07;
+    const half = width * (0.82 + terrainHash(seed, 502) * 0.36) * 0.5;
+    const y = 0.061;
+    tirePositions.push(
+      x0, y, z - half + drift, x1, y, z - half - drift,
+      x1, y, z + half - drift, x0, y, z - half + drift,
+      x1, y, z + half - drift, x0, y, z + half + drift
+    );
+  };
+  const pushTireZ = (x, z0, z1, width, seed) => {
+    const drift = (terrainHash(seed, 511) - 0.5) * 0.07;
+    const half = width * (0.82 + terrainHash(seed, 512) * 0.36) * 0.5;
+    const y = 0.081;
+    tirePositions.push(
+      x - half + drift, y, z0, x + half + drift, y, z0,
+      x + half - drift, y, z1, x - half + drift, y, z0,
+      x + half - drift, y, z1, x - half - drift, y, z1
+    );
+  };
+  let tireSegments = 0;
+  for (let x = -96; x < 96; x += 2.8) {
+    for (const z of [-0.76, 0.76]) {
+      if (terrainHash(Math.round(x + 100), z < 0 ? 521 : 522) < 0.17) continue;
+      pushTireX(x, x + 2.25, z, 0.17, Math.round(x * 10) + (z < 0 ? 1 : 2));
+      tireSegments++;
+    }
+  }
+  for (let z = -32; z < -2; z += 2.5) {
+    for (const x of [7.25, 8.75]) {
+      if (terrainHash(Math.round(z + 40), x < 8 ? 531 : 532) < 0.12) continue;
+      pushTireZ(x, z, z + 2.05, 0.16, Math.round(z * 10) + Math.round(x));
+      tireSegments++;
+    }
+  }
+  const tireGeometry = new THREE.BufferGeometry();
+  tireGeometry.setAttribute('position', new THREE.Float32BufferAttribute(tirePositions, 3));
+  const tireMesh = new THREE.Mesh(
+    tireGeometry,
+    new THREE.MeshBasicMaterial({
+      color: 0x202a2b, transparent: true, opacity: 0.30,
+      depthWrite: false, side: THREE.DoubleSide
+    })
+  );
+  tireMesh.name = 'logistics-tire-wear';
+  root.add(tireMesh);
+
+  // Irregular asphalt repairs blend into the original road surface.
+  const patchPositions = [], patchColors = [];
+  const addPatch = (cx, cz, rx, rz, seed, colorHex) => {
+    const y = cz < -3 ? 0.081 : 0.063;
+    const center = [cx, y, cz];
+    const points = [];
+    const count = 7;
+    for (let i = 0; i < count; i++) {
+      const angle = i / count * Math.PI * 2;
+      const irregular = 0.78 + terrainHash(seed + i, 541) * 0.34;
+      points.push([
+        cx + Math.cos(angle) * rx * irregular,
+        y,
+        cz + Math.sin(angle) * rz * irregular
+      ]);
+    }
+    for (let i = 0; i < count; i++) {
+      pushColoredTriangle(patchPositions, patchColors, center, points[i], points[(i + 1) % count], colorHex, seed + i * 3);
+    }
+  };
+  [
+    [-67, -0.42, 3.8, 0.62, 17, 0x424849],
+    [-38, 0.36, 2.8, 0.50, 29, 0x3b4242],
+    [-8, -0.30, 2.4, 0.43, 41, 0x48504d],
+    [34, 0.42, 3.5, 0.58, 53, 0x3b4141],
+    [71, -0.35, 4.0, 0.55, 67, 0x454a47],
+    [7.4, -12.5, 0.42, 3.0, 79, 0x424747],
+    [8.5, -25.5, 0.38, 2.2, 83, 0x454a49]
+  ].forEach(p => addPatch(...p));
+  const patchGeometry = new THREE.BufferGeometry();
+  patchGeometry.setAttribute('position', new THREE.Float32BufferAttribute(patchPositions, 3));
+  patchGeometry.setAttribute('color', new THREE.Float32BufferAttribute(patchColors, 3));
+  patchGeometry.computeVertexNormals();
+  const patchMesh = new THREE.Mesh(
+    patchGeometry,
+    new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 1, metalness: 0,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1
+    })
+  );
+  patchMesh.name = 'worn-asphalt-repair-patches';
+  root.add(patchMesh);
+
+  // Fine branching cracks: one batched line object across the road and spur.
+  const crackPositions = [];
+  const addCrack = (points) => {
+    for (let i = 0; i < points.length - 1; i++) {
+      const y = points[i][1] < -3 ? 0.084 : 0.067;
+      crackPositions.push(
+        points[i][0], y, points[i][1],
+        points[i + 1][0], y, points[i + 1][1]
+      );
+    }
+  };
+  for (let i = 0; i < 7; i++) {
+    const x = -82 + i * 26;
+    const z = (terrainHash(i, 571) - 0.5) * 1.1;
+    addCrack([
+      [x - 1.6, z - 0.16], [x - 0.8, z + 0.05],
+      [x - 0.15, z - 0.10], [x + 0.55, z + 0.22], [x + 1.5, z + 0.12]
+    ]);
+    addCrack([[x - 0.15, z - 0.10], [x - 0.35, z - 0.58], [x - 0.72, z - 0.83]]);
+    addCrack([[x + 0.55, z + 0.22], [x + 0.84, z + 0.62], [x + 1.18, z + 0.76]]);
+  }
+  for (const z of [-8, -18, -28]) {
+    const x = 8 + (terrainHash(Math.round(z), 581) - 0.5) * 1.2;
+    addCrack([[x - 0.55, z], [x - 0.12, z + 0.35], [x + 0.2, z + 0.12], [x + 0.62, z + 0.48]]);
+    addCrack([[x + 0.2, z + 0.12], [x + 0.32, z - 0.36]]);
+  }
+  const crackGeometry = new THREE.BufferGeometry();
+  crackGeometry.setAttribute('position', new THREE.Float32BufferAttribute(crackPositions, 3));
+  const crackLines = new THREE.LineSegments(
+    crackGeometry,
+    new THREE.LineBasicMaterial({ color: 0x202726, transparent: true, opacity: 0.68 })
+  );
+  crackLines.name = 'road-and-spur-crack-lines';
+  root.add(crackLines);
+
+  // Drainage grates sit flush with both shoulders at regular service intervals.
+  const drainGeometry = new THREE.BoxGeometry(0.82, 0.025, 0.30);
+  const drainMaterial = new THREE.MeshStandardMaterial({ color: 0x343d3f, roughness: 0.82, metalness: 0.42 });
+  const drains = new THREE.InstancedMesh(drainGeometry, drainMaterial, 10);
+  drains.name = 'logistics-road-drain-grates';
+  const dummy = new THREE.Object3D();
+  let drainIndex = 0;
+  for (const x of [-72, -36, 0, 36, 72]) {
+    for (const side of [-1, 1]) {
+      dummy.position.set(x, 0.064, side * 2.28);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      drains.setMatrixAt(drainIndex++, dummy.matrix);
+    }
+  }
+  drains.instanceMatrix.needsUpdate = true;
+  root.add(drains);
+
+  // Faded safety bars mark the point where the spur enters the gantry apron.
+  const barGeometry = new THREE.BoxGeometry(0.48, 0.012, 0.11);
+  const barMaterial = new THREE.MeshBasicMaterial({ color: 0xb28a42, transparent: true, opacity: 0.78 });
+  const bars = new THREE.InstancedMesh(barGeometry, barMaterial, 8);
+  bars.name = 'gantry-apron-worn-safety-bars';
+  for (let i = 0; i < 8; i++) {
+    dummy.position.set(5.7 + i * 0.66, 0.084, -31.1);
+    dummy.rotation.set(0, 0, (i % 2 ? 1 : -1) * 0.08);
+    dummy.updateMatrix();
+    bars.setMatrixAt(i, dummy.matrix);
+  }
+  bars.instanceMatrix.needsUpdate = true;
+  root.add(bars);
+
+  const metrics = {
+    id: 'logistics-corridor-wear-v94',
+    roadShoulderSegments: 100,
+    accessSpur: true,
+    tireSegments,
+    asphaltRepairPatches: 7,
+    crackSegments: crackPositions.length / 6,
+    drainGrates: drains.count,
+    safetyBars: bars.count,
+    renderObjects: root.children.length,
+    blocksMovement: false
+  };
+  window.__BLUE_ALERTS_BATTLEFIELD_WEAR = Object.freeze(metrics);
+  if (new URLSearchParams(location.search).get('environment') === '1') {
+    const cameraSnapshot = () => ({
+      target: [Number(camTarget.x.toFixed(2)), Number(camTarget.z.toFixed(2))],
+      yaw: Number(camYaw.toFixed(3)),
+      pitch: Number(camPitch.toFixed(3)),
+      distance: Number(camDist.toFixed(2))
+    });
+    const snapshot = () => ({
+      ...metrics,
+      visible: root.visible,
+      camera: cameraSnapshot()
+    });
+    window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA = Object.freeze({
+      snapshot,
+      focusRoad() {
+        camTarget.set(0, 0, 0);
+        camYaw = 0.4; camPitch = 0.72; camDist = isMobile ? 16 : 20;
+        camVelX = 0; camVelZ = 0;
+        return snapshot();
+      },
+      focusCorridor() {
+        camTarget.set(8, 0, -18);
+        camYaw = 0.4; camPitch = 0.82; camDist = isMobile ? 48 : 50;
+        camVelX = 0; camVelZ = 0;
+        return snapshot();
+      },
+      setVisible(visible) {
+        root.visible = !!visible;
+        return snapshot();
+      }
+    });
+  }
+  return metrics;
+}
+const battlefieldWear = addBattlefieldWear();
+
 /* ─── Industrial logistics yard — playable V94 environment content ───
    Four authored, non-blocking set pieces. Shared geometry and instancing
    keep the added draw calls and memory cost bounded on mobile. */
