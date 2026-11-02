@@ -265,8 +265,6 @@ def main():
         raise SystemExit("FAIL: logistics corridor wear is missing connected road/gantry detail: " + ", ".join(missing))
     if "blocksMovement: false" not in wear_section:
         raise SystemExit("FAIL: battlefield wear must remain visual-only and non-blocking")
-    if "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))" not in browser_test:
-        raise SystemExit("FAIL: desktop environment screenshots must clear the completed-mission overlay after its dedicated evidence capture")
 
     kill_start = source.index("function killUnit(u)")
     kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
@@ -283,6 +281,8 @@ def main():
         raise SystemExit("FAIL: combat QA must track the exact death explosion: " + ", ".join(missing))
 
     browser_test = BROWSER_TEST.read_text(encoding="utf-8")
+    if "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))" not in browser_test:
+        raise SystemExit("FAIL: desktop environment screenshots must clear the completed-mission overlay after its dedicated evidence capture")
     required_browser_test = (
         "desktopDeath.before.modelExplosions + 1",
         "mobileDeath.before.modelExplosions + 1",
@@ -309,6 +309,10 @@ def main():
         "desktop-v94-road-wear-detail.png",
         "mobile-v94-road-wear-baseline-390x844.png",
         "mobile-v94-road-wear-detail-390x844.png",
+        "desktop-v94-mission-complete.png",
+        "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
+        "desktop-v94-industrial-yard.png",
+        "desktop-v94-terrain-surface.png",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
