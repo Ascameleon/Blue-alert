@@ -426,3 +426,28 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Exact changed file for this correction: `scripts/validate_v94_browser.mjs`. The existing PR #46 change set remains the eight files listed above.
 - Workflow [41471494577](https://github.com/Ascameleon/Blue-alert/actions/runs/41471494577), run #341, was created for exact code/test head `1bba5798711c54efcf30e3b0cd3c3f1b778326d0` and was still pending with no job results at the time of this log entry. Combined commit-status query returned no status entries. No passing exact-head result is claimed.
 - Evidence boundaries: browser mobile is 390×844 emulation, not a physical Samsung test; OpenRTS is a separate native engine and was not reached in this failed run; Three.js remains CDN-loaded; no paid APIs, assets, credits or services were used. Budget: 0 €. No game version/release was created.
+
+
+## Cycle — isolate desktop VFX QA from autonomous skirmish fire (2026-11-02)
+
+- Working branch: `art/v94-tank-surface-finish-20261102`; accepted base remains `main` at `462b6d448c810485b597effcf3e60c708dbbd48e`. PR #46 remains draft and unmerged.
+- Inspected exact PR workflow [41471725971](https://github.com/Ascameleon/Blue-alert/actions/runs/41471725971), run #342. GitHub Actions checked the PR merge candidate `8e2f91fb26e73dbada60e4dbcfe9df4506de980d`, combining PR head `5a115bd91bd5719451842d5cca055ba51920ad64` with the accepted base.
+- Passed before the browser failure: repository/prototype validation, V94 static validation, expanded model-kit validation, imported V93 validation, skirmish-data validation, standalone V94 HTML build, and desktop/mobile model-preview rendering.
+- The live V94 desktop browser suite failed at the first combat-effect cleanup wait in `scripts/validate_v94_browser.mjs`. The log recorded zero active/model projectiles, zero muzzle flashes, zero impact rings and zero impact sparks, but one model explosion remained at lifetime `0.6949s` when the 15-second wall-clock wait expired. Autonomous combat had only been frozen after the controlled shot/death sequence, so earlier AI shots could still be in flight and enqueue late effects. The run did not reach live-game mobile rendering, standalone artifact upload, OpenRTS build/launch or native input checks. This is a browser-suite failure; it is not evidence of an OpenRTS compile failure.
+- Downloaded and inspected artifact [13155687816](https://github.com/Ascameleon/Blue-alert/actions/runs/41471725971/artifacts/13155687816). Inspected actual captures:
+  - `v94-browser/desktop-v94-tank-surface-baseline.png`
+  - `v94-browser/desktop-v94-tank-surface-detail.png`
+  - `v94-browser/desktop-v94-gameplay.png`
+  - `model-preview/desktop-blue-sentinel-tank-surface-baseline.png`
+  - `model-preview/desktop-blue-sentinel-tank-surface-detail.png`
+  - `model-preview/mobile-blue-sentinel-tank-surface-baseline-390x844.png`
+  - `model-preview/mobile-blue-sentinel-tank-surface-detail-390x844.png`
+- Visual review: the live desktop A/B pair makes the finish visible at tactical scale, but the mottling is still too camouflage-like and the change is modest. The model-preview desktop/mobile pairs show a stronger surface-map difference. No live-game mobile A/B pair exists in this artifact because the desktop suite stopped first. The commercial-grade visual gate remains incomplete; no release/version is authorized.
+- QA-only correction commit: `8f8311289f3f6aeff1a6b953a987a772489b260b` (`test: isolate desktop VFX probes from autonomous skirmish fire`). It changes only `scripts/validate_v94_browser.mjs`:
+  - Freeze autonomous combat before the controlled desktop VFX probes, rather than after the shot/death sequence.
+  - Keep the freeze active for the remainder of the desktop QA page; explicit `qa.fire()` and `qa.destroyEnemyUnit()` remain available.
+  - Extend the first cleanup allowance from 15 to 30 seconds for slow software-rendered RAF progression.
+  - Retain the full projectile, muzzle-flash, explosion, impact-ring and impact-spark cleanup assertion; no gameplay code, effect lifetime, pass threshold or combat behavior was weakened.
+- Changed files for this cycle: `scripts/validate_v94_browser.mjs` (code/test); `docs/EVOLUTION_LOG.md` (this evidence record).
+- The final documentation commit and exact-head validation result will be recorded after the completed workflow. No workflow was active when this branch update was prepared.
+- Evidence boundaries: desktop/mobile model-preview screenshots are actual browser renders; mobile is 390×844 emulation, not a physical Samsung test. OpenRTS is a separate native engine and was not reached in run #342. Three.js remains CDN-loaded. No paid APIs, assets, credits or services; budget 0 €. No game version/release was created.
