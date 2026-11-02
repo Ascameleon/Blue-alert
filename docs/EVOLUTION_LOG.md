@@ -153,3 +153,18 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Model documentation and static/browser regression checks accompany the runtime change.
 - Prior isolated exact-head workflow `41379372338` passed on the original PR head. This reconciliation creates a new exact head; the combined industrial-yard + tank suite must pass before merge.
 - No paid assets, APIs or services. Physical Samsung testing is not claimed; mobile remains 390×844 browser emulation.
+
+
+## Cycle — faction-specific infantry and displacement-linked gait ported to current V94 main (2026-11-02)
+
+- Base: `main` at `05635dd14eb9d40df44df509946ae42e83058060`; working branch: `feat/blue-alerts-infantry-current-main-20261102`.
+- Ported only the infantry-specific constructor and gait work from the earlier PR #32 branch; retained the current-main tank profiles, industrial logistics yard, layered vegetation and procedural terrain instead of replacing the newer model library.
+- BLUE SENTINEL rifleman: low-profile helmet, cyan visor/comms hardware, lighter carrier, shoulder marks and segmented armor.
+- RED BASTION rifleman: reinforced brow/jaw guard, cheek plates, heavier pauldrons and warm optics.
+- Both profiles add layered magazine/utility pouches, backpack/radio, antenna, canteen, articulated arms/legs, combat boots and a detailed assault rifle. Repeated pouches are instanced.
+- The existing V94 `createUnit(..., 'infantry')` path now retains a child animation rig on the outer unit. The movement loop drives opposing arm/leg pivots from measured per-frame displacement and uses a restrained idle-breathing motion. Unit position, collision, selection, HP, speed, weapon and targeting contracts remain on the unchanged outer group.
+- Exact implementation commits: model `a6c9d7efbee86add6e2c5532ff58a6c973a6f932`; V94 wiring `013b36c2fdfd6aea4bbb606a2eb38cfe1cc09852`; preview `53e6b90255d3cdb76e880e04250ae3238c3bb966`; static contracts `275ea0bdf5fb5145eaeba83bbfe5ac61021da4b9`; model-preview browser tests `76232a8c8198537430aa254e1dce6c307cc4e72d`; V94 desktop/mobile gait tests `5ac987863f90f7129ee6e1dbdc67380698780521`.
+- Changed files: `game-data/models/blue-alert-models.js`, `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `game-data/models/preview.html`, `scripts/validate_model_kit.py`, `scripts/validate_model_preview_browser.mjs`, `scripts/validate_v94_browser.mjs`.
+- Regression coverage: both faction profiles, signature equipment, 1,200+ triangle detail floor, ground-clearance bounds, 60-draw-call ceiling, desktop/390×844 preview, and live V94 movement-linked gait on desktop/mobile.
+- Validation status at log creation: current-main port awaits its own exact-head workflow. Earlier PR #32 workflow `41384445424` passed on its own stale-base head only; that historical result is not substituted for this port.
+- Evidence boundary: mobile is 390×844 browser emulation, not physical Samsung hardware. OpenRTS/native smoke tests validate the separate Java engine and do not import these Three.js infantry meshes. No paid models, textures, APIs, assets or services were used; budget remains 0.
