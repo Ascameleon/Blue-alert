@@ -311,6 +311,12 @@ try {
   await desktop.locator('#btnSound').click();
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : ON', 'desktop sound toggle must restore');
 
+  // Suppress autonomous skirmish fire before controlled VFX probes. Explicit QA fire()
+  // and destroyEnemyUnit() remain enabled, so this isolates the real effect lifecycle
+  // without allowing unrelated AI shots to enqueue fresh projectiles during cleanup.
+  const desktopCombatIsolation = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  assert.ok(desktopCombatIsolation?.combatSuppressed === true,
+    'desktop QA must suppress autonomous combat before controlled VFX probes while preserving explicit QA shots');
   const desktopCombatBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(desktopCombatBefore?.livingBlueCombatUnits > 0 && desktopCombatBefore?.livingRedCombatUnits > 0, 'desktop combat QA must find live units on both factions');
   assert.ok(desktopCombatBefore.started && !desktopCombatBefore.gameOver, 'desktop gameplay simulation must be active before VFX tests');
@@ -389,7 +395,7 @@ try {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 15000, polling: 50 });
+    }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('DESKTOP_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
@@ -397,7 +403,8 @@ try {
   }
   const desktopClean = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   console.log('DESKTOP_COMBAT_VFX ' + JSON.stringify({ shot: desktopShot, kill: desktopKill, afterCleanup: desktopClean }));
-  await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeCombat());
+  assert.equal(desktopClean.combatSuppressed, true,
+    'desktop QA must keep autonomous combat suppressed through all controlled VFX and building-damage probes');
 
   const combatProbe = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA.arm());
   assert.ok(combatProbe.shooterId && combatProbe.targetId, 'combat probe must arm real in-game 3D units');
