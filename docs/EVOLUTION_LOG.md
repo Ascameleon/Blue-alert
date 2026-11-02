@@ -145,3 +145,15 @@ The existing V94 `createUnit(..., 'infantry')` path now loads the faction-specif
 - Runtime optimization commit: `204ab7903cadf3b84042e889356bd9b24248cf65`.
 - The browser test now logs triangle/draw-call counts and reports the specific failed budget; test commit: `71b8f4a87fdc6a2fb57f9509f58f3f5097a22843`.
 - No desktop/mobile render or gameplay result is claimed from the failed run. The next exact-head workflow must recheck the 60-draw-call ceiling before the runtime gait tests can run.
+
+
+### Infantry ground-contact and QA-probe correction
+
+- Visual geometry review identified that the lower-leg pivot at Y=0.51 placed the boot soles below the battlefield plane. Raised both leg pivots to Y=0.62 so the combat boots terminate at approximately ground level.
+- Added preview world-bounds diagnostics and desktop/mobile browser assertions for both faction profiles (`boundsMinY >= -0.03`).
+- Made the V94 gait probe create a fresh test infantry only if the starting blue rifleman has already been eliminated; this prevents the movement test from depending on unrelated combat casualties.
+- Model ground-contact fix: `2a6dd074831cfe3d81bc0498536736fb8bd41ad3`.
+- Preview bounds diagnostic: `b781bd52b9d18dcf0798988e2bb113ac0c88f8ed`.
+- QA probe fallback: `de75269dce52ac35bdb39b1e5f71bfab9943b84d`.
+- Ground-contact browser assertions: `cd9c95a78ded227e75601f90e2de807d1fe43bc7`.
+- No gameplay/browser/native test is claimed from the preceding run while it was still in progress; the next exact-head workflow must revalidate the complete build and interaction suite.
