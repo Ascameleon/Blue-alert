@@ -1460,6 +1460,9 @@ function refreshPower() {
 function missionObjectiveSnapshot() {
   const deliveredOre = Math.min(MISSION_TARGETS.deliveredOre, missionState.deliveredOre);
   const combatUnitsProduced = Math.min(MISSION_TARGETS.combatUnitsProduced, missionState.combatUnitsProduced);
+  const prerequisitesComplete =
+    deliveredOre >= MISSION_TARGETS.deliveredOre &&
+    combatUnitsProduced >= MISSION_TARGETS.combatUnitsProduced;
   return [
     {
       id: 'ore', title: 'Livrer 600 minerais', progress: deliveredOre,
@@ -1473,7 +1476,8 @@ function missionObjectiveSnapshot() {
     },
     {
       id: 'citadel', title: 'Détruire la citadelle ennemie', progress: missionState.enemyCitadelDestroyed ? 1 : 0,
-      target: 1, detail: missionState.enemyCitadelDestroyed ? 'Cible détruite' : 'Cible active',
+      target: 1, detail: missionState.enemyCitadelDestroyed ? 'Cible détruite' :
+        prerequisitesComplete ? 'Cible active' : 'Verrouillée — logistique et renforts requis',
       complete: missionState.enemyCitadelDestroyed
     }
   ];
@@ -2207,7 +2211,23 @@ function applyDamage(target, amount, fromTeam) {
     if (!unitTarget && target.g) target.damageFxCd = Math.min(target.damageFxCd ?? 0.25, 0.12);
 
     if (target.kind === 'citadel') {
-      if (target.team === 2) missionState.enemyCitadelDestroyed = true;
+      if (target.team === 2) {
+        const prerequisitesComplete =
+          missionState.deliveredOre >= MISSION_TARGETS.deliveredOre &&
+          missionState.combatUnitsProduced >= MISSION_TARGETS.combatUnitsProduced;
+        if (!prerequisitesComplete) {
+          // Keep the enemy citadel targetable, but do not let a rush attack bypass the mission.
+          target.hp = 1;
+          target.dead = false;
+          if (!target.missionLockNotified) {
+            toast('Objectifs requis : livrer 600 minerais et former 3 unités');
+            target.missionLockNotified = true;
+          }
+          updateHUD();
+          return;
+        }
+        missionState.enemyCitadelDestroyed = true;
+      }
       updateMissionHUD();
       gameOver = true;
       spawnParticle(new THREE.Vector3(target.x, 3.5, target.z), 0xffa020, true);
@@ -3604,7 +3624,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       const target = buildings.find(building => !building.dead && building.team === 2 && building.kind === 'citadel');
       if (!target) throw new Error('Mission QA requires a live enemy citadel.');
       applyDamage(target, target.hp, 1);
-      return missionSnapshot();
+      return { ...missionSnapshot(), enemyCitadelHp: target.hp, enemyCitadelAlive: !target.dead };
     }
   });
 }
