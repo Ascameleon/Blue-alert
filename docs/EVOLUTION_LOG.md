@@ -369,3 +369,10 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - The details are grouped into a small set of batched meshes/instances. Existing road, industrial yard, evergreen geometry, pathfinding, collision and unit behavior remain unchanged. The new layer reports its counts and exposes a QA-only visibility toggle for matched A/B screenshots.
 - Acceptance is pending exact-head static, desktop/mobile WebGL, standalone build, OpenRTS and native-input validation. The browser suite captures road and gantry-corridor baseline/detail pairs at 1440×900 and 390×844 with identical camera poses. No visual improvement or release is claimed until those images are inspected.
 - Mobile captures are browser emulation, not a physical Samsung test. Three.js remains CDN-loaded. Budget: 0 €.
+
+
+### Desktop environment evidence overlay correction — 2026-11-02
+
+- Direct inspection of the exact PR #44 workflow artifact showed the desktop industrial-yard and terrain screenshots were taken after the mission-complete test while the victory overlay still dimmed the entire 3D scene. The road/gantry A/B screenshots were clear; the later two scene captures were not acceptable as visual evidence.
+- Kept the dedicated mission-complete screenshot and its visible-overlay assertion unchanged, then hide only the overlay in the Playwright page before capturing the industrial-yard and terrain views. This is test-only evidence cleanup; it does not alter the game runtime or mission state.
+- Added a static contract requiring the overlay-clear operation in the desktop visual test. Exact-head desktop/mobile, standalone, OpenRTS build/launch and native interaction checks must pass again before PR #44 is mergeable.
