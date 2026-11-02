@@ -406,6 +406,12 @@ try {
   assert.equal(desktopClean.combatSuppressed, true,
     'desktop QA must keep autonomous combat suppressed through all controlled VFX and building-damage probes');
 
+  // The next probe validates autonomous turret tracking and muzzle alignment.
+  // Resume combat only for that controlled firing check; the following cleanup
+  // gate freezes new shots again before building-damage assertions begin.
+  const desktopCombatResumeForRig = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeCombat());
+  assert.equal(desktopCombatResumeForRig?.combatSuppressed, false,
+    'desktop turret-alignment QA must temporarily restore autonomous firing');
   const combatProbe = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA.arm());
   assert.ok(combatProbe.shooterId && combatProbe.targetId, 'combat probe must arm real in-game 3D units');
   await desktop.waitForFunction(() => {
