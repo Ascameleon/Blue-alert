@@ -177,3 +177,10 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Corrected the test harness, not the cleanup criterion: both desktop and mobile waits now poll at 50 ms and allow 15 seconds for the exact same all-zero cleanup condition. No VFX leak assertion or performance threshold was removed or reduced.
 - Bumped the active V94 model-library URL from `blue-alert-models.js?v=4` to `?v=5` and updated its static contract so deployments cannot silently reuse the previous cached model module.
 - Fresh exact-head workflow required after this repair. Earlier PR #32 success remains historical evidence only.
+
+
+## Cycle — standalone bundler aligned with V94 model cache key (2026-11-02)
+
+- Exact-head run `41394060081` reached the standalone build and exposed a hardcoded `?v=4` expectation in `scripts/build_single_html.mjs` after the runtime cache key was correctly advanced to `?v=5`.
+- Updated both the builder's import matcher and its post-bundle external-reference assertion to `?v=5`. The builder still requires the module to be fully inlined into the standalone HTML; no external model file is allowed in the bundle.
+- This was a tooling contract mismatch, not a runtime failure. The next exact-head run must pass the standalone bundle, both browser suites and the separate OpenRTS/native checks before this PR can be considered verified.
