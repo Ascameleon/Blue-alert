@@ -217,13 +217,14 @@ def main():
         "new THREE.Quaternion()",
         "new THREE.ConeGeometry(radius, height, segments, 1)",
         "geometry.userData",
-        "if (!firstTreeFocus) firstTreeFocus = { x, z, scale };",
     )
     missing = [feature for feature in required_tree_features if feature not in tree_section]
     if missing:
         raise SystemExit("FAIL: instanced evergreen asset is missing authored branch/needle geometry: " + ", ".join(missing))
     if "foliageTriangles: treeFoliageGeometry.userData.triangleCount" not in source:
         raise SystemExit("FAIL: evergreen geometry complexity must be exposed for browser acceptance")
+    if "if (!firstTreeFocus) firstTreeFocus = { x, z, scale };" not in source:
+        raise SystemExit("FAIL: deterministic evergreen visual focus must track an accepted placed tree")
 
     kill_start = source.index("function killUnit(u)")
     kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
