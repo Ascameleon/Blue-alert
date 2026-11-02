@@ -51,8 +51,12 @@ def main():
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
     required_tank_features = (
         "factionProfile", "BLUE_SENTINEL", "RED_BASTION", "front-glacis",
-        "track-shoe-instanced", "wheel-bolts-instanced", "blue-turret-cheek",
-        "red-turret-cheek", "red-bastion-cupola", "heavy-turret-reinforcement",
+        "engine-deck-grilles-instanced", "reactive-armor-tiles-instanced",
+        "return-rollers-instanced", "road-wheels-instanced", "wheel-hubs-instanced",
+        "wheel-hub-caps-instanced", "track-shoe-instanced", "wheel-bolts-instanced",
+        "blue-turret-cheeks-instanced", "red-turret-cheeks-instanced",
+        "red-bastion-side-plates-instanced", "red-bastion-cupola",
+        "heavy-turret-reinforcements-instanced",
     )
     missing = [feature for feature in required_tank_features if feature not in model]
     if missing:
