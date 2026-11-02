@@ -79,8 +79,67 @@ const addMarking = (THREE, group, x, y, z, team) => {
   stripe.rotation.y = Math.PI/2; return stripe;
 };
 
+
+const TANK_SURFACE_TEXTURE_CACHE = new WeakMap();
+const createTankSurfaceTextures = (THREE, isRed) => {
+  if (typeof document === 'undefined') return null;
+  let factionCache = TANK_SURFACE_TEXTURE_CACHE.get(THREE);
+  if (!factionCache) { factionCache = new Map(); TANK_SURFACE_TEXTURE_CACHE.set(THREE, factionCache); }
+  const faction = isRed ? 'red' : 'blue';
+  if (factionCache.has(faction)) return factionCache.get(faction);
+  let seed = (isRed ? 0xB457A921 : 0x51E73B41) >>> 0;
+  const random = () => { seed = (Math.imul(seed,1664525)+1013904223)>>>0; return seed/4294967296; };
+  const makeTexture = (name, paint, srgb=false) => {
+    const canvas=document.createElement('canvas'); canvas.width=canvas.height=256;
+    const context=canvas.getContext('2d'); if(!context)return null;
+    paint(context);
+    const texture=new THREE.CanvasTexture(canvas);
+    texture.name=name; texture.wrapS=texture.wrapT=THREE.RepeatWrapping; texture.repeat.set(1,1);
+    texture.anisotropy=4;
+    if(srgb&&THREE.SRGBColorSpace)texture.colorSpace=THREE.SRGBColorSpace;
+    texture.generateMipmaps=true; texture.minFilter=THREE.LinearMipmapLinearFilter;
+    texture.magFilter=THREE.LinearFilter; texture.needsUpdate=true;
+    return texture;
+  };
+  const armorMap=makeTexture(faction+'-tank-ceramic-paint-mottle',ctx=>{
+    ctx.fillStyle='#f3f3f3';ctx.fillRect(0,0,256,256);
+    const shades=['#c4c4c4','#d5d5d5','#e5e5e5','#bdbdbd'];
+    for(let i=0;i<34;i++){
+      const cx=random()*256,cy=random()*256,rx=9+random()*24,ry=5+random()*15;
+      ctx.beginPath();
+      for(let p=0;p<9;p++){const a=p/9*Math.PI*2,w=.72+random()*.48,x=cx+Math.cos(a)*rx*w,y=cy+Math.sin(a)*ry*w;if(p===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+      ctx.closePath();ctx.globalAlpha=.10+random()*.12;ctx.fillStyle=shades[Math.floor(random()*shades.length)];ctx.fill();
+    }
+    ctx.globalAlpha=.12;ctx.fillStyle='#686868';
+    for(let i=0;i<2600;i++){const size=.45+random()*1.2;ctx.fillRect(random()*256,random()*256,size,size);}
+    ctx.globalAlpha=1;
+  },true);
+  const metalMap=makeTexture(faction+'-tank-brushed-metal-albedo',ctx=>{
+    ctx.fillStyle='#f0f0f0';ctx.fillRect(0,0,256,256);
+    for(let i=0;i<220;i++){const y=random()*256;ctx.globalAlpha=.08+random()*.13;ctx.strokeStyle=random()>.5?'#626262':'#ffffff';ctx.lineWidth=.35+random()*.7;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(256,y+(random()-.5)*4);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },true);
+  const roughnessMap=makeTexture(faction+'-tank-roughness-variation',ctx=>{
+    ctx.fillStyle='#e8e8e8';ctx.fillRect(0,0,256,256);
+    for(let i=0;i<5200;i++){const v=Math.round(178+random()*72);ctx.fillStyle='rgb('+v+','+v+','+v+')';const size=.8+random()*1.4;ctx.fillRect(random()*256,random()*256,size,size);}
+  });
+  const armorBump=makeTexture(faction+'-tank-armor-microscuff-relief',ctx=>{
+    ctx.fillStyle='#808080';ctx.fillRect(0,0,256,256);
+    for(let i=0;i<145;i++){const x=random()*256,y=random()*256;ctx.globalAlpha=.20+random()*.24;ctx.strokeStyle=random()>.5?'#c6c6c6':'#555555';ctx.lineWidth=.4+random()*.9;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(random()-.5)*18,y+(random()-.5)*4);ctx.stroke();}
+    for(let i=0;i<48;i++){ctx.globalAlpha=.12+random()*.16;ctx.fillStyle=random()>.5?'#c4c4c4':'#555555';ctx.beginPath();ctx.ellipse(random()*256,random()*256,1+random()*3,.7+random()*1.8,random(),0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;
+  });
+  const metalBump=makeTexture(faction+'-tank-brushed-metal-relief',ctx=>{
+    ctx.fillStyle='#808080';ctx.fillRect(0,0,256,256);
+    for(let y=0;y<256;y+=3){ctx.globalAlpha=.16+random()*.12;ctx.strokeStyle=y%2?'#bdbdbd':'#555555';ctx.lineWidth=.45+random()*.45;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(256,y+(random()-.5)*2);ctx.stroke();}
+    ctx.globalAlpha=1;
+  });
+  const maps={armorMap,metalMap,roughnessMap,armorBump,metalBump};
+  factionCache.set(faction,maps);return maps;
+};
+
 export function createTank(THREE, options={}) {
-  const { team='blue', variant='main-battle-tank', scale=1 } = options;
+  const { team='blue', variant='main-battle-tank', scale=1, surfaceFinish=true } = options;
   const isRed = team === 'red';
   const isHeavy = variant === 'heavy';
   const factionProfile = isRed ? 'RED_BASTION' : 'BLUE_SENTINEL';
@@ -95,6 +154,36 @@ export function createTank(THREE, options={}) {
   const optics = mat(THREE, isRed ? 0xf0a45e : 0x83d9ed, .2, .7);
   const rubber = mat(THREE, 0x1d2527, .96, .02);
   const heavyArmor = mat(THREE, isRed ? 0x897463 : 0x87908a, .66, .32);
+
+  const tankSurfaceTextures=createTankSurfaceTextures(THREE,isRed);
+  const tankSurfaceBindings=[
+    {material:hull,map:tankSurfaceTextures?.armorMap||null,bump:tankSurfaceTextures?.armorBump||null,bumpScale:.0045},
+    {material:armor,map:tankSurfaceTextures?.armorMap||null,bump:tankSurfaceTextures?.armorBump||null,bumpScale:.006},
+    {material:heavyArmor,map:tankSurfaceTextures?.armorMap||null,bump:tankSurfaceTextures?.armorBump||null,bumpScale:.005},
+    {material:metal,map:tankSurfaceTextures?.metalMap||null,bump:tankSurfaceTextures?.metalBump||null,bumpScale:.003},
+    {material:edge,map:tankSurfaceTextures?.metalMap||null,bump:tankSurfaceTextures?.metalBump||null,bumpScale:.0025}
+  ];
+  let surfaceState={enabled:false,surfaceFinish:'UNTEXTURED_FALLBACK',surfaceTextureCount:0,surfaceMaterialCount:0};
+  const setSurfaceFinish=enabled=>{
+    const active=!!enabled&&!!tankSurfaceTextures;
+    for(const binding of tankSurfaceBindings){
+      binding.material.map=active?binding.map:null;
+      binding.material.roughnessMap=active?tankSurfaceTextures.roughnessMap:null;
+      binding.material.bumpMap=active?binding.bump:null;
+      binding.material.bumpScale=active?binding.bumpScale:0;
+      binding.material.needsUpdate=true;
+    }
+    surfaceState={
+      enabled:active,
+      surfaceFinish:active?'TANK_ARMOR_MICROSCUFF_PBR_V1':'UNTEXTURED_FALLBACK',
+      surfaceTextureCount:active?Object.values(tankSurfaceTextures).filter(Boolean).length:0,
+      surfaceMaterialCount:active?tankSurfaceBindings.filter(binding=>binding.map&&binding.bump).length:0
+    };
+    if(g.userData)Object.assign(g.userData,surfaceState);
+    return surfaceState;
+  };
+  setSurfaceFinish(surfaceFinish);
+
 
   const addInstances=(parent,name,geometry,material,transforms)=>{
     const mesh=new THREE.InstancedMesh(geometry,material,transforms.length);
@@ -248,6 +337,10 @@ export function createTank(THREE, options={}) {
 
   g.userData={
     kind:'vehicle',unitType:variant,team,turret,factionProfile,
+    surfaceFinish:surfaceState.surfaceFinish,
+    surfaceTextureCount:surfaceState.surfaceTextureCount,
+    surfaceMaterialCount:surfaceState.surfaceMaterialCount,
+    setSurfaceFinish,
     trackShoeInstances:shoeTransforms.length,
     wheelBoltInstances:boltTransforms.length,
     detailInstances:{
