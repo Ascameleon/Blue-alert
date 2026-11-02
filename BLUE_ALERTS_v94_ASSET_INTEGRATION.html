@@ -3394,7 +3394,12 @@ if (new URLSearchParams(location.search).get('combat-rig') === '1' || new URLSea
 }
 
 if (new URLSearchParams(location.search).get('qa') === '1') {
-  const infantryProbe = () => units.find(unit => !unit.dead && unit.team === 1 && unit.kind === 'infantry' && unit.g.userData.infantryRig);
+  const infantryProbe = () => {
+    let unit = units.find(candidate => !candidate.dead && candidate.team === 1 &&
+      candidate.kind === 'infantry' && candidate.g.userData.infantryRig);
+    if (!unit) unit = createUnit(-70, 50, 1, 'infantry');
+    return unit;
+  };
   const infantrySnapshot = () => {
     const unit = infantryProbe();
     if (!unit) return null;
