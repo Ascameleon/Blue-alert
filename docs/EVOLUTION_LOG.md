@@ -35,3 +35,13 @@ This log records verified source changes only. A design specification, static ch
 ### Next priority after this branch is green
 
 Wire the authored First Contact campaign content to real runtime mission state in small, testable increments. Do not label a map layout or objective JSON as playable until zone capture, escort, hold timers, wave director, briefing/debrief and failure conditions are implemented and tested in the V94 runtime.
+
+## Cycle 5 — mobile mission toast clearance
+
+- Parent gameplay: PR #28, Mission 01 objective HUD and early-citadel lock.
+- Visual evidence inspected: artifact `13109028287`, screenshot `mobile-v94-mission-progress-390x844.png` (390×844 browser emulation).
+- Verified issue: the mission-start toast at `top:48px` overlaps the mobile command row at `top:42px`; the screenshot visibly covers the attack-move/center controls.
+- Runtime correction: mobile-only toast placement moved to `top:210px`, below the command row and objective card. Desktop toast placement is unchanged.
+- Regression: Playwright forces a visible toast and asserts its bounding box intersects neither `#mobileCommands` nor `#mobileMission`; captures `mobile-v94-mission-toast-clearance-390x844.png`.
+- Source/test commits: `793dfa0afaa353da437ab5d121729f388dc2d3db` and `ecfc696aaf1912aa075cb4dd4aba901475c96d36`.
+- Validation status: pending on this stacked branch head; no merge claim. Browser mobile remains emulation, not physical Samsung testing.
