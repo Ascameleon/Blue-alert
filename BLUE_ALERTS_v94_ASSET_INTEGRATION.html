@@ -565,7 +565,6 @@ for (let i = 0; i < terrainPositions.count; i++) {
 terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
 function createTerrainSurfaceTextures(size) {
   const albedoPixels = new Uint8Array(size * size * 4);
-  const bumpPixels = new Uint8Array(size * size * 4);
   let checksum = 2166136261;
   const channel = value => Math.max(0, Math.min(255, Math.round(value)));
   for (let py = 0; py < size; py++) {
@@ -591,12 +590,6 @@ function createTerrainSurfaceTextures(size) {
       albedoPixels[offset + 2] = blue;
       albedoPixels[offset + 3] = 255;
 
-      const relief = channel(128 + (broad - 0.5) * 28 + (medium - 0.5) * 46 +
-        (fine - 0.5) * 18 + (fleck - 0.5) * 22);
-      bumpPixels[offset] = relief;
-      bumpPixels[offset + 1] = relief;
-      bumpPixels[offset + 2] = relief;
-      bumpPixels[offset + 3] = 255;
       if ((px & 15) === 0 && (py & 3) === 0) {
         checksum = Math.imul(checksum ^ red ^ (green << 8) ^ (blue << 16), 16777619);
       }
@@ -617,7 +610,6 @@ function createTerrainSurfaceTextures(size) {
   return {
     size,
     albedo: makeTexture(albedoPixels, THREE.SRGBColorSpace),
-    bump: makeTexture(bumpPixels, THREE.NoColorSpace),
     checksum: checksum >>> 0
   };
 }
@@ -626,8 +618,6 @@ const terrainMaterial = new THREE.MeshStandardMaterial({
   color: 0xffffff, vertexColors: true, roughness: 1, metalness: 0
 });
 terrainMaterial.map = terrainSurfaceTextures.albedo;
-terrainMaterial.bumpMap = terrainSurfaceTextures.bump;
-terrainMaterial.bumpScale = isMobile ? 0.045 : 0.075;
 terrainMaterial.needsUpdate = true;
 const ground = new THREE.Mesh(terrainGeometry, terrainMaterial);
 ground.name = 'terrain-ground';
@@ -640,10 +630,9 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   colorCount: terrainColors.length / 3,
   vertexColors: ground.material.vertexColors,
   albedoMap: !!terrainMaterial.map,
-  bumpMap: !!terrainMaterial.bumpMap,
+  surfaceMode: 'procedural-albedo-grain',
   textureResolution: terrainSurfaceTextures.size,
   textureChecksum: terrainSurfaceTextures.checksum,
-  bumpScale: terrainMaterial.bumpScale,
   anisotropy: terrainSurfaceTextures.albedo.anisotropy
 });
 window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
@@ -652,7 +641,6 @@ window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
     camDist = isMobile ? 14 : 19;
     return {
       textureResolution: terrainSurfaceTextures.size,
-      bumpScale: terrainMaterial.bumpScale,
       checksum: terrainSurfaceTextures.checksum
     };
   }
