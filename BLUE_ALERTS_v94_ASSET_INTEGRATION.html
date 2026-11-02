@@ -1193,6 +1193,7 @@ function addBattlefieldCraterSet() {
     Math.abs(spec.z) > BUILD_ZONE.roadHalfWidth + 4 &&
     !insideIndustrialSet(spec.x, spec.z, 5)
   );
+  const craterDummy = new THREE.Object3D();
   const root = new THREE.Group();
   root.name = 'BA_BattlefieldCraters';
   root.userData = { kind: 'terrain-detail', blocksMovement: false };
@@ -1212,24 +1213,24 @@ function addBattlefieldCraterSet() {
   let debrisCount = 0;
   for (let i = 0; i < valid.length; i++) {
     const spec = valid[i];
-    treeDummy.position.set(spec.x, .018, spec.z);
-    treeDummy.rotation.set(0, spec.rotation, 0);
-    treeDummy.scale.set(spec.sx, 1, spec.sz);
-    treeDummy.updateMatrix();
-    craterMesh.setMatrixAt(i, treeDummy.matrix);
+    craterDummy.position.set(spec.x, .018, spec.z);
+    craterDummy.rotation.set(0, spec.rotation, 0);
+    craterDummy.scale.set(spec.sx, 1, spec.sz);
+    craterDummy.updateMatrix();
+    craterMesh.setMatrixAt(i, craterDummy.matrix);
     for (let part = 0; part < 3; part++) {
       const angle = spec.rotation + [0.65, 2.50, 4.10][part];
       const radius = 1.28 + (part % 2) * .12;
       const size = .08 + ((i + part) % 3) * .025;
-      treeDummy.position.set(
+      craterDummy.position.set(
         spec.x + Math.cos(angle) * radius,
         .055 + (part % 2) * .018,
         spec.z + Math.sin(angle) * radius
       );
-      treeDummy.rotation.set(angle * .3, angle, .18 * (part - 1));
-      treeDummy.scale.set(size * 1.25, size * .55, size);
-      treeDummy.updateMatrix();
-      debrisMesh.setMatrixAt(debrisCount, treeDummy.matrix);
+      craterDummy.rotation.set(angle * .3, angle, .18 * (part - 1));
+      craterDummy.scale.set(size * 1.25, size * .55, size);
+      craterDummy.updateMatrix();
+      debrisMesh.setMatrixAt(debrisCount, craterDummy.matrix);
       debrisMesh.setColorAt(debrisCount, new THREE.Color(debrisTones[(i + part) % debrisTones.length]));
       debrisCount++;
     }
