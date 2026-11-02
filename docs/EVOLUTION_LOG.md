@@ -175,3 +175,13 @@ The existing V94 `createUnit(..., 'infantry')` path now loads the faction-specif
 - Raised both hip pivots to Y=0.72 and reduced stride swing to 0.32 radians. The opposing arm/leg phase and displacement-linked gait remain intact.
 - Fix commit: `f3578c2691111fed3da6600df5bfb794b86319fa`.
 - The preceding run did not reach V94 gameplay or OpenRTS tests. A fresh exact-head workflow must verify the animated ground clearance and full runtime suite.
+
+
+### Visual-artifact review and infantry preview framing
+
+- Inspected the exact-head screenshots from workflow `41383789302`: both faction profiles rendered, the V94 desktop/mobile gait probes moved, and OpenRTS produced an interactive screen capture.
+- The rendered model was too small in the 3D preview viewport despite passing geometry and mobile draw-call checks. This weakened visual inspection of helmet, carrier, rifle and gait details.
+- Added a dedicated closer camera position for the infantry preview and exposed camera distance in diagnostics. Desktop, red-faction and mobile preview tests now require a camera distance below 8 world units.
+- Preview camera fix: `a18e2c8f6439adbd92ffad5982d801db87cc2699`.
+- Browser framing assertions: `4fa6883f6cd1e13c8890f7f1d4d2050b1214e242`.
+- Prior exact-head workflow `41383789302` passed the complete code/build/browser/OpenRTS/native suite at `2db0adb2cf377a67fb3aec09ba358b3e8012ca1b`; this additional preview-framing change requires its own fresh exact-head CI run.
