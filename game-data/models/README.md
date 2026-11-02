@@ -50,3 +50,13 @@ The original v94 kit remains intact and gains additional procedural Three.js mod
 - extra reactive armour, side skirts, optics and antennae on the tank; plate carrier, pouches, knee pads and goggles on infantry; exterior lights and service vents on buildings.
 
 The interactive preview exposes all five new asset types. The assets remain original procedural geometry, deliberately avoiding paid generation APIs and unlicensed downloads. They are not AI-sculpted GLB models; rotor spin, projectile travel and explosion lifetime require the game runtime to animate the returned groups. The relay model is an asset for the existing OpenRTS capture-point design; the OpenRTS scenario XML is still not loaded by the browser prototype. Validate scale, hitboxes, animation timing and frame rate in the actual game before gameplay integration.
+
+
+## Faction-specific main battle tanks (V94)
+
+The same \`createTank(THREE, { team, variant, scale })\` entry point now produces two distinct original silhouettes:
+
+- **BLUE SENTINEL** — low-profile turret, sloped cheek plates, compact laser/rangefinder cluster and cool sensor accents.
+- **RED BASTION** — taller reinforced turret, side armor slabs, raised command cupola, protected rangefinder and warm sensor accents.
+
+Both retain the existing outer group and \`userData.turret\` contract used by V94 combat. Track belts remain continuous collision-safe chassis geometry; 36 instanced tread shoes and 60 instanced wheel fasteners add detail without creating one draw call per bolt or shoe. The sloped glacis, engine-deck grilles, fenders, return rollers and hub caps are procedural Three.js geometry. No third-party model, texture, API or paid asset is used.
