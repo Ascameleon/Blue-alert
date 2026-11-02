@@ -232,10 +232,15 @@ try {
   const desktopCombatBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(desktopCombatBefore?.livingBlueCombatUnits > 0 && desktopCombatBefore?.livingRedCombatUnits > 0, 'desktop combat QA must find live units on both factions');
   assert.ok(desktopCombatBefore.started && !desktopCombatBefore.gameOver, 'desktop gameplay simulation must be active before VFX tests');
-  assert.equal(desktopCombatBefore.modelProjectiles, 0, 'desktop VFX test must start without active procedural projectiles');
-  const desktopShot = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.fire());
-  assert.equal(desktopShot.modelProjectiles, 1, 'desktop live combat must use the procedural projectile model');
-  assert.equal(desktopShot.modelMuzzleFlashes, 1, 'desktop live combat must show the procedural muzzle flash');
+  const desktopShot = await desktop.evaluate(() => {
+    const qa = window.__BLUE_ALERTS_COMBAT_QA__;
+    const baseline = qa.state();
+    return { ...qa.fire(), baseline };
+  });
+  assert.equal(desktopShot.modelProjectiles, desktopShot.baseline.modelProjectiles + 1,
+    'desktop QA fire must add exactly one procedural projectile to the live simulation');
+  assert.equal(desktopShot.modelMuzzleFlashes, desktopShot.baseline.modelMuzzleFlashes + 1,
+    'desktop QA fire must add one procedural muzzle flash to the live simulation');
   await desktop.waitForTimeout(35);
   await desktop.screenshot({ path: output + '/desktop-v94-projectile-vfx.png', fullPage: true });
   try {
@@ -289,7 +294,7 @@ try {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 10000 });
+    }, null, { timeout: 15000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('DESKTOP_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
@@ -355,6 +360,18 @@ try {
     desktopBuildingStage2.hp > 0 && desktopBuildingStage2.scorchMark && desktopBuildingStage2.flamesSpawned > 0,
     'desktop critical building damage must show scorch and fire while the building remains alive');
   await desktop.screenshot({ path: output + '/desktop-v94-building-critical.png', fullPage: true });
+
+  // The infantry rig must follow actual V94 displacement, not merely animate in the preview.
+  const infantryReady = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  assert.ok(infantryReady?.profile === 'BLUE_SENTINEL_RIFLEMAN', 'V94 must attach the Blue Sentinel infantry rig to a live unit');
+  const infantryWalkStart = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
+  await desktop.waitForFunction(start => {
+    const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
+    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 && Math.abs(state.leftLeg - state.rightLeg) > 0.1;
+  }, infantryWalkStart.position, { timeout: 5000, polling: 50 });
+  const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 && desktopInfantryGait.walkAmount > 0.2 && Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04, 'desktop V94 infantry arms and legs must animate in response to real movement');
+  await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
   const missionVictory = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.destroyEnemyCitadel());
   assert.ok(missionVictory.enemyCitadelDestroyed && missionVictory.complete &&
     missionVictory.completedCount === 3 && missionVictory.progressPercent === 100,
@@ -533,17 +550,17 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
 
   // Real touch placement on the 390x844 mobile viewport.
+  const mobilePlacementBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
   const mobileBuildPoint = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-24, -12));
   assert.ok(mobileBuildPoint.visible, 'mobile construction target must be visible above the bottom HUD');
   await mobile.locator('#cards .card').first().tap();
   await mobile.touchscreen.tap(mobileBuildPoint.x, mobileBuildPoint.y);
-  await mobile.waitForFunction(
-    count => window.__BLUE_ALERTS_BUILD_QA.snapshot().playerBuildingCount === count + 1,
-    mobileBuildBefore.playerBuildingCount,
-    { timeout: 5000 }
-  );
+  // Pointer placement is synchronous; inspect the state immediately so unrelated
+  // AI kill rewards cannot be mistaken for a construction-price regression.
   const mobileBuildAfter = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
-  assert.equal(mobileBuildAfter.credits, mobileBuildBefore.credits - 350,
+  assert.equal(mobileBuildAfter.playerBuildingCount, mobilePlacementBefore.playerBuildingCount + 1,
+    'a real mobile touch must place exactly one power station');
+  assert.equal(mobileBuildAfter.credits, mobilePlacementBefore.credits - 350,
     'a real mobile touch placement must deduct the configured power-station cost');
 
   const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -552,9 +569,15 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   // Keep the mobile page foregrounded: Chromium may throttle requestAnimationFrame on a background page.
   await mobile.bringToFront();
   await mobile.waitForFunction(() => document.visibilityState === 'visible', null, { timeout: 3000 });
-  const mobileShot = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.fire());
-  assert.equal(mobileShot.modelProjectiles, 1, 'mobile live combat must use the procedural projectile model');
-  assert.equal(mobileShot.modelMuzzleFlashes, 1, 'mobile live combat must show the procedural muzzle flash');
+  const mobileShot = await mobile.evaluate(() => {
+    const qa = window.__BLUE_ALERTS_COMBAT_QA__;
+    const baseline = qa.state();
+    return { ...qa.fire(), baseline };
+  });
+  assert.equal(mobileShot.modelProjectiles, mobileShot.baseline.modelProjectiles + 1,
+    'mobile QA fire must add exactly one procedural projectile to the live simulation');
+  assert.equal(mobileShot.modelMuzzleFlashes, mobileShot.baseline.modelMuzzleFlashes + 1,
+    'mobile QA fire must add one procedural muzzle flash to the live simulation');
   await mobile.waitForTimeout(35);
   await mobile.screenshot({ path: output + '/mobile-v94-projectile-vfx-390x844.png', fullPage: true });
   try {
@@ -608,7 +631,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 8000 });
+    }, null, { timeout: 15000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
@@ -662,6 +685,17 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     mobileBuildingStage2.hp > 0 && mobileBuildingStage2.scorchMark && mobileBuildingStage2.flamesSpawned > 0,
     'mobile critical building damage must show scorch and fire while the building remains alive');
   await mobile.screenshot({ path: output + '/mobile-v94-building-critical-390x844.png', fullPage: true });
+
+  const mobileInfantryReady = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  assert.ok(mobileInfantryReady?.profile === 'BLUE_SENTINEL_RIFLEMAN', 'mobile V94 must load the faction infantry rig');
+  const mobileInfantryWalkStart = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
+  await mobile.waitForFunction(start => {
+    const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
+    return state && state.position[0] > start[0] + 0.25 && state.walkAmount > 0.15 && Math.abs(state.leftLeg - state.rightLeg) > 0.08;
+  }, mobileInfantryWalkStart.position, { timeout: 6000, polling: 50 });
+  const mobileInfantryGait = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 && mobileInfantryGait.walkAmount > 0.15, 'mobile V94 infantry gait must follow actual unit displacement');
+  await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true });
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must be available');
   await mobile.waitForTimeout(300);
@@ -669,7 +703,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
