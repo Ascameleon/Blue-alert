@@ -525,6 +525,12 @@ try {
     hasTouch: true
   });
   await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true });
+  // Freeze autonomous skirmish fire before long mobile QA probes. Explicit QA
+  // fireProjectile calls remain enabled, so VFX and damage tests still exercise
+  // the real runtime without allowing the test fixture to attrit its own units.
+  const mobileCombatIsolation = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  assert.ok(mobileCombatIsolation?.combatSuppressed,
+    'mobile QA must isolate autonomous combat before long visual probes while preserving explicit QA shots');
   const mobileMetrics = await metrics(mobile);
   const mobileTankFocus=await mobile.evaluate(()=>window.__BLUE_ALERTS_TANK_SURFACE_QA__?.focus());
   assert.ok(mobileTankFocus?.camera,'mobile live tank surface focus must be available');
