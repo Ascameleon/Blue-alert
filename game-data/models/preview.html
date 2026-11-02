@@ -99,12 +99,12 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
   const beveledArmorParts=[];
   const namedParts=[];
   current?.traverse(object => {
-    if (object.name) namedParts.push(object.name);
+    if (object.name) namedParts.push(...(object.userData?.mergedPartNames || [object.name]));
     if (!object.isMesh) return;
     meshCount++;
     if (['faction-panel','exterior-light','service-vent','vent-slat'].includes(object.name)) genericDecorationCount++;
     const geometry=object.geometry;
-    if(geometry.userData?.beveledArmor) beveledArmorParts.push(object.name);
+    if(geometry.userData?.beveledArmor) beveledArmorParts.push(...(object.userData?.mergedBeveledPartNames || [object.name]));
     triangleCount += geometry.index ? geometry.index.count/3 : (geometry.attributes.position?.count || 0)/3;
     for (const material of (Array.isArray(object.material)?object.material:[object.material])) {
       if (material?.isMeshPhysicalMaterial) physicalMaterialCount++;
@@ -114,8 +114,11 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
   const signatureParts=[];
   const infantryArmorParts=[];
   current?.traverse(object=>{
-    if(object.isMesh && (object.name.includes('gas-mask') || object.name.includes('respirator-') || object.name.includes('faceted-helmet') || object.name.includes('angular-pauldron') || object.name.includes('articulated-knee-guard'))) infantryArmorParts.push(object.name);
-    if(object.isMesh && (object.name==='front-glacis' || object.name==='engine-deck-grilles-instanced' || object.name==='reactive-armor-tiles-instanced' || object.name==='track-shoe-instanced' || object.name==='wheel-bolts-instanced' || object.name.includes('blue-sentinel') || object.name==='blue-turret-cheeks-instanced' || object.name.includes('red-bastion') || object.name==='red-turret-cheeks-instanced' || object.name==='red-bastion-side-plates-instanced' || object.name==='heavy-turret-reinforcements-instanced')) signatureParts.push(object.name);
+    const partNames=object.userData?.mergedPartNames || [object.name];
+    for(const partName of partNames){
+      if(object.isMesh && (partName.includes('gas-mask') || partName.includes('respirator-') || partName.includes('faceted-helmet') || partName.includes('angular-pauldron') || partName.includes('articulated-knee-guard'))) infantryArmorParts.push(partName);
+      if(object.isMesh && (partName==='front-glacis' || partName==='engine-deck-grilles-instanced' || partName==='reactive-armor-tiles-instanced' || partName==='track-shoe-instanced' || partName==='wheel-bolts-instanced' || partName.includes('blue-sentinel') || partName==='blue-turret-cheeks-instanced' || partName.includes('red-bastion') || partName==='red-turret-cheeks-instanced' || partName==='red-bastion-side-plates-instanced' || partName==='heavy-turret-reinforcements-instanced')) signatureParts.push(partName);
+    }
   });
   return {
     asset:document.querySelector('#asset').value,
@@ -129,6 +132,7 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     signatureParts,
     infantryArmorParts,
     renderProfile:current?.userData?.renderProfile||null,
+    renderOptimization:current?.userData?.renderOptimization||null,
     cameraDistance:camera.position.length(),
     boundsMinY:bounds?.min.y??null,
     namedParts,
