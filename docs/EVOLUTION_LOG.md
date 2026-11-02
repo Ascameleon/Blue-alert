@@ -211,3 +211,16 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Mobile cleanup benchmark was 23.9 FPS in the 390×844 CI browser-emulation cleanup scenario only. This is not sustained gameplay FPS and is not a physical Samsung measurement.
 - Three.js remains CDN-loaded; the standalone HTML embeds the model kit but still needs internet access for the renderer. No paid assets, APIs, purchases or services; budget remains 0 €.
 - Next performance target: reduce the infantry model's 55 draw calls without losing faction silhouette or gait. Then reconcile the existing terrain-surface PR with the newly updated mainline before integration.
+
+## Cycle — clear attached turret flashes immediately when a unit dies (2026-11-02)
+
+- Audited post-merge main workflow `41399739647` on merge commit `dfccd5abbc83744e49bbd6607a1dafeda64f2e52`. Desktop mission acceptance reached 100%, desktop VFX/building-damage checks passed, and mobile projectile impact/unit-death/explosion checks passed, but mobile VFX cleanup timed out after 15 seconds.
+- Exact timeout state: `activeProjectiles=0`, `modelProjectiles=0`, `modelExplosions=0`, `impactRings=0`, `impactSparks=0`, but `modelMuzzleFlashes=1`. This was not the earlier credit/test-race issue.
+- Root cause: tank turret muzzle flashes are attached to the unit rig and their opacity is normally reset by the per-frame `flashT` countdown. `killUnit()` marks a unit dead and removes it from the scene; the unit-update loop then skips dead units before decrementing `flashT`. A flash active at death can therefore remain visible and keep the VFX cleanup counter non-zero indefinitely.
+- Runtime fix in `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`: `killUnit()` now sets `u.flashT=0` and synchronously calls `setMuzzleFlashIntensity(u.g.userData.flash, 0)` before removing the rig.
+- Regression coverage in `scripts/validate_v94_browser.mjs`: desktop and mobile QA now deliberately activate the target tank's attached flash before destroying it, then assert the flash was active, is hidden immediately after death, and its timer is zero. The existing 15-second global VFX cleanup assertion remains unchanged.
+- Static coverage in `scripts/validate_v94.py`: verifies the kill path contains the immediate flash reset.
+- Commits on `fix/v94-dead-unit-muzzle-flash-cleanup-20261102`: runtime `cf37a496837c5b70a438d5455066f434bb737161`; browser regression `2489064ea78869f061b242a5f8132888fe1392fc`; static validator `14d13a9a61dcce839286e99893fee154411e1cfa`.
+- Exact-head CI is required before merge. No test pass is claimed for these new commits until the workflow completes.
+- Also inspected existing draft PR #37 (`feat/blue-alerts-infantry-hero-render-20261102`). Its latest preview workflow `41400154451` fails the enforced 60-draw-call mobile ceiling: the hero infantry model reports 90 draw calls, 88 meshes and 5,140 triangles. The prior run `41400032419` stopped earlier because the static validator still expected model cache key v5. The latest artifact contains no hero-infantry render because the preview assertion exits before screenshots. PR #37 was not modified in this cycle; it needs geometry batching/instancing before it can be considered for merge.
+- Mobile browser checks remain CI emulation only; no physical Samsung test is claimed. OpenRTS remains a separate native engine. Budget remains 0 €.

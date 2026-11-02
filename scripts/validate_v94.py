@@ -202,6 +202,12 @@ def main():
     if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
 
+    kill_start = source.index("function killUnit(u)")
+    kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
+    kill_section = source[kill_start:kill_end]
+    if "u.flashT = 0;" not in kill_section or "setMuzzleFlashIntensity(u.g.userData.flash, 0)" not in kill_section:
+        raise SystemExit("FAIL: dead units must synchronously hide their attached turret muzzle flash")
+
     parser = ScriptCollector()
     parser.feed(source)
     parser.close()
