@@ -90,11 +90,30 @@ try {
   await page.waitForFunction(()=>typeof window.__BLUE_ALERTS_PREVIEW__==='function' && window.__BLUE_ALERTS_PREVIEW__().drawCalls>0,null,{timeout:30000});
   const initial=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(initial.asset,'tank');
-  assert.ok(initial.meshCount>0 && initial.triangleCount>0,'default tank must render real geometry');
+  assert.ok(initial.meshCount>=50 && initial.triangleCount>0,'default faction tank must render a detailed geometry set');
   assert.ok(initial.environment,'procedural reflection environment must be assigned');
   assert.ok(initial.physicalMaterialCount>0,'PBR physical materials must be present');
   assert.ok(initial.canvasWidth>0 && initial.canvasHeight>0,'WebGL canvas must have a backing resolution');
-  await page.screenshot({path:output+'/desktop-tank.png',fullPage:true});
+  assert.equal(initial.team,'blue');
+  assert.equal(initial.factionProfile,'BLUE_SENTINEL','blue faction must use its own low-profile turret signature');
+  assert.equal(initial.trackShoeInstances,36,'both tracks must expose 36 instanced tread shoes');
+  assert.equal(initial.wheelBoltInstances,60,'twelve road wheels must expose 60 instanced wheel bolts');
+  assert.ok(initial.cameraDistance<12,'tank preview must frame the vehicle at a useful scale');
+  for(const name of ['front-glacis','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheek','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
+  await page.screenshot({path:output+'/desktop-blue-sentinel-tank.png',fullPage:true});
+
+  await page.selectOption('#team','red');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION',null,{timeout:10000});
+  const redTank=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.equal(redTank.team,'red');
+  assert.equal(redTank.factionProfile,'RED_BASTION','red faction must use its reinforced high turret signature');
+  assert.equal(redTank.trackShoeInstances,36);
+  assert.equal(redTank.wheelBoltInstances,60);
+  for(const name of ['front-glacis','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheek','red-bastion-side-plate']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
+  assert.notEqual(redTank.factionProfile,initial.factionProfile,'factions must not share the same visual profile');
+  await page.screenshot({path:output+'/desktop-red-bastion-tank.png',fullPage:true});
+  await page.selectOption('#team','blue');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
 
   await page.selectOption('#asset','turret');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='turret' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=20,null,{timeout:10000});
@@ -114,6 +133,12 @@ try {
 
   await page.setViewportSize({width:390,height:844});
   await page.waitForTimeout(400);
+  await page.screenshot({path:output+'/mobile-blue-sentinel-tank-390x844.png',fullPage:true});
+  await page.selectOption('#team','red');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION',null,{timeout:10000});
+  await page.screenshot({path:output+'/mobile-red-bastion-tank-390x844.png',fullPage:true});
+  await page.selectOption('#team','blue');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
   const mobile=await page.evaluate(()=>{
     const view=document.querySelector('#view').getBoundingClientRect();
     const canvas=document.querySelector('#view canvas').getBoundingClientRect();
@@ -138,7 +163,7 @@ try {
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
-  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-tank.png','desktop-turret.png','desktop-control-tower.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
+  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
   for(const file of files) assert.ok((await stat(output+'/'+file)).size>10000,'screenshot must contain rendered evidence: '+file);
   console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files},null,2));
 } catch(error) {
