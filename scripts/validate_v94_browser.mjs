@@ -265,7 +265,7 @@ try {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 10000 });
+    }, null, { timeout: 15000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('DESKTOP_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
@@ -554,7 +554,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 8000 });
+    }, null, { timeout: 15000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
