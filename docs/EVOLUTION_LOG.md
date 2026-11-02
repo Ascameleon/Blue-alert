@@ -128,3 +128,11 @@ The existing V94 `createUnit(..., 'infantry')` path now loads the faction-specif
 - Corrected the validator to check faction profile and rig-part tokens in the model source, while keeping preview-only hooks in the preview contract.
 - Fix commit: `d68f53cfe0dfbdcf7e4e74d689c9d1f068e528ff`.
 - A fresh exact-head workflow is required before this cycle can be marked verified.
+
+
+### Static-validator correction — generated pivot names
+
+- Workflow `41382845446` passed the V94 static validator but failed the model-kit contract because the test expected literal `left-leg-pivot` and `right-leg-pivot` strings. The model correctly constructs those names from the `makeLeg(label)` helper.
+- Updated the static contract to assert the pivot factory (`makeArm`, `makeLeg`) and left/right pivot names remain asserted by the rendered browser diagnostics.
+- Fix commit: `37ea334339aeb7e36792efdd003e420e3d26d166`.
+- No browser, standalone-build or OpenRTS test is claimed from the failed run; a fresh exact-head workflow is required.
