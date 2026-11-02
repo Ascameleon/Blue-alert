@@ -259,21 +259,29 @@ try {
     'desktop projectile hit must record a real shock ring and spark burst');
   await desktop.screenshot({ path: output + '/desktop-v94-impact-vfx.png', fullPage: true });
 
-  const desktopKill = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
+  const desktopDeath = await desktop.evaluate(() => {
+    const qa = window.__BLUE_ALERTS_COMBAT_QA__;
+    const before = qa.state();
+    return { before, kill: qa.destroyEnemyUnit() };
+  });
+  const desktopKill = desktopDeath.kill;
   console.log('DESKTOP_UNIT_DEATH ' + JSON.stringify(desktopKill));
-  assert.ok(desktopKill.targetDead && desktopKill.targetRemoved && desktopKill.killsDelta === 1 && desktopKill.creditsDelta >= 50 && desktopKill.modelExplosions === 1, 'desktop unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
+  assert.ok(desktopKill.targetDead && desktopKill.targetRemoved && desktopKill.killsDelta === 1 && desktopKill.creditsDelta >= 50 && desktopKill.explosionSpawned && desktopKill.modelExplosions === desktopDeath.before.modelExplosions + 1, 'desktop unit destruction must remove the unit, award its kill/reward and add exactly one new procedural explosion');
   assert.ok(desktopKill.flashWasActive && desktopKill.flashHidden && desktopKill.flashTimer === 0,
     'desktop unit death must immediately hide its attached turret flash and clear its timer');
   await desktop.bringToFront();
   try {
-    await desktop.waitForFunction(({ frameCount, time, life }) => {
+    await desktop.waitForFunction(({ frameCount, time, life, position }) => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      const index = state?.modelExplosionPositions?.findIndex(p =>
+        Math.abs(p.x - position.x) < 0.001 && Math.abs(p.z - position.z) < 0.001) ?? -1;
       return state && state.frameCount >= frameCount + 2 && state.time > time &&
-        state.modelExplosionLives.length === 1 && state.modelExplosionLives[0] < life;
+        index >= 0 && state.modelExplosionLives[index] < life;
     }, {
       frameCount: desktopKill.frameCount,
       time: desktopKill.time,
-      life: desktopKill.modelExplosionLives[0]
+      life: desktopKill.spawnedExplosionLife,
+      position: desktopKill.targetPosition
     }, { timeout: 5000, polling: 50 });
   } catch (error) {
     const diagnostic = await desktop.evaluate(() => ({
@@ -285,11 +293,12 @@ try {
     throw error;
   }
   const desktopExplosionState = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
-  assert.equal(desktopExplosionState.modelExplosions, 1, 'desktop explosion must remain in the live scene during its authored lifetime');
+  const desktopExplosionIndex = desktopExplosionState.modelExplosionPositions.findIndex(p => Math.abs(p.x - desktopKill.targetPosition.x) < 0.001 && Math.abs(p.z - desktopKill.targetPosition.z) < 0.001);
+  assert.ok(desktopExplosionIndex >= 0, 'desktop death explosion must remain attached to its original target position');
   console.log('DESKTOP_EXPLOSION_LIFECYCLE ' + JSON.stringify({ before: desktopKill, after: desktopExplosionState }));
   assert.ok(desktopExplosionState.started && !desktopExplosionState.gameOver && desktopExplosionState.time > desktopKill.time, 'desktop simulation clock must advance while the explosion is alive');
   assert.ok(desktopExplosionState.frameCount >= desktopKill.frameCount + 2 && desktopExplosionState.lastFrameDelta > 0, 'desktop requestAnimationFrame loop must continue after unit destruction');
-  assert.ok(desktopExplosionState.modelExplosionLives[0] < desktopKill.modelExplosionLives[0], 'desktop explosion simulation lifetime must advance');
+  assert.ok(desktopExplosionState.modelExplosionLives[desktopExplosionIndex] < desktopKill.spawnedExplosionLife, 'desktop death explosion simulation lifetime must advance');
   await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
   try {
     await desktop.waitForFunction(() => {
@@ -598,21 +607,29 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     'mobile projectile hit must record a real shock ring and spark burst');
   await mobile.screenshot({ path: output + '/mobile-v94-impact-vfx-390x844.png', fullPage: true });
 
-  const mobileKill = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.destroyEnemyUnit());
+  const mobileDeath = await mobile.evaluate(() => {
+    const qa = window.__BLUE_ALERTS_COMBAT_QA__;
+    const before = qa.state();
+    return { before, kill: qa.destroyEnemyUnit() };
+  });
+  const mobileKill = mobileDeath.kill;
   console.log('MOBILE_UNIT_DEATH ' + JSON.stringify(mobileKill));
-  assert.ok(mobileKill.targetDead && mobileKill.targetRemoved && mobileKill.killsDelta === 1 && mobileKill.creditsDelta >= 50 && mobileKill.modelExplosions === 1, 'mobile unit destruction must remove the unit, award its kill/reward and spawn the procedural explosion');
+  assert.ok(mobileKill.targetDead && mobileKill.targetRemoved && mobileKill.killsDelta === 1 && mobileKill.creditsDelta >= 50 && mobileKill.explosionSpawned && mobileKill.modelExplosions === mobileDeath.before.modelExplosions + 1, 'mobile unit destruction must remove the unit, award its kill/reward and add exactly one new procedural explosion');
   assert.ok(mobileKill.flashWasActive && mobileKill.flashHidden && mobileKill.flashTimer === 0,
     'mobile unit death must immediately hide its attached turret flash and clear its timer');
   await mobile.bringToFront();
   try {
-    await mobile.waitForFunction(({ frameCount, time, life }) => {
+    await mobile.waitForFunction(({ frameCount, time, life, position }) => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      const index = state?.modelExplosionPositions?.findIndex(p =>
+        Math.abs(p.x - position.x) < 0.001 && Math.abs(p.z - position.z) < 0.001) ?? -1;
       return state && state.frameCount >= frameCount + 2 && state.time > time &&
-        state.modelExplosionLives.length === 1 && state.modelExplosionLives[0] < life;
+        index >= 0 && state.modelExplosionLives[index] < life;
     }, {
       frameCount: mobileKill.frameCount,
       time: mobileKill.time,
-      life: mobileKill.modelExplosionLives[0]
+      life: mobileKill.spawnedExplosionLife,
+      position: mobileKill.targetPosition
     }, { timeout: 5000, polling: 50 });
   } catch (error) {
     const diagnostic = await mobile.evaluate(() => ({
@@ -627,7 +644,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   console.log('MOBILE_EXPLOSION_LIFECYCLE ' + JSON.stringify({ before: mobileKill, after: mobileExplosionState }));
   assert.ok(mobileExplosionState.started && !mobileExplosionState.gameOver && mobileExplosionState.time > mobileKill.time, 'mobile simulation clock must advance while the explosion is alive');
   assert.ok(mobileExplosionState.frameCount >= mobileKill.frameCount + 2 && mobileExplosionState.lastFrameDelta > 0, 'mobile requestAnimationFrame loop must continue after unit destruction');
-  assert.ok(mobileExplosionState.modelExplosionLives[0] < mobileKill.modelExplosionLives[0], 'mobile explosion simulation lifetime must advance');
+  const mobileExplosionIndex = mobileExplosionState.modelExplosionPositions.findIndex(p => Math.abs(p.x - mobileKill.targetPosition.x) < 0.001 && Math.abs(p.z - mobileKill.targetPosition.z) < 0.001);
+  assert.ok(mobileExplosionIndex >= 0 && mobileExplosionState.modelExplosionLives[mobileExplosionIndex] < mobileKill.spawnedExplosionLife, 'mobile death explosion simulation lifetime must advance');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
   const mobileCleanupStartedAt = Date.now();
   try {

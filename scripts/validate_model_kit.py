@@ -54,6 +54,35 @@ def main():
     missing = [name for name in REQUIRED_MODEL if name not in model]
     if missing:
         raise SystemExit("FAIL: faction infantry model is missing: " + ", ".join(missing))
+    REQUIRED_HERO_PARTS = (
+        "SENTINEL_BASTION_FIELD_SOLDIER_V3", "faceted-helmet-shell", "gas-mask-faceplate",
+        "gas-mask-optic-lens", "respirator-filter-housing", "respirator-filter-cap",
+        "respirator-filter-vent", "respirator-breathing-hose", "gas-mask-chin-guard",
+        "angular-pauldron", "articulated-knee-guard", "rifle-top-rail", "rifle-ejection-port",
+        "createInfantrySurfaceTextures", "FIELDWEAVE_CERAMIC_MICROSCUFF_V2", "fabricBump", "armorBump", "metalBump",
+        "head.scale.setScalar(.82)", "helmet shell above is the sole crown surface",
+    )
+    missing = [name for name in REQUIRED_HERO_PARTS if name not in model]
+    if missing:
+        raise SystemExit("FAIL: hero infantry sculpt is missing: " + ", ".join(missing))
+    REQUIRED_ANATOMY = (
+        "createInfantryLoftGeometry", "ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1",
+        "anatomical-torso-loft", "SHOULDER_ELBOW_HIP_KNEE_V1",
+        "TWO_HAND_FORWARD_READY_V1", "-elbow-pivot", "-knee-pivot",
+        "-upper-arm-loft", "-forearm-loft", "-thigh-loft", "-calf-loft",
+        "-glove-palm", "leftKnee.rotation.x", "rightKnee.rotation.x",
+    )
+    missing = [name for name in REQUIRED_ANATOMY if name not in model]
+    if missing:
+        raise SystemExit("FAIL: anatomical infantry and joint rig missing: " + ", ".join(missing))
+    REQUIRED_BATCHING = ("mergeInfantryStaticMeshes", "mergedPartNames", "mergedBeveledPartNames", "keepSeparateForCombat", "renderOptimization")
+    missing = [name for name in REQUIRED_BATCHING if name not in model]
+    if missing:
+        raise SystemExit("FAIL: infantry render batching contract missing: " + ", ".join(missing))
+    if "surfaceFinish" not in preview or "surfaceTextureCount" not in preview or "surfaceMaterialCount" not in preview:
+        raise SystemExit("FAIL: preview must expose real infantry PBR surface-map diagnostics")
+    if "mergedPartNames" not in preview or "renderOptimization" not in preview:
+        raise SystemExit("FAIL: preview must retain source part names and render-batching diagnostics")
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
@@ -72,9 +101,12 @@ def main():
     if missing:
         raise SystemExit("FAIL: faction tank signatures missing: " + ", ".join(missing))
 
+    if "camera.position.set(a==='landscape'?22:a==='infantry'?2.75:8" not in preview or "infantryArmorParts" not in preview:
+        raise SystemExit("FAIL: infantry preview must use close framing and expose actual armor mesh diagnostics")
+
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=5", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=10", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")

@@ -116,10 +116,27 @@ try {
   await page.waitForTimeout(450);
   const blueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(blueInfantry.factionProfile,'BLUE_SENTINEL_RIFLEMAN','blue infantry must use the Sentinel faction profile');
+  assert.equal(blueInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V2','blue infantry must render original fabric/ceramic surface maps');
+  assert.ok(blueInfantry.surfaceTextureCount>=7 && blueInfantry.surfaceMaterialCount>=5,
+    'blue infantry must bind cached color, roughness and micro-relief maps to its PBR materials');
+  assert.equal(blueInfantry.headScale,.82,'infantry head/helmet silhouette must use the corrected human proportion');
+  assert.equal(blueInfantry.bodyGeometryProfile,'ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1',
+    'infantry torso and limbs must use tapered anatomical loft geometry');
+  assert.equal(blueInfantry.animationJointProfile,'SHOULDER_ELBOW_HIP_KNEE_V1',
+    'infantry must expose shoulder, elbow, hip and knee articulation');
+  assert.equal(blueInfantry.weaponGripProfile,'TWO_HAND_FORWARD_READY_V1',
+    'infantry weapon and hand pose must use the two-hand ready alignment');
+  assert.deepEqual(blueInfantry.jointDiagnostics,{leftElbow:true,rightElbow:true,leftKnee:true,rightKnee:true},
+    'both elbows and both knees must be real articulated rig pivots');
   assert.ok(blueInfantry.cameraDistance<8,'blue infantry preview camera must frame the model closely: '+blueInfantry.cameraDistance);
   assert.ok(blueInfantry.namedParts.includes('sentinel-visor') && blueInfantry.namedParts.includes('infantry-assault-rifle') &&
-    blueInfantry.namedParts.includes('left-leg-pivot') && blueInfantry.namedParts.includes('right-leg-pivot'),
-    'blue infantry must render its visor, rifle and independent leg pivots');
+    blueInfantry.namedParts.includes('anatomical-torso-loft') &&
+    blueInfantry.namedParts.includes('left-upper-arm-loft') && blueInfantry.namedParts.includes('right-forearm-loft') &&
+    blueInfantry.namedParts.includes('left-thigh-loft') && blueInfantry.namedParts.includes('right-calf-loft') &&
+    blueInfantry.namedParts.includes('left-glove-palm') && blueInfantry.namedParts.includes('right-glove-palm') &&
+    blueInfantry.namedParts.includes('left-elbow-pivot') && blueInfantry.namedParts.includes('right-elbow-pivot') &&
+    blueInfantry.namedParts.includes('left-knee-pivot') && blueInfantry.namedParts.includes('right-knee-pivot'),
+    'blue infantry must render its anatomical torso, tapered limbs, hands and four articulated joints');
   console.log('BLUE_SENTINEL_INFANTRY_METRICS '+JSON.stringify({
     meshCount:blueInfantry.meshCount,triangleCount:blueInfantry.triangleCount,
     drawCalls:blueInfantry.drawCalls,animationPhase:blueInfantry.animationPhase
@@ -128,6 +145,10 @@ try {
     'blue infantry must retain its detailed geometry budget: '+blueInfantry.triangleCount+' triangles');
   assert.ok(blueInfantry.boundsMinY>=-0.03,
     'blue infantry combat boots must not sink below the ground plane: '+blueInfantry.boundsMinY);
+  assert.ok(blueInfantry.renderOptimization?.savedDrawCalls>=25,
+    'blue infantry must batch at least 25 static draw calls without crossing rig pivots: '+JSON.stringify(blueInfantry.renderOptimization));
+  assert.ok(blueInfantry.meshCount<60,
+    'blue infantry mesh count must reflect the static geometry batching: '+blueInfantry.meshCount);
   assert.ok(blueInfantry.drawCalls<=60,
     'blue infantry must stay within the 60-draw-call mobile preview ceiling: '+blueInfantry.drawCalls);
   assert.ok(blueInfantry.animationPhase>0 && blueInfantry.walkAmount>=0.8,
@@ -138,10 +159,14 @@ try {
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION_RIFLEMAN',null,{timeout:10000});
   await page.waitForTimeout(350);
   const redInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.equal(redInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V2','red infantry must share the same textured surface pipeline');
+  assert.ok(redInfantry.surfaceTextureCount>=7 && redInfantry.surfaceMaterialCount>=5,'red infantry PBR maps must be bound');
   assert.ok(redInfantry.namedParts.includes('bastion-brow-guard') &&
     redInfantry.namedParts.includes('bastion-jaw-guard') &&
     redInfantry.namedParts.includes('right-bastion-pauldron'),
     'red infantry must render reinforced Bastion helmet and shoulder armor');
+  assert.ok(redInfantry.renderOptimization?.savedDrawCalls>=25,
+    'red infantry must batch static geometry while preserving faction detail: '+JSON.stringify(redInfantry.renderOptimization));
   assert.ok(redInfantry.meshCount>=blueInfantry.meshCount-3 && redInfantry.drawCalls<=60,
     'red infantry must retain comparable detail and the same draw-call ceiling');
   assert.ok(redInfantry.boundsMinY>=-0.03,

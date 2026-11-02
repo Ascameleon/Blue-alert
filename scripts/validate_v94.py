@@ -8,6 +8,7 @@ import tempfile
 
 HTML = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("BLUE_ALERTS_v94_ASSET_INTEGRATION.html")
 MODEL_LIBRARY = Path("game-data/models/blue-alert-models.js")
+BROWSER_TEST = Path("scripts/validate_v94_browser.mjs")
 
 
 class ScriptCollector(HTMLParser):
@@ -207,6 +208,26 @@ def main():
     kill_section = source[kill_start:kill_end]
     if "u.flashT = 0;" not in kill_section or "setMuzzleFlashIntensity(u.g.userData.flash, 0)" not in kill_section:
         raise SystemExit("FAIL: dead units must synchronously hide their attached turret muzzle flash")
+
+    qa_start = source.index("const combatState =")
+    qa_end = source.index("if (new URLSearchParams(location.search).get('qa') === '1')", qa_start)
+    qa_section = source[qa_start:qa_end]
+    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition")
+    missing = [token for token in required_qa if token not in qa_section]
+    if missing:
+        raise SystemExit("FAIL: combat QA must track the exact death explosion: " + ", ".join(missing))
+
+    browser_test = BROWSER_TEST.read_text(encoding="utf-8")
+    required_browser_test = (
+        "desktopDeath.before.modelExplosions + 1",
+        "mobileDeath.before.modelExplosions + 1",
+        "desktopExplosionIndex",
+        "mobileExplosionIndex",
+        "spawnedExplosionLife",
+    )
+    missing = [token for token in required_browser_test if token not in browser_test]
+    if missing:
+        raise SystemExit("FAIL: desktop/mobile browser acceptance must verify a target-specific death explosion: " + ", ".join(missing))
 
     parser = ScriptCollector()
     parser.feed(source)
