@@ -378,7 +378,7 @@ def main():
         "pelvis.add(head)",
         "pelvis.add(pivot)",
         "label + '-ankle-pivot'",
-        "label+'-reinforced-combat-boot-sole'",
+        "sole.name = label + '-reinforced-combat-boot-sole'",
         "label+'-reinforced-combat-boot-toe-cap'",
         "locomotionProfile:'PLANTED_FOOT_WEIGHT_SHIFT_V1'",
         "handGeometryProfile:'ANATOMICAL_GLOVE_WRAP_V1'",

@@ -536,3 +536,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Exact-head validation and fresh desktop/390×844 mobile screenshots are pending. No visual acceptance is claimed until the running V94 preview/game captures are inspected against the accepted-main baseline. OpenRTS remains a separate native-engine validation.
 - The previous model preview used 60 meshes and 56 draw calls; the new hand geometry is batched inside each hand pivot, while boot laces/eyelets reuse the existing dark/armor material groups. The exact preview budgets remain `meshCount <= 60` and `drawCalls <= 60`; the browser workflow must confirm them.
 - No version/release created; no external or paid assets/services; budget remains 0 €. The final commit SHA will be appended only after this exact-head workflow completes, followed by a documentation-only exact-head validation as required.
+
+
+### Exact-head workflow #361 — static contract mismatch (2026-11-03)
+
+- Tested HEAD: `ba743f79824f51615bce02cd1ab43448a68d1fa0`; GitHub Actions [run 41543894902](https://github.com/Ascameleon/Blue-alert/actions/runs/41543894902) completed with failure.
+- Prototype validation and inline JavaScript parsing passed. The V94 static validator stopped before the model-kit, browser, standalone-build, gameplay and OpenRTS stages.
+- Exact failure: `required_infantry_rig` still searched for the removed source spelling `label+'-reinforced-combat-boot-sole'`. The new sculpted boot correctly names the loft mesh through `sole.name = label + '-reinforced-combat-boot-sole'`; the semantic part name is unchanged.
+- No browser captures or gameplay artifacts were produced by #361. No visual acceptance is claimed.
+- Corrected the static validator to check the new exact assignment rather than the retired beveled-box constructor expression. This is a test-contract correction; production geometry, animation and combat behavior are unchanged.
+- The branch was not written during #361. The correction and this log entry are committed together after the run completed; a fresh exact-head validation is required before any further write.
