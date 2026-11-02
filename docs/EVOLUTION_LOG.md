@@ -153,3 +153,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Model documentation and static/browser regression checks accompany the runtime change.
 - Prior isolated exact-head workflow `41379372338` passed on the original PR head. This reconciliation creates a new exact head; the combined industrial-yard + tank suite must pass before merge.
 - No paid assets, APIs or services. Physical Samsung testing is not claimed; mobile remains 390×844 browser emulation.
+
+
+## Cycle — Mission 01 objective runtime and mobile HUD port to current main (2026-11-02)
+
+- Ported the exercised Mission 01 runtime and mobile notification-clearance work from the earlier stacked branch onto current main base 05635dd14eb9d40df44df509946ae42e83058060, preserving the faction-specific tank silhouettes, industrial yard, layered vegetation and procedural terrain.
+- Runtime objectives: deliver 600 minerals at a friendly refinery/HQ, produce three combat units, then destroy the enemy citadel. The citadel remains at 1 HP until both prerequisites are complete; starting credits, field ore and initial forces do not count.
+- Desktop and mobile HUDs expose objective state and progress. The mobile mission notification is positioned below the command row and objective card.
+- Added current-main browser acceptance for initial state, premature citadel attack, mineral delivery, production, final victory, mobile objective visibility, and notification non-overlap. Dedicated screenshots are required for mission completion, toast clearance and mobile progress.
+- Source-branch workflow #215 passed browser, standalone V94, OpenRTS build, 12/12 unit movement and native selection/movement/attack checks. This current-main port is a new revision and has no validation result yet.
+- No physical Samsung test is claimed. Mobile remains 390×844 browser emulation; budget remains 0.

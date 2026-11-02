@@ -176,6 +176,22 @@ def main():
     if missing:
         raise SystemExit("FAIL: live impact/building damage states missing: " + ", ".join(missing))
 
+    required_mission_features = (
+        "const MISSION_TARGETS = Object.freeze({ deliveredOre: 600, combatUnitsProduced: 3 });",
+        "function missionObjectiveSnapshot(",
+        "function recordMissionDelivery(",
+        "function recordMissionUnitProduction(",
+        "function updateMissionHUD(",
+        "missionState.enemyCitadelDestroyed = true;",
+        "window.__BLUE_ALERTS_MISSION_QA__",
+        "mobileMissionObjective",
+        "mobileMissionBarFill",
+        "Mission progress is driven by completed gameplay conditions",
+    )
+    missing = [feature for feature in required_mission_features if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: playable mission objective tracking missing: " + ", ".join(missing))
+
     terrain_start = source.index("/* ─── Deterministic terrain art")
     terrain_end = source.index("/* ─── Game state", terrain_start)
     terrain_section = source[terrain_start:terrain_end]
