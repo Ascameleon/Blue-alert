@@ -1118,6 +1118,157 @@ battlefieldRocks.instanceMatrix.needsUpdate = true;
 if (battlefieldRocks.instanceColor) battlefieldRocks.instanceColor.needsUpdate = true;
 scene.add(battlefieldRocks);
 
+/* ─── Battlefield impact craters — deterministic, instanced terrain detail ───
+   Shallow visual-only blast scars add battlefield history without changing
+   the navigation grid, construction pads, unit height or collision model. */
+function createBattlefieldCraterGeometry() {
+  const segments = 24;
+  const rings = [
+    { radius: .36, height: .018, color: 0x302c25 },
+    { radius: .58, height: .022, color: 0x43382b },
+    { radius: .78, height: .085, color: 0x66513a },
+    { radius: 1.00, height: .17, color: 0x806a49 },
+    { radius: 1.24, height: .025, color: 0x5b503d }
+  ];
+  const positions = [];
+  const colors = [];
+  const indices = [];
+  const centerColor = new THREE.Color(0x292720);
+  positions.push(0, .014, 0);
+  colors.push(centerColor.r, centerColor.g, centerColor.b);
+  for (let ringIndex = 0; ringIndex < rings.length; ringIndex++) {
+    const ring = rings[ringIndex];
+    const baseColor = new THREE.Color(ring.color);
+    for (let segment = 0; segment < segments; segment++) {
+      const angle = segment / segments * Math.PI * 2;
+      const ripple = ringIndex >= 2 ? Math.sin(angle * 3 + ringIndex) * .018 : 0;
+      const radius = ring.radius + ripple;
+      positions.push(Math.cos(angle) * radius, ring.height + ripple * .35, Math.sin(angle) * radius);
+      const tone = .93 + (segment % 5) * .018;
+      colors.push(baseColor.r * tone, baseColor.g * tone, baseColor.b * tone);
+    }
+  }
+  for (let segment = 0; segment < segments; segment++) {
+    const current = 1 + segment;
+    const next = 1 + (segment + 1) % segments;
+    indices.push(0, next, current);
+  }
+  for (let ringIndex = 0; ringIndex < rings.length - 1; ringIndex++) {
+    const innerStart = 1 + ringIndex * segments;
+    const outerStart = innerStart + segments;
+    for (let segment = 0; segment < segments; segment++) {
+      const next = (segment + 1) % segments;
+      const a = innerStart + segment;
+      const b = innerStart + next;
+      const c = outerStart + next;
+      const d = outerStart + segment;
+      indices.push(a, b, d, b, c, d);
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+function addBattlefieldCraterSet() {
+  const craterSpecs = [
+    { x: 36, z: 24, sx: 1.25, sz: .88, rotation: .35 },
+    { x: 45, z: 31, sx: .86, sz: 1.08, rotation: 1.10 },
+    { x: 52, z: 20, sx: 1.12, sz: .78, rotation: 2.20 },
+    { x: -86, z: -18, sx: .92, sz: 1.18, rotation: .65 },
+    { x: -36, z: -54, sx: 1.15, sz: .90, rotation: 1.80 },
+    { x: 83, z: 23, sx: 1.30, sz: 1.00, rotation: 2.80 },
+    { x: 76, z: 16, sx: .82, sz: 1.20, rotation: .20 },
+    { x: -86, z: 44, sx: 1.05, sz: .82, rotation: 2.40 }
+  ];
+  const clearOfBuildZone = craterSpecs.every(spec => !insideBuildZone(spec.x, spec.z, 1.6));
+  const clearOfRoad = craterSpecs.every(spec => Math.abs(spec.z) > BUILD_ZONE.roadHalfWidth + 4);
+  const clearOfIndustrial = craterSpecs.every(spec => !insideIndustrialSet(spec.x, spec.z, 5));
+  const valid = craterSpecs.filter(spec =>
+    !insideBuildZone(spec.x, spec.z, 1.6) &&
+    Math.abs(spec.z) > BUILD_ZONE.roadHalfWidth + 4 &&
+    !insideIndustrialSet(spec.x, spec.z, 5)
+  );
+  const root = new THREE.Group();
+  root.name = 'BA_BattlefieldCraters';
+  root.userData = { kind: 'terrain-detail', blocksMovement: false };
+  const craterMesh = new THREE.InstancedMesh(
+    createBattlefieldCraterGeometry(),
+    new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .98, metalness: 0, side: THREE.DoubleSide }),
+    valid.length
+  );
+  craterMesh.name = 'battlefield-craters-instanced';
+  craterMesh.castShadow = false;
+  craterMesh.receiveShadow = !isMobile;
+  const debrisMesh = new THREE.InstancedMesh(rockGeometry, rockMaterial, valid.length * 3);
+  debrisMesh.name = 'battlefield-crater-debris-instanced';
+  debrisMesh.castShadow = !isMobile;
+  debrisMesh.receiveShadow = !isMobile;
+  const debrisTones = [0x5f594e, 0x777064, 0x4f5149];
+  let debrisCount = 0;
+  for (let i = 0; i < valid.length; i++) {
+    const spec = valid[i];
+    treeDummy.position.set(spec.x, .018, spec.z);
+    treeDummy.rotation.set(0, spec.rotation, 0);
+    treeDummy.scale.set(spec.sx, 1, spec.sz);
+    treeDummy.updateMatrix();
+    craterMesh.setMatrixAt(i, treeDummy.matrix);
+    for (let part = 0; part < 3; part++) {
+      const angle = spec.rotation + [0.65, 2.50, 4.10][part];
+      const radius = 1.28 + (part % 2) * .12;
+      const size = .08 + ((i + part) % 3) * .025;
+      treeDummy.position.set(
+        spec.x + Math.cos(angle) * radius,
+        .055 + (part % 2) * .018,
+        spec.z + Math.sin(angle) * radius
+      );
+      treeDummy.rotation.set(angle * .3, angle, .18 * (part - 1));
+      treeDummy.scale.set(size * 1.25, size * .55, size);
+      treeDummy.updateMatrix();
+      debrisMesh.setMatrixAt(debrisCount, treeDummy.matrix);
+      debrisMesh.setColorAt(debrisCount, new THREE.Color(debrisTones[(i + part) % debrisTones.length]));
+      debrisCount++;
+    }
+  }
+  craterMesh.instanceMatrix.needsUpdate = true;
+  debrisMesh.count = debrisCount;
+  debrisMesh.instanceMatrix.needsUpdate = true;
+  if (debrisMesh.instanceColor) debrisMesh.instanceColor.needsUpdate = true;
+  root.add(craterMesh, debrisMesh);
+  scene.add(root);
+  return {
+    root,
+    craterCount: craterMesh.count,
+    debrisCount,
+    clearanceVerified: valid.length === craterSpecs.length && clearOfBuildZone && clearOfRoad && clearOfIndustrial,
+    blocksMovement: false,
+    renderGroups: 2
+  };
+}
+const battlefieldCraters = addBattlefieldCraterSet();
+window.__BLUE_ALERTS_CRATERS = Object.freeze({
+  craterCount: battlefieldCraters.craterCount,
+  debrisCount: battlefieldCraters.debrisCount,
+  clearanceVerified: battlefieldCraters.clearanceVerified,
+  blocksMovement: battlefieldCraters.blocksMovement,
+  renderGroups: battlefieldCraters.renderGroups
+});
+window.__BLUE_ALERTS_CRATER_QA = Object.freeze({
+  focus() {
+    camTarget.set(44, 0, 26);
+    camYaw = .4;
+    camPitch = .72;
+    camDist = isMobile ? 9.5 : 13.5;
+    camVelX = 0;
+    camVelZ = 0;
+    return window.__BLUE_ALERTS_CRATERS;
+  }
+});
+
 window.__BLUE_ALERTS_VEGETATION = Object.freeze({
   seed: 0x424c5545,
   treeCount: placedTreeCount,
