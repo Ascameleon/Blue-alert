@@ -85,6 +85,13 @@ def main():
         "vertexColors: true",
         "terrain-ground",
         "window.__BLUE_ALERTS_TERRAIN",
+        "function createLayeredTreeFoliageGeometry",
+        "battlefield-trees-trunks-instanced",
+        "battlefield-trees-foliage-instanced",
+        "battlefield-rocks-instanced",
+        "window.__BLUE_ALERTS_VEGETATION",
+        "foliageTiers: 3",
+        "blocksMovement: false",
     )
     missing = [feature for feature in required_features if feature not in source]
     if missing:
