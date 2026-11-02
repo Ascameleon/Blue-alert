@@ -563,9 +563,62 @@ for (let i = 0; i < terrainPositions.count; i++) {
   color.toArray(terrainColors, i * 3);
 }
 terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
+function createTerrainSurfaceTextures(size) {
+  const albedoPixels = new Uint8Array(size * size * 4);
+  let checksum = 2166136261;
+  const channel = value => Math.max(0, Math.min(255, Math.round(value)));
+  for (let py = 0; py < size; py++) {
+    const worldZ = ((py + 0.5) / size - 0.5) * 160;
+    for (let px = 0; px < size; px++) {
+      const worldX = ((px + 0.5) / size - 0.5) * 200;
+      const broad = terrainNoise(worldX + 29, worldZ - 17, 0.075);
+      const medium = terrainNoise(worldX - 11, worldZ + 23, 0.32);
+      const fine = terrainNoise(worldX + 7, worldZ - 5, 1.25);
+      const fleck = terrainHash(px + 701, py - 307);
+      const soil = terrainSmoothstep(0.48, 0.72, broad * 0.62 + medium * 0.38);
+      const exposedStone = terrainSmoothstep(0.70, 0.91, medium * 0.68 + fleck * 0.32) *
+        (1 - terrainSmoothstep(0.32, 0.62, broad));
+      const grain = (fine - 0.5) * 13 + (fleck - 0.5) * 9;
+      const warm = soil * 0.54;
+      const stony = exposedStone * 0.42;
+      const offset = (py * size + px) * 4;
+      const red = channel(240 + warm * 15 - stony * 7 + grain);
+      const green = channel(244 - warm * 17 - stony * 8 + grain * 0.72);
+      const blue = channel(235 - warm * 27 - stony * 3 + grain * 0.46);
+      albedoPixels[offset] = red;
+      albedoPixels[offset + 1] = green;
+      albedoPixels[offset + 2] = blue;
+      albedoPixels[offset + 3] = 255;
+
+      if ((px & 15) === 0 && (py & 3) === 0) {
+        checksum = Math.imul(checksum ^ red ^ (green << 8) ^ (blue << 16), 16777619);
+      }
+    }
+  }
+  const makeTexture = (pixels, colorSpace) => {
+    const texture = new THREE.DataTexture(pixels, size, size, THREE.RGBAFormat);
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.generateMipmaps = true;
+    texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), isMobile ? 2 : 8);
+    if (colorSpace) texture.colorSpace = colorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  };
+  return {
+    size,
+    albedo: makeTexture(albedoPixels, THREE.SRGBColorSpace),
+    checksum: checksum >>> 0
+  };
+}
+const terrainSurfaceTextures = createTerrainSurfaceTextures(isMobile ? 256 : 512);
 const terrainMaterial = new THREE.MeshStandardMaterial({
   color: 0xffffff, vertexColors: true, roughness: 1, metalness: 0
 });
+terrainMaterial.map = terrainSurfaceTextures.albedo;
+terrainMaterial.needsUpdate = true;
 const ground = new THREE.Mesh(terrainGeometry, terrainMaterial);
 ground.name = 'terrain-ground';
 ground.rotation.x = -Math.PI / 2;
@@ -575,13 +628,232 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   seed: 0x424c5545,
   vertexCount: terrainPositions.count,
   colorCount: terrainColors.length / 3,
-  vertexColors: ground.material.vertexColors
+  vertexColors: ground.material.vertexColors,
+  albedoMap: !!terrainMaterial.map,
+  surfaceMode: 'procedural-albedo-grain',
+  textureResolution: terrainSurfaceTextures.size,
+  textureChecksum: terrainSurfaceTextures.checksum,
+  anisotropy: terrainSurfaceTextures.albedo.anisotropy
 });
-
+window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
+  focus() {
+    camTarget.set(32, 0, 44);
+    camDist = isMobile ? 14 : 19;
+    return {
+      textureResolution: terrainSurfaceTextures.size,
+      checksum: terrainSurfaceTextures.checksum
+    };
+  }
+});
 // Road
 addBox(scene, 0, 0.015, 0, 200, 0.03, 5.0, MAT.concrete);
 addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
 for (let x = -95; x < 95; x += 6) addBox(scene, x, 0.055, 0, 2.4, 0.01, 0.12, MAT.line);
+
+
+/* ─── Industrial logistics yard — playable V94 environment content ───
+   Four authored, non-blocking set pieces. Shared geometry and instancing
+   keep the added draw calls and memory cost bounded on mobile. */
+function addIndustrialLogisticsSet() {
+  const steel = new THREE.MeshStandardMaterial({ color: 0x66747a, roughness: 0.48, metalness: 0.68 });
+  const paleSteel = new THREE.MeshStandardMaterial({ color: 0xa1abad, roughness: 0.38, metalness: 0.72 });
+  const concrete = new THREE.MeshStandardMaterial({ color: 0x777d7b, roughness: 0.96, metalness: 0.02 });
+  const hazard = new THREE.MeshStandardMaterial({ color: 0xc58b32, roughness: 0.68, metalness: 0.18 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x222d32, roughness: 0.76, metalness: 0.22 });
+  const signal = new THREE.MeshStandardMaterial({
+    color: 0x45b6c8, emissive: 0x145568, emissiveIntensity: 0.65,
+    roughness: 0.32, metalness: 0.42
+  });
+  const geometry = new Map();
+  const boxGeometry = (w,h,d) => {
+    const key = 'b:' + [w,h,d].join(':');
+    if (!geometry.has(key)) geometry.set(key, new THREE.BoxGeometry(w,h,d));
+    return geometry.get(key);
+  };
+  const cylinderGeometry = (radius,height,segments=12) => {
+    const key = 'c:' + [radius,height,segments].join(':');
+    if (!geometry.has(key)) geometry.set(key, new THREE.CylinderGeometry(radius,radius,height,segments));
+    return geometry.get(key);
+  };
+  const root = new THREE.Group();
+  root.name = 'BA_IndustrialLogisticsYard';
+  root.userData = { kind:'environment-set', id:'industrial-logistics-yard-v94', blocksMovement:false };
+  scene.add(root);
+  const addBox = (parent,name,x,y,z,w,h,d,mat,rz=0) => {
+    const mesh = new THREE.Mesh(boxGeometry(w,h,d),mat);
+    mesh.name = name; mesh.position.set(x,y,z); mesh.rotation.z = rz;
+    mesh.castShadow = !isMobile; mesh.receiveShadow = !isMobile; parent.add(mesh);
+    return mesh;
+  };
+  const addCylinder = (parent,name,x,y,z,radius,height,mat,segments=12) => {
+    const mesh = new THREE.Mesh(cylinderGeometry(radius,height,segments),mat);
+    mesh.name = name; mesh.position.set(x,y,z);
+    mesh.castShadow = !isMobile; mesh.receiveShadow = !isMobile; parent.add(mesh);
+    return mesh;
+  };
+  const cluster = (name,x,z) => {
+    const group = new THREE.Group();
+    group.name = name; group.position.set(x,0,z);
+    group.userData = { kind:'environment-prop', blocksMovement:false };
+    root.add(group); return group;
+  };
+
+  // 1 — Electrical substation: transformer banks, busbars, insulators and fence.
+  const substation = cluster('BA_Substation',-72,-47);
+  addBox(substation,'substation-concrete-apron',0,.12,0,20,.24,13,concrete);
+  for (const x of [-5.6,0,5.6]) {
+    addBox(substation,'transformer-main-tank',x,1.05,0,3.55,1.65,3.35,steel);
+    addBox(substation,'transformer-cover',x,1.94,0,3.82,.16,3.58,dark);
+    for (const z of [-1.05,0,1.05]) {
+      addCylinder(substation,'ceramic-insulator',x,2.42,z,.22,.78,paleSteel,8);
+      addCylinder(substation,'insulator-cap',x,2.86,z,.29,.12,hazard,10);
+    }
+    addBox(substation,'transformer-side-panel',x+1.86,.98,0,.12,1.28,2.75,paleSteel);
+  }
+  addBox(substation,'high-voltage-busbar',0,3.18,-3.2,15,.14,.18,hazard);
+  addBox(substation,'switchgear-front',0,.94,5.15,14,1.5,.3,dark);
+  for (let i=0;i<8;i++) addBox(substation,'switchgear-indicator',-5.65+i*1.62,1.1,5.34,.42,.18,.06,signal);
+  for (let i=0;i<7;i++) {
+    const x=-8.4+i*2.8;
+    addBox(substation,'substation-fence-post',x,1.05,6.35,.12,2.1,.12,paleSteel);
+  }
+  addBox(substation,'substation-fence-rail',0,1.6,6.35,17,.1,.1,steel);
+
+  // 2 — Loading gantry: crossbeam, braced legs, trolley and suspended hook.
+  const gantry = cluster('BA_LoadingGantry',8,-38);
+  addBox(gantry,'gantry-concrete-apron',0,.1,0,23,.2,13,concrete);
+  for (const x of [-8.7,8.7]) {
+    addBox(gantry,'gantry-leg',x,3.9,0,.58,7.5,.72,hazard);
+    addBox(gantry,'gantry-foot',x,.38,0,1.9,.56,1.9,steel);
+    addBox(gantry,'gantry-diagonal-brace',x*.72,3.45,0,.24,5.8,.24,paleSteel,x<0?-.3:.3);
+    addBox(gantry,'gantry-track',x,7.65,0,.9,.3,1.05,dark);
+  }
+  addBox(gantry,'gantry-crossbeam',0,7.75,0,18.5,.72,.92,steel);
+  addBox(gantry,'gantry-hazard-stripe',0,7.36,.49,17.7,.16,.08,hazard);
+  addBox(gantry,'gantry-trolley',1.1,7.15,0,2.15,.56,1.35,dark);
+  addCylinder(gantry,'gantry-hoist-cable',1.1,6.08,0,.055,1.65,paleSteel,8);
+  addBox(gantry,'gantry-hook',1.1,5.2,0,.52,.2,.38,hazard);
+  addBox(gantry,'gantry-control-cab',-6.9,5.7,.8,1.3,1.15,1.1,dark);
+  addBox(gantry,'gantry-control-cab-window',-6.9,5.82,1.37,1.04,.68,.06,signal);
+  addBox(gantry,'gantry-control-cab-roof',-6.9,6.34,.8,1.62,.14,1.52,paleSteel);
+  addBox(gantry,'gantry-control-cab-door',-6.9,5.18,1.38,.34,.84,.06,steel);
+  addBox(gantry,'gantry-cab-access-platform',-6.9,4.95,.8,2.25,.14,2.0,steel);
+  for(let step=0;step<7;step++){
+    addBox(gantry,'gantry-cab-ladder-rung',-8.05,1.0+step*.53,1.1,.62,.075,.09,paleSteel);
+  }
+
+  // Twin runway rails, cross ties, lattice braces and four visible wheel bogies.
+  addBox(gantry,'gantry-runway-rail-near',0,7.0,-.72,19,.2,.2,dark);
+  addBox(gantry,'gantry-runway-rail-far',0,7.0,.72,19,.2,.2,dark);
+  for(let i=0;i<8;i++){
+    const x=-7.7+i*2.2;
+    addBox(gantry,'gantry-runway-cross-tie',x,7.02,0,.16,.14,1.55,paleSteel);
+    if(i<7) addBox(gantry,'gantry-lattice-diagonal',x+1.1,7.48,0,2.15,.12,.14,paleSteel,i%2?-.42:.42);
+  }
+  for(const x of [-7.5,7.5]){
+    for(const z of [-.72,.72]){
+      const wheel=addCylinder(gantry,'gantry-wheel',x,7.05,z,.34,.22,dark,12);
+      wheel.rotation.z=Math.PI/2;
+      const hub=addCylinder(gantry,'gantry-wheel-hub',x,7.05,z+.02,.13,.24,hazard,10);
+      hub.rotation.z=Math.PI/2;
+    }
+  }
+  const motor=addCylinder(gantry,'gantry-trolley-motor',1.1,7.72,0,.36,.82,steel,12);
+  motor.rotation.z=Math.PI/2;
+  addBox(gantry,'gantry-trolley-gearbox',1.1,7.55,.88,.92,.5,.42,hazard);
+  for(const x of [-8.7,8.7]){
+    const beacon=addCylinder(gantry,'gantry-warning-beacon',x,8.25,0,.18,.28,signal,10);
+    beacon.position.y=8.25;
+  }
+
+  // 3 — Fuel storage: three ribbed silos, ladders and transfer pipework.
+  const silos = cluster('BA_FuelSilos',72,-46);
+  addBox(silos,'silo-containment-apron',0,.12,0,22,.24,12,concrete);
+  for (const x of [-5.1,0,5.1]) {
+    addCylinder(silos,'fuel-silo-shell',x,2.55,0,2.05,5.05,steel,18);
+    addCylinder(silos,'fuel-silo-cap',x,5.15,0,2.02,.2,paleSteel,18);
+    addCylinder(silos,'fuel-silo-foundation',x,.2,0,2.25,.36,concrete,18);
+    for (const y of [1.15,2.55,3.9]) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(2.08,.045,6,22),paleSteel);
+      ring.name = 'fuel-silo-rib'; ring.position.set(x,y,0); ring.rotation.x=Math.PI/2;
+      silos.add(ring);
+    }
+    addBox(silos,'silo-warning-plate',x,2.15,2.07,1.2,.28,.08,hazard);
+    addBox(silos,'silo-ladder-rail',x+1.08,2.28,-1.53,.09,3.9,.09,dark);
+    for(let step=0;step<9;step++) addBox(silos,'silo-ladder-rung',x+1.08,.55+step*.42,-1.53,.56,.07,.1,paleSteel);
+  }
+  addCylinder(silos,'fuel-transfer-pipe',0,.72,4.65,.16,10.4,hazard,10).rotation.z=Math.PI/2;
+
+  // 4 — Cargo apron: colored container stacks and hazard drums, instanced.
+  const cargo = cluster('BA_CargoStacks',5,56);
+  addBox(cargo,'cargo-concrete-apron',0,.1,0,17,.2,15,concrete);
+  const crateGeometry = new THREE.BoxGeometry(1.72,1.42,1.62);
+  const crateMaterial = new THREE.MeshStandardMaterial({ color:0xffffff, roughness:.78, metalness:.32 });
+  const crates = new THREE.InstancedMesh(crateGeometry,crateMaterial,18);
+  crates.name='instanced-cargo-crates'; crates.castShadow=!isMobile; crates.receiveShadow=!isMobile;
+  const dummy = new THREE.Object3D();
+  const crateColors=[0x617a83,0x8c7149,0x465f6a];
+  for(let i=0;i<18;i++){
+    const col=i%3, row=Math.floor(i/3), level=Math.floor(row/3), depth=row%3;
+    dummy.position.set((col-1)*2.0,.82+level*1.45,(depth-1)*2.0);
+    dummy.rotation.set(0,(i%3-1)*.045,0); dummy.updateMatrix();
+    crates.setMatrixAt(i,dummy.matrix);
+    crates.setColorAt(i,new THREE.Color(crateColors[i%crateColors.length]));
+  }
+  crates.instanceMatrix.needsUpdate=true;
+  if(crates.instanceColor) crates.instanceColor.needsUpdate=true;
+  cargo.add(crates);
+  const barrels = new THREE.InstancedMesh(new THREE.CylinderGeometry(.42,.42,1.12,10),hazard,8);
+  barrels.name='instanced-hazard-barrels'; barrels.castShadow=!isMobile;
+  for(let i=0;i<8;i++){
+    dummy.position.set(-5.1+(i%4)*1.45,.66,5.0+Math.floor(i/4)*1.55);
+    dummy.rotation.set(0,0,0); dummy.updateMatrix(); barrels.setMatrixAt(i,dummy.matrix);
+  }
+  barrels.instanceMatrix.needsUpdate=true; cargo.add(barrels);
+  addBox(cargo,'cargo-apron-warning-line',0,.22,6.95,15,.035,.16,hazard);
+
+  return {
+    root, clusters:[substation,gantry,silos,cargo],
+    counts:{ cargoCrates:crates.count, hazardBarrels:barrels.count },
+    exclusionZones:[
+      {x:-72,z:-47,rx:14,rz:10}, {x:8,z:-38,rx:16,rz:10},
+      {x:72,z:-46,rx:15,rz:10}, {x:5,z:56,rx:12,rz:11}
+    ],
+    focus:{
+      base:{x:-18,z:4}, substation:{x:-72,z:-47},
+      gantry:{x:8,z:-38}, silos:{x:72,z:-46}, cargo:{x:5,z:56}
+    }
+  };
+}
+const industrialYard = addIndustrialLogisticsSet();
+function insideIndustrialSet(x,z,padding=0) {
+  return industrialYard.exclusionZones.some(zone =>
+    Math.abs(x-zone.x) <= zone.rx+padding && Math.abs(z-zone.z) <= zone.rz+padding
+  );
+}
+window.__BLUE_ALERTS_ENVIRONMENT = Object.freeze({
+  id:'industrial-logistics-yard-v94',
+  runtimeIntegrated:true,
+  clusterCount:industrialYard.clusters.length,
+  cargoCrates:industrialYard.counts.cargoCrates,
+  hazardBarrels:industrialYard.counts.hazardBarrels,
+  clearanceZones:industrialYard.exclusionZones.length,
+  blocksMovement:false
+});
+if (new URLSearchParams(location.search).get('environment') === '1') {
+  window.__BLUE_ALERTS_ENVIRONMENT_QA = Object.freeze({
+    snapshot:() => window.__BLUE_ALERTS_ENVIRONMENT,
+    focus(name) {
+      const point=industrialYard.focus[name];
+      if(!point) throw new Error('Unknown industrial environment focus: '+name);
+      camTarget.set(point.x,0,point.z);
+      camYaw=.4; camPitch=.72; camDist=name==='base'?48:31;
+      camVelX=0; camVelZ=0;
+      return {name,...point};
+    }
+  });
+}
+
  
 // Battlefield dressing: lightweight instanced scrub and reflective road markers.
 // Instancing keeps the extra environmental detail to a handful of draw calls on mobile.
@@ -601,7 +873,7 @@ function addBattlefieldDressing() {
   for (let i = 0; i < tuftCount; i++) {
     const x = -94 + terrainHash(i, 31) * 188;
     const z = -70 + terrainHash(i, 73) * 140;
-    if (Math.abs(z) < 8 || insideBuildZone(x, z, 0)) continue;
+    if (Math.abs(z) < 8 || insideBuildZone(x, z, 0) || insideIndustrialSet(x, z, 8)) continue;
     const scale = 0.55 + terrainHash(i, 97) * 0.85;
     for (let blade = 0; blade < 2; blade++) {
       dummy.position.set(x + (blade ? 0.09 : -0.09), 0.025, z + (blade ? -0.06 : 0.06));
@@ -728,31 +1000,123 @@ function createBuildZoneVisual() {
 }
 createBuildZoneVisual();
 
-// Trees — deterministic placement keeps every match and visual test reproducible.
-for (let i = 0; i < (isMobile ? 100 : 160); i++) {
+// Battlefield vegetation — layered conifers and rocks, batched for desktop/mobile.
+// Every transform is deterministic; props remain visual-only and never alter pathing.
+function createLayeredTreeFoliageGeometry() {
+  const tiers = [
+    { radius: .88, height: 1.45, y: 1.10, light: .76 },
+    { radius: .70, height: 1.30, y: 1.62, light: .88 },
+    { radius: .52, height: 1.10, y: 2.08, light: 1.00 }
+  ];
+  const positions = [], normals = [], colors = [];
+  for (let tierIndex = 0; tierIndex < tiers.length; tierIndex++) {
+    const tier = tiers[tierIndex];
+    const indexed = new THREE.ConeGeometry(tier.radius, tier.height, 8, 1);
+    const part = indexed.toNonIndexed();
+    indexed.dispose();
+    part.translate(0, tier.y, 0);
+    const p = part.getAttribute('position');
+    const n = part.getAttribute('normal');
+    for (let vertex = 0; vertex < p.count; vertex++) {
+      positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
+      normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
+      const facet = .97 + (vertex % 7) * .005;
+      const tone = tier.light * facet;
+      colors.push(tone * .84, tone, tone * .82);
+    }
+    part.dispose();
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+const treeCapacity = isMobile ? 100 : 160;
+const treeTrunkGeometry = new THREE.CylinderGeometry(.10, .16, .85, 7);
+treeTrunkGeometry.translate(0, .425, 0);
+const treeFoliageGeometry = createLayeredTreeFoliageGeometry();
+const treeTrunks = new THREE.InstancedMesh(
+  treeTrunkGeometry, mkMat(0x4a3820, .96, .01), treeCapacity
+);
+treeTrunks.name = 'battlefield-trees-trunks-instanced';
+treeTrunks.castShadow = !isMobile;
+treeTrunks.receiveShadow = false;
+const treeFoliage = new THREE.InstancedMesh(
+  treeFoliageGeometry,
+  new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .96, metalness: .01 }),
+  treeCapacity
+);
+treeFoliage.name = 'battlefield-trees-foliage-instanced';
+treeFoliage.castShadow = !isMobile;
+treeFoliage.receiveShadow = !isMobile;
+const treeDummy = new THREE.Object3D();
+const treeTones = [0x4d7950, 0x416e49, 0x587f50];
+let placedTreeCount = 0;
+for (let i = 0; i < treeCapacity; i++) {
   const x = (terrainRandom() - 0.5) * 185;
   const z = (terrainRandom() - 0.5) * 145;
   if (Math.abs(z) < 7) continue;
-  if (insideBuildZone(x, z, 0) || (Math.abs(x) < 55 && Math.abs(z) < 35)) continue;
-  const sc = 0.5 + terrainRandom() * 1.4;
-  addCyl(scene, x, 0.4 * sc, z, 0.1 * sc, 0.16 * sc, 0.85 * sc, mkMat(0x4a3820), 6);
-  const crown = new THREE.Mesh(new THREE.ConeGeometry(sc * 0.85, 2.3 * sc, 6), i % 3 ? MAT.tree : MAT.tree2);
-  crown.position.set(x, 1.5 * sc, z);
-  crown.castShadow = true;
-  scene.add(crown);
+  if (insideBuildZone(x, z, 0) || (Math.abs(x) < 55 && Math.abs(z) < 35) || insideIndustrialSet(x, z, 5)) continue;
+  const scale = 0.5 + terrainRandom() * 1.4;
+  treeDummy.position.set(x, 0, z);
+  treeDummy.rotation.set(0, terrainHash(i, 181) * Math.PI * 2, 0);
+  treeDummy.scale.setScalar(scale);
+  treeDummy.updateMatrix();
+  treeTrunks.setMatrixAt(placedTreeCount, treeDummy.matrix);
+  treeFoliage.setMatrixAt(placedTreeCount, treeDummy.matrix);
+  treeFoliage.setColorAt(placedTreeCount, new THREE.Color(treeTones[i % treeTones.length]));
+  placedTreeCount++;
 }
-// Rocks — same seeded stream, separate from gameplay randomness.
-for (let i = 0; i < (isMobile ? 48 : 80); i++) {
+treeTrunks.count = placedTreeCount;
+treeFoliage.count = placedTreeCount;
+treeTrunks.instanceMatrix.needsUpdate = true;
+treeFoliage.instanceMatrix.needsUpdate = true;
+if (treeFoliage.instanceColor) treeFoliage.instanceColor.needsUpdate = true;
+scene.add(treeTrunks, treeFoliage);
+
+// Weathered field rocks use one shared low-poly geometry and per-instance tint.
+const rockCapacity = isMobile ? 48 : 80;
+const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
+const rockMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .92, metalness: .03 });
+const battlefieldRocks = new THREE.InstancedMesh(rockGeometry, rockMaterial, rockCapacity);
+battlefieldRocks.name = 'battlefield-rocks-instanced';
+battlefieldRocks.castShadow = !isMobile;
+battlefieldRocks.receiveShadow = !isMobile;
+const rockTones = [0x686d62, 0x77796c, 0x5d645d];
+const rockDummy = new THREE.Object3D();
+let placedRockCount = 0;
+for (let i = 0; i < rockCapacity; i++) {
   const x = (terrainRandom() - 0.5) * 180;
   const z = (terrainRandom() - 0.5) * 140;
-  if (Math.abs(z) < 6 || insideBuildZone(x, z, 0)) continue;
-  const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15 + terrainRandom() * 0.45, 0), MAT.rock);
-  r.position.set(x, 0.1, z);
-  r.scale.y = 0.4 + terrainRandom() * 0.5;
-  r.rotation.set(terrainRandom(), terrainRandom(), terrainRandom());
-  r.castShadow = true;
-  scene.add(r);
+  if (Math.abs(z) < 6 || insideBuildZone(x, z, 0) || insideIndustrialSet(x, z, 3)) continue;
+  const radius = 0.15 + terrainRandom() * 0.45;
+  const verticalScale = 0.4 + terrainRandom() * 0.5;
+  rockDummy.position.set(x, 0.1, z);
+  rockDummy.rotation.set(terrainRandom(), terrainRandom(), terrainRandom());
+  rockDummy.scale.set(radius, radius * verticalScale, radius);
+  rockDummy.updateMatrix();
+  battlefieldRocks.setMatrixAt(placedRockCount, rockDummy.matrix);
+  battlefieldRocks.setColorAt(placedRockCount, new THREE.Color(rockTones[i % rockTones.length]));
+  placedRockCount++;
 }
+battlefieldRocks.count = placedRockCount;
+battlefieldRocks.instanceMatrix.needsUpdate = true;
+if (battlefieldRocks.instanceColor) battlefieldRocks.instanceColor.needsUpdate = true;
+scene.add(battlefieldRocks);
+
+window.__BLUE_ALERTS_VEGETATION = Object.freeze({
+  seed: 0x424c5545,
+  treeCount: placedTreeCount,
+  trunkInstances: treeTrunks.count,
+  foliageInstances: treeFoliage.count,
+  foliageTiers: 3,
+  rockInstances: battlefieldRocks.count,
+  renderGroups: 3,
+  blocksMovement: false
+});
 
 /* ─── Game state ─────────────────────────────────────────── */
 const buildings = [];

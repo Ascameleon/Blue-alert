@@ -85,6 +85,18 @@ def main():
         "vertexColors: true",
         "terrain-ground",
         "window.__BLUE_ALERTS_TERRAIN",
+        "function createTerrainSurfaceTextures(size)",
+        "terrainSurfaceTextures.albedo",
+                        "textureResolution: terrainSurfaceTextures.size",
+        "textureChecksum: terrainSurfaceTextures.checksum",
+        "surfaceMode: 'procedural-albedo-grain'",
+        "function createLayeredTreeFoliageGeometry",
+        "battlefield-trees-trunks-instanced",
+        "battlefield-trees-foliage-instanced",
+        "battlefield-rocks-instanced",
+        "window.__BLUE_ALERTS_VEGETATION",
+        "foliageTiers: 3",
+        "blocksMovement: false",
     )
     missing = [feature for feature in required_features if feature not in source]
     if missing:
@@ -124,6 +136,27 @@ def main():
     if missing:
         raise SystemExit("FAIL: live combat VFX/death lifecycle missing: " + ", ".join(missing))
 
+
+    required_environment_features = (
+        "function addIndustrialLogisticsSet()",
+        "BA_IndustrialLogisticsYard",
+        "BA_Substation",
+        "BA_LoadingGantry",
+        "BA_FuelSilos",
+        "BA_CargoStacks",
+        "instanced-cargo-crates",
+        "instanced-hazard-barrels",
+        "window.__BLUE_ALERTS_ENVIRONMENT",
+        "function insideIndustrialSet(",
+        "exclusionZones:[",
+        "clearanceZones:industrialYard.exclusionZones.length",
+        "runtimeIntegrated:true",
+        "blocksMovement:false",
+    )
+    missing = [feature for feature in required_environment_features if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: V94 industrial environment integration missing: " + ", ".join(missing))
+
     required_building_damage_features = (
         "function spawnImpact(",
         "kind: 'impact-ring'",
@@ -150,6 +183,8 @@ def main():
         raise SystemExit("FAIL: terrain prop placement must be deterministic")
     if "vertexColors: true" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic vertex color variation")
+    if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
+        raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
 
     parser = ScriptCollector()
     parser.feed(source)
