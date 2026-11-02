@@ -130,6 +130,22 @@ try {
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
+  const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
+  assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
+  assert.equal(missionInitial.deliveredOre, 0, 'starting credits and ore in the field must not count as delivered resources');
+  assert.equal(missionInitial.combatUnitsProduced, 0, 'starting forces must not count as newly produced combat units');
+  assert.equal(missionInitial.completedCount, 0, 'mission objectives must begin incomplete');
+  const missionAfterOre = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.recordDelivery(600));
+  assert.ok(missionAfterOre.objectives[0].complete && missionAfterOre.completedCount === 1,
+    'the mineral objective must complete only after a real delivery event is recorded');
+  const missionAfterProduction = await desktop.evaluate(() => {
+    for (let i = 0; i < 3; i++) window.__BLUE_ALERTS_MISSION_QA__.recordProduction('light');
+    return window.__BLUE_ALERTS_MISSION_QA__.snapshot();
+  });
+  assert.ok(missionAfterProduction.objectives[1].complete && missionAfterProduction.completedCount === 2 &&
+    !missionAfterProduction.objectives[2].complete && missionAfterProduction.progressPercent >= 66,
+    'the force objective must count three produced combat units without completing the citadel objective');
+  console.log('DESKTOP_MISSION_OBJECTIVES ' + JSON.stringify({ initial: missionInitial, afterOre: missionAfterOre, afterProduction: missionAfterProduction }));
   const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
   assert.ok(buildBefore, 'build-zone QA diagnostics must be available');
   assert.ok(buildBefore.hq.modelsLoaded, 'the procedural model library must load from inside the single HTML file');
@@ -304,6 +320,17 @@ try {
     'desktop critical building damage must show scorch and fire while the building remains alive');
   await desktop.screenshot({ path: output + '/desktop-v94-building-critical.png', fullPage: true });
 
+  const missionVictory = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.destroyEnemyCitadel());
+  assert.ok(missionVictory.enemyCitadelDestroyed && missionVictory.complete &&
+    missionVictory.completedCount === 3 && missionVictory.progressPercent === 100,
+    'destroying the enemy citadel through the combat damage path must complete all three mission objectives');
+  assert.ok(!(await desktop.locator('#endOverlay').evaluate(el => el.classList.contains('hidden'))),
+    'mission completion must display the victory overlay');
+  assert.equal(await desktop.locator('#mBar').evaluate(el => Math.round(parseFloat(el.style.width))), 100,
+    'the mission progress bar must reach 100 percent only after all objective conditions are met');
+  console.log('DESKTOP_MISSION_COMPLETE ' + JSON.stringify(missionVictory));
+  await desktop.screenshot({ path: output + '/desktop-v94-mission-complete.png', fullPage: true });
+
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
   await desktop.close();
@@ -335,6 +362,25 @@ try {
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
   assert.equal(touchTargets.tabs.length, 3, 'all three mobile sidebar tabs must be present');
   assert.ok(touchTargets.tabs.every(t => t.width >= 44 && t.height >= 44), 'every mobile tab must meet the 44px touch-target minimum');
+  const mobileMissionHud = await mobile.evaluate(() => {
+    const el = document.getElementById('mobileMission');
+    const rect = el.getBoundingClientRect();
+    return { display: getComputedStyle(el).display, width: rect.width, left: rect.left, right: rect.right,
+      text: document.getElementById('mobileMissionObjective').textContent };
+  });
+  assert.ok(mobileMissionHud.display !== 'none' && mobileMissionHud.width > 0 &&
+    mobileMissionHud.left >= 0 && mobileMissionHud.right <= innerWidth + 1 &&
+    mobileMissionHud.text.includes('Livrer 600 minerais'),
+    'mobile HUD must expose the active mission objective without horizontal overflow');
+  const mobileMissionProgress = await mobile.evaluate(() => {
+    window.__BLUE_ALERTS_MISSION_QA__.recordDelivery(600);
+    for (let i = 0; i < 3; i++) window.__BLUE_ALERTS_MISSION_QA__.recordProduction('light');
+    return window.__BLUE_ALERTS_MISSION_QA__.snapshot();
+  });
+  assert.ok(mobileMissionProgress.completedCount === 2 &&
+    document.getElementById('mobileMissionCount').textContent === '2/3',
+    'mobile mission HUD must update its objective count after gameplay progress');
+  await mobile.screenshot({ path: output + '/mobile-v94-mission-progress-390x844.png', fullPage: true });
   assert.ok(touchTargets.firstCard && touchTargets.firstCard.width >= 60 && touchTargets.firstCard.height >= 44, 'mobile build cards must remain tappable');
   const tabBox = await mobile.locator('#sidebar .tab[data-t="units"]').boundingBox();
   await mobile.touchscreen.tap(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2);
