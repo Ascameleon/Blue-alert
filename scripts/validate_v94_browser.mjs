@@ -180,9 +180,14 @@ try {
   assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
     desktopMetrics.vegetation.trunkInstances === desktopMetrics.vegetation.treeCount &&
     desktopMetrics.vegetation.foliageInstances === desktopMetrics.vegetation.treeCount &&
-    desktopMetrics.vegetation.foliageTiers === 3 && desktopMetrics.vegetation.rockInstances >= 30 &&
+    desktopMetrics.vegetation.foliageTiers === 3 &&
+    desktopMetrics.vegetation.branchWhorls === 3 &&
+    desktopMetrics.vegetation.branchArms >= 17 &&
+    desktopMetrics.vegetation.needleClusters >= 17 &&
+    desktopMetrics.vegetation.foliageTriangles >= 350 &&
+    desktopMetrics.vegetation.rockInstances >= 30 &&
     desktopMetrics.vegetation.renderGroups === 3 && desktopMetrics.vegetation.blocksMovement === false,
-    'desktop vegetation must render layered tree silhouettes and field rocks in three non-blocking instanced groups');
+    'desktop vegetation must render detailed instanced evergreen branch whorls and needle clusters without adding draw groups');
   assert.ok(desktopMetrics.environment?.runtimeIntegrated &&
     desktopMetrics.environment.clusterCount === 4 &&
     desktopMetrics.environment.cargoCrates === 18 &&
@@ -760,9 +765,23 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
 
+  const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
+  assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
+    desktopTreeDetail.needleClusters >= 17 && desktopTreeDetail.foliageTriangles >= 350,
+    'desktop live V94 must expose a complete instanced evergreen asset for close visual inspection');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-detail.png', fullPage: true });
+
+  const mobileTreeDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
+  assert.ok(mobileTreeDetail?.branchWhorls === 3 && mobileTreeDetail.branchArms >= 17 &&
+    mobileTreeDetail.needleClusters >= 17 && mobileTreeDetail.foliageTriangles >= 350,
+    'mobile live V94 must expose the same detailed evergreen asset within the mobile draw-call budget');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-detail-390x844.png', fullPage: true });
+
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
@@ -780,7 +799,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       desktop: { baseline: desktopCameraBaseline, improved: desktopCameraCloser },
       mobile: { baseline: mobileCameraBaseline, improved: mobileCameraCloser }
     },
-    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png']
+    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-detail-390x844.png']
   }, null, 2));
 } catch (error) {
   console.error(error);
