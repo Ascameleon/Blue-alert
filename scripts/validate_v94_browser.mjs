@@ -162,6 +162,7 @@ try {
   await desktop.waitForTimeout(650);
   await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
   await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA.focus('base'));
+  await desktop.waitForTimeout(180);
 
   // Real mouse input: place a power station on the pad, then prove invalid ground
   // clicks do not spend credits or create structures.
