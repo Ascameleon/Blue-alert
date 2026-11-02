@@ -425,11 +425,13 @@ scene.background = new THREE.Color(0x536c78);
 scene.fog = new THREE.Fog(0x536c78, 105, 220);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.15, 350);
-let camTarget = new THREE.Vector3(-18, 0, 4);
-let camYaw = 0.4, camPitch = 0.72, camDist = 48;
-let camVelX = 0, camVelZ = 0;
-
 const isMobile = matchMedia('(max-width: 800px)').matches;
+// Keep the opening RTS view closer to the command group so unit silhouettes,
+// infantry gait and faction equipment are readable before the player zooms.
+const DEFAULT_CAMERA_DISTANCE = isMobile ? 40 : 38;
+let camTarget = new THREE.Vector3(-18, 0, 4);
+let camYaw = 0.4, camPitch = 0.72, camDist = DEFAULT_CAMERA_DISTANCE;
+let camVelX = 0, camVelZ = 0;
 const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.15 : 1.5));
 renderer.shadowMap.enabled = !isMobile;
@@ -872,7 +874,7 @@ if (new URLSearchParams(location.search).get('environment') === '1') {
       const point=industrialYard.focus[name];
       if(!point) throw new Error('Unknown industrial environment focus: '+name);
       camTarget.set(point.x,0,point.z);
-      camYaw=.4; camPitch=.72; camDist=name==='base'?48:31;
+      camYaw=.4; camPitch=.72; camDist=name==='base'?DEFAULT_CAMERA_DISTANCE:31;
       camVelX=0; camVelZ=0;
       return {name,...point};
     }
@@ -1149,6 +1151,7 @@ const units = [];
 const ores = [];
 const projectiles = [];
 const fx = [];
+let qaSuppressCombat = false; // QA-only gate; production gameplay remains unchanged unless explicitly enabled.
 let impactSequence = 0;
 let lastImpactEvent = null;
 const orderMarks = [];
@@ -3052,7 +3055,7 @@ addEventListener('keydown', e => {
     toast('Attack-move : cliquez la destination');
     sfx('click');
   }
-  else if (k === ' ') { e.preventDefault(); camTarget.set(-18, 0, 4); camYaw = 0.4; camPitch = 0.72; camDist = 48; }
+  else if (k === ' ') { e.preventDefault(); camTarget.set(-18, 0, 4); camYaw = 0.4; camPitch = 0.72; camDist = DEFAULT_CAMERA_DISTANCE; }
   else if (k === 'h') {
     // Center on HQ (common RTS binding)
     camTarget.set(playerHQ.x, 0, playerHQ.z);
@@ -3081,7 +3084,7 @@ $('btnRetry').addEventListener('click', () => location.reload());
 $('btnSelectAll').addEventListener('click', selectAll);
 $('btnStop').addEventListener('click', stopSelected);
 $('btnCenter').addEventListener('click', () => {
-  camTarget.set(-18, 0, 4); camYaw = 0.4; camPitch = 0.72; camDist = 48;
+  camTarget.set(-18, 0, 4); camYaw = 0.4; camPitch = 0.72; camDist = DEFAULT_CAMERA_DISTANCE;
 });
 $('btnSound').addEventListener('click', () => {
   soundOn = !soundOn;
@@ -3091,7 +3094,7 @@ $('btnSound').addEventListener('click', () => {
 });
 $('mobileSelect')?.addEventListener('click', selectAll);
 $('mobileStop')?.addEventListener('click', stopSelected);
-$('mobileCenter')?.addEventListener('click', () => { camTarget.set(-18,0,4); camYaw=.4; camPitch=.72; camDist=48; });
+$('mobileCenter')?.addEventListener('click', () => { camTarget.set(-18,0,4); camYaw=.4; camPitch=.72; camDist=DEFAULT_CAMERA_DISTANCE; });
 $('mobileAttack')?.addEventListener('click', () => {
   attackMoveMode = !attackMoveMode; mode='select'; placeKind=null; clearGhost();
   syncMobileAttackButton();
@@ -3397,7 +3400,7 @@ function tick() {
         }
       }
 
-      if (combatTarget && u.dmg > 0) {
+      if (!qaSuppressCombat && combatTarget && u.dmg > 0) {
         const tx = combatTarget.g ? combatTarget.g.position.x : combatTarget.x;
         const tz = combatTarget.g ? combatTarget.g.position.z : combatTarget.z;
         const dx = tx - u.g.position.x;
@@ -3576,7 +3579,7 @@ function tick() {
         const dx = nearest.g.position.x - b.x;
         const dz = nearest.g.position.z - b.z;
         if (b.head) b.head.rotation.y = Math.atan2(dx, dz);
-        if (b.cd <= 0) {
+        if (!qaSuppressCombat && b.cd <= 0) {
           b.cd = 1.0;
           fireProjectile(b, nearest);
         }
@@ -3875,6 +3878,27 @@ if (new URLSearchParams(location.search).get('combat-rig') === '1' || new URLSea
 }
 
 if (new URLSearchParams(location.search).get('qa') === '1') {
+  const cameraQaSnapshot = () => ({
+    distance: Number(camDist.toFixed(2)),
+    defaultDistance: DEFAULT_CAMERA_DISTANCE,
+    mobile: isMobile,
+    target: [Number(camTarget.x.toFixed(2)), Number(camTarget.z.toFixed(2))],
+    yaw: Number(camYaw.toFixed(3)),
+    pitch: Number(camPitch.toFixed(3))
+  });
+  window.__BLUE_ALERTS_CAMERA_QA__ = Object.freeze({
+    snapshot: cameraQaSnapshot,
+    setDistance(distance) {
+      const next = Number(distance);
+      if (!Number.isFinite(next) || next < 16 || next > 95) {
+        throw new RangeError('Camera QA distance must stay within the player zoom range 16–95.');
+      }
+      camDist = next;
+      camVelX = 0;
+      camVelZ = 0;
+      return cameraQaSnapshot();
+    }
+  });
   const infantryProbe = () => {
     let unit = units.find(candidate => !candidate.dead && candidate.team === 1 &&
       candidate.kind === 'infantry' && candidate.g.userData.infantryRig);
@@ -3958,6 +3982,14 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
   });
   window.__BLUE_ALERTS_COMBAT_QA__ = Object.freeze({
     state: combatState,
+    freezeNewCombat() {
+      qaSuppressCombat = true;
+      return combatState();
+    },
+    resumeCombat() {
+      qaSuppressCombat = false;
+      return combatState();
+    },
     fire() {
       const shooter = units.find(u => !u.dead && u.team === 1 && u.dmg > 0);
       const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);
