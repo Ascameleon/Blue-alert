@@ -96,6 +96,46 @@ try {
   assert.ok(initial.canvasWidth>0 && initial.canvasHeight>0,'WebGL canvas must have a backing resolution');
   await page.screenshot({path:output+'/desktop-tank.png',fullPage:true});
 
+  // Both faction riflemen must render their own equipment silhouette and live gait rig.
+  await page.selectOption('#asset','infantry');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='infantry' &&
+    window.__BLUE_ALERTS_PREVIEW__().hasAnimationRig && window.__BLUE_ALERTS_PREVIEW__().meshCount>=25,null,{timeout:10000});
+  await page.waitForTimeout(450);
+  const blueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.equal(blueInfantry.factionProfile,'BLUE_SENTINEL_RIFLEMAN','blue infantry must use the Sentinel faction profile');
+  assert.ok(blueInfantry.cameraDistance<8,'blue infantry preview camera must frame the model closely: '+blueInfantry.cameraDistance);
+  assert.ok(blueInfantry.namedParts.includes('sentinel-visor') && blueInfantry.namedParts.includes('infantry-assault-rifle') &&
+    blueInfantry.namedParts.includes('left-leg-pivot') && blueInfantry.namedParts.includes('right-leg-pivot'),
+    'blue infantry must render its visor, rifle and independent leg pivots');
+  console.log('BLUE_SENTINEL_INFANTRY_METRICS '+JSON.stringify({
+    meshCount:blueInfantry.meshCount,triangleCount:blueInfantry.triangleCount,
+    drawCalls:blueInfantry.drawCalls,animationPhase:blueInfantry.animationPhase
+  }));
+  assert.ok(blueInfantry.triangleCount>=1200,
+    'blue infantry must retain its detailed geometry budget: '+blueInfantry.triangleCount+' triangles');
+  assert.ok(blueInfantry.boundsMinY>=-0.03,
+    'blue infantry combat boots must not sink below the ground plane: '+blueInfantry.boundsMinY);
+  assert.ok(blueInfantry.drawCalls<=60,
+    'blue infantry must stay within the 60-draw-call mobile preview ceiling: '+blueInfantry.drawCalls);
+  assert.ok(blueInfantry.animationPhase>0 && blueInfantry.walkAmount>=0.8,
+    'preview gait must advance its deterministic animation rig');
+  await page.screenshot({path:output+'/desktop-blue-sentinel-infantry.png',fullPage:true});
+
+  await page.selectOption('#team','red');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION_RIFLEMAN',null,{timeout:10000});
+  await page.waitForTimeout(350);
+  const redInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.ok(redInfantry.namedParts.includes('bastion-brow-guard') &&
+    redInfantry.namedParts.includes('bastion-jaw-guard') &&
+    redInfantry.namedParts.includes('right-bastion-pauldron'),
+    'red infantry must render reinforced Bastion helmet and shoulder armor');
+  assert.ok(redInfantry.meshCount>=blueInfantry.meshCount-3 && redInfantry.drawCalls<=60,
+    'red infantry must retain comparable detail and the same draw-call ceiling');
+  assert.ok(redInfantry.boundsMinY>=-0.03,
+    'red infantry combat boots must not sink below the ground plane: '+redInfantry.boundsMinY);
+  assert.ok(redInfantry.cameraDistance<8,'red infantry preview camera must frame the model closely: '+redInfantry.cameraDistance);
+  await page.screenshot({path:output+'/desktop-red-bastion-infantry.png',fullPage:true});
+
   await page.selectOption('#asset','turret');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='turret' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=20,null,{timeout:10000});
   await page.waitForTimeout(500);
@@ -130,6 +170,19 @@ try {
   await page.selectOption('#asset','turret');
   await page.waitForTimeout(450);
   await page.screenshot({path:output+'/mobile-turret-390x844.png',fullPage:true});
+  await page.selectOption('#asset','infantry');
+  await page.selectOption('#team','blue');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='BLUE_SENTINEL_RIFLEMAN',null,{timeout:10000});
+  await page.waitForTimeout(350);
+  const mobileBlueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.ok(mobileBlueInfantry.canvasWidth>=300 && mobileBlueInfantry.canvasHeight>=400 &&
+    mobileBlueInfantry.hasAnimationRig && mobileBlueInfantry.drawCalls<=60 && mobileBlueInfantry.cameraDistance<8,
+    'blue infantry must remain readable and animated in the mobile preview');
+  await page.screenshot({path:output+'/mobile-blue-sentinel-infantry-390x844.png',fullPage:true});
+  await page.selectOption('#team','red');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION_RIFLEMAN',null,{timeout:10000});
+  await page.waitForTimeout(350);
+  await page.screenshot({path:output+'/mobile-red-bastion-infantry-390x844.png',fullPage:true});
   console.log('MOBILE_LAYOUT '+JSON.stringify(mobile));
   console.log('VISUAL_BASELINE '+JSON.stringify(baselineMetrics));
   assert.ok(mobile.documentWidth<=mobile.viewportWidth+1,'mobile preview must not overflow horizontally');
@@ -138,9 +191,9 @@ try {
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
-  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-tank.png','desktop-turret.png','desktop-control-tower.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
+  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png'];
   for(const file of files) assert.ok((await stat(output+'/'+file)).size>10000,'screenshot must contain rendered evidence: '+file);
-  console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files},null,2));
+  console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,blueInfantry,redInfantry,mobileBlueInfantry,turret,tower,mobile,screenshots:files},null,2));
 } catch(error) {
   console.error(error);
   if(failures.length) console.error('Browser errors:',failures);

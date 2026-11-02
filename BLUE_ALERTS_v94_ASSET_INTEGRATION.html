@@ -1193,7 +1193,10 @@ function createUnit(x, z, team, kind) {
   if (BLUE_MODELS && (kind === 'infantry' || kind === 'light' || kind === 'heavy')) {
     if (kind === 'infantry') {
       speed = 2.9; hp = 50; dmg = 9; range = 7.5;
-      g.add(BLUE_MODELS.createInfantry(THREE, { team: team === 1 ? 'blue' : 'red', role: 'rifleman' }));
+      const infantryModel = BLUE_MODELS.createInfantry(THREE, { team: team === 1 ? 'blue' : 'red', role: 'rifleman' });
+      g.add(infantryModel);
+      g.userData.infantryRig = infantryModel.userData?.animationRig || null;
+      g.userData.infantryProfile = infantryModel.userData?.factionProfile || null;
     } else {
       const heavy = kind === 'heavy';
       speed = heavy ? 2.3 : 3.6; hp = heavy ? 320 : 160;
@@ -3032,6 +3035,10 @@ function tick() {
       // Stuck-unit recovery: retry navigation after sustained lack of progress.
       // It also covers combat approaches, but never teleports a unit through geometry.
       const moved = Math.hypot(u.g.position.x - frameStartX, u.g.position.z - frameStartZ);
+      if (u.kind === 'infantry' && u.g.userData.infantryRig && BLUE_MODELS?.updateInfantryAnimation) {
+        const movementIntensity = Math.min(1, moved / Math.max(dt, 0.001) / Math.max(u.speed, 0.1));
+        BLUE_MODELS.updateInfantryAnimation(u.g.userData.infantryRig, dt, movementIntensity);
+      }
       const hasTravelGoal = !!u.dest || (!!combatTarget && u.dmg > 0);
       if (hasTravelGoal && moved < 0.012 && (!combatTarget || u.dest)) {
         u.stuckTime = (u.stuckTime || 0) + dt;
@@ -3387,6 +3394,48 @@ if (new URLSearchParams(location.search).get('combat-rig') === '1' || new URLSea
 }
 
 if (new URLSearchParams(location.search).get('qa') === '1') {
+  const infantryProbe = () => {
+    let unit = units.find(candidate => !candidate.dead && candidate.team === 1 &&
+      candidate.kind === 'infantry' && candidate.g.userData.infantryRig);
+    if (!unit) unit = createUnit(-70, 50, 1, 'infantry');
+    return unit;
+  };
+  const infantrySnapshot = () => {
+    const unit = infantryProbe();
+    if (!unit) return null;
+    const rig = unit.g.userData.infantryRig;
+    return {
+      profile: unit.g.userData.infantryProfile,
+      position: [unit.g.position.x, unit.g.position.z],
+      walkAmount: rig.walkAmount,
+      phase: rig.phase,
+      leftLeg: rig.leftLeg.rotation.x,
+      rightLeg: rig.rightLeg.rotation.x,
+      leftArm: rig.leftArm.rotation.x,
+      rightArm: rig.rightArm.rotation.x
+    };
+  };
+  window.__BLUE_ALERTS_INFANTRY_QA__ = Object.freeze({
+    snapshot: infantrySnapshot,
+    walkProbe() {
+      const unit = infantryProbe();
+      if (!unit) throw new Error('A live blue infantry model with an animation rig is required.');
+      unit.g.position.set(-70, 0.04, 50);
+      unit.g.rotation.y = 0;
+      unit.speed = 2.9;
+      unit.dmg = 0;
+      unit.atkTarget = null;
+      unit.attackMove = false;
+      unit.path = null;
+      unit.pathIdx = 0;
+      unit.combatRouteGoal = null;
+      unit.stuckTime = 0;
+      unit.dest = { x: -64, z: 50 };
+      camTarget.set(-70, 0, 50);
+      camDist = 15;
+      return infantrySnapshot();
+    }
+  });
   const visibleModelMuzzleFlashCount = () => {
     let count = 0;
     for (const unit of units) {

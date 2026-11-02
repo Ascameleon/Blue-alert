@@ -29,7 +29,7 @@ header{padding:12px;gap:8px;align-items:flex-start}
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-import {createTank,createInfantry,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode} from './blue-alert-models.js';
+import {createTank,createInfantry,updateInfantryAnimation,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode} from './blue-alert-models.js';
 const host=document.querySelector('#view'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9aa9a4);scene.fog=new THREE.Fog(0x9aa9a4,45,125);
 const camera=new THREE.PerspectiveCamera(42,1,.1,300);camera.position.set(9,8,12);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
@@ -42,7 +42,7 @@ const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStand
 let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
 const desc={
 tank:['Char de combat','Blindage à plusieurs niveaux, chenilles et roues détaillées, tourelle indépendante et canon.'],
-infantry:['Fantassin','Silhouette tactique, casque, sac à dos, bras, jambes, bottes et fusil.'],
+infantry:['Fantassin','Deux silhouettes de faction, équipement tactique segmenté, fusil détaillé et marche animée.'],
 hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile latérale et marquage de faction.'],
 barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
 refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],
@@ -76,14 +76,16 @@ else if(a==='relay')current=createRelay(THREE,{team:t});
 else if(a==='ore')current=createOreNode(THREE);
 else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
 scene.add(current);document.querySelector('#title').textContent=desc[a][0];document.querySelector('#desc').textContent=desc[a][1];
-controls.target.set(0,a==='infantry'?.7:1,0);camera.position.set(a==='landscape'?22:8,a==='landscape'?25:7,a==='landscape'?24:11);controls.update();}
+controls.target.set(0,a==='infantry'?.7:1,0);camera.position.set(a==='landscape'?22:a==='infantry'?3.6:8,a==='landscape'?25:a==='infantry'?3:7,a==='landscape'?24:a==='infantry'?4.6:11);controls.update();}
 document.querySelector('#asset').addEventListener('change',build);document.querySelector('#team').addEventListener('change',build);
 document.querySelector('#reset').addEventListener('click',build);
 function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
 new ResizeObserver(resize).observe(host);resize();build();
 window.__BLUE_ALERTS_PREVIEW__ = () => {
   let meshCount=0, triangleCount=0, physicalMaterialCount=0, genericDecorationCount=0;
+  const namedParts=[];
   current?.traverse(object => {
+    if (object.name) namedParts.push(object.name);
     if (!object.isMesh) return;
     meshCount++;
     if (['faction-panel','exterior-light','service-vent','vent-slat'].includes(object.name)) genericDecorationCount++;
@@ -93,14 +95,22 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
       if (material?.isMeshPhysicalMaterial) physicalMaterialCount++;
     }
   });
+  const bounds=current?new THREE.Box3().setFromObject(current):null;
   return {
     asset:document.querySelector('#asset').value,
+    boundsMinY:bounds?.min.y??null,
+    cameraDistance:camera.position.distanceTo(controls.target),
     meshCount,triangleCount,physicalMaterialCount,genericDecorationCount,
+    factionProfile:current?.userData?.factionProfile||null,
+    hasAnimationRig:!!current?.userData?.animationRig,
+    animationPhase:current?.userData?.animationRig?.phase??null,
+    walkAmount:current?.userData?.animationRig?.walkAmount??null,
+    namedParts,
     environment:!!scene.environment,
     drawCalls:renderer.info.render.calls,
     canvasWidth:renderer.domElement.width,
     canvasHeight:renderer.domElement.height
   };
 };
-let previewClock=0;renderer.setAnimationLoop(()=>{previewClock+=.016;if(current?.userData?.rotatingGun)current.userData.rotatingGun.rotation.y+=.006;if(current?.userData?.rotatingGun?.name==='rotating-radar')current.userData.rotatingGun.rotation.y+=.018;current?.traverse(o=>{if(o.userData?.emissivePulse&&o.material?.emissiveIntensity!==undefined)o.material.emissiveIntensity=.55+Math.sin(previewClock*3.2)*.45;});if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;if(current?.userData?.collectionDrum)current.userData.collectionDrum.rotation.x+=.08;if(current?.userData?.reactorRing)current.userData.reactorRing.rotation.z+=.008;if(current?.userData?.core)current.userData.core.rotation.y+=.012;if(current?.userData?.captureHalo)current.userData.captureHalo.rotation.z+=.008;controls.update();renderer.render(scene,camera);});
+let previewClock=0;renderer.setAnimationLoop(()=>{previewClock+=.016;if(current?.userData?.animationRig)updateInfantryAnimation(current.userData.animationRig,.016,.85);if(current?.userData?.rotatingGun)current.userData.rotatingGun.rotation.y+=.006;if(current?.userData?.rotatingGun?.name==='rotating-radar')current.userData.rotatingGun.rotation.y+=.018;current?.traverse(o=>{if(o.userData?.emissivePulse&&o.material?.emissiveIntensity!==undefined)o.material.emissiveIntensity=.55+Math.sin(previewClock*3.2)*.45;});if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;if(current?.userData?.collectionDrum)current.userData.collectionDrum.rotation.x+=.08;if(current?.userData?.reactorRing)current.userData.reactorRing.rotation.z+=.008;if(current?.userData?.core)current.userData.core.rotation.y+=.012;if(current?.userData?.captureHalo)current.userData.captureHalo.rotation.z+=.008;controls.update();renderer.render(scene,camera);});
 </script></body></html>
