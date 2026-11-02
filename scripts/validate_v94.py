@@ -96,7 +96,11 @@ def main():
         "battlefield-trees-foliage-instanced",
         "battlefield-rocks-instanced",
         "window.__BLUE_ALERTS_VEGETATION",
-        "foliageTiers: treeFoliageGeometry.userData.branchWhorls",\n        "branchWhorls: treeFoliageGeometry.userData.branchWhorls",\n        "branchArms: treeFoliageGeometry.userData.branchArms",\n        "needleClusters: treeFoliageGeometry.userData.needleClusters",\n        "foliageTriangles: treeFoliageGeometry.userData.triangleCount",
+        "foliageTiers: treeFoliageGeometry.userData.branchWhorls",
+        "branchWhorls: treeFoliageGeometry.userData.branchWhorls",
+        "branchArms: treeFoliageGeometry.userData.branchArms",
+        "needleClusters: treeFoliageGeometry.userData.needleClusters",
+        "foliageTriangles: treeFoliageGeometry.userData.triangleCount",
         "blocksMovement: false",
     )
     missing = [feature for feature in required_features if feature not in source]
