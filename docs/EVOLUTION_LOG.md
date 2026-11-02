@@ -1,0 +1,39 @@
+# BLUE ALERTS — Cumulative Evolution Log
+
+## Cycle — Faction-specific V94 tank signatures
+
+- Base source: \`main\` at \`1b0768b56bc61976391bc6fd930faa3a336e2e7c\`.
+- Working branch: \`feat/blue-alerts-faction-tank-signatures-20261102\`.
+- Runtime implementation: \`25e1c4293c7a952bccece21e463cf6958d43530e\`.
+- Preview integration: \`0c45e035d0dc1b56be3b14bc98fa406bb7873c94\`.
+- Static contract tests: \`19200aedf93894b474e35c0515b4602689e3f3ec\`, corrected preview labels in \`28f5784e5e1aebae34eacf20dad1016225994623\`.
+- Desktop/mobile visual tests: \`5543f70ba92ccc34cdace0409021f2e3aa2089bb\`.
+- Model documentation: \`12ed5c0b9fb224bd91e2b750575c329ddc99a8e7\`.
+
+### Runtime changes
+
+The existing \`createTank(THREE, { team, variant, scale })\` API and V94 combat contract remain intact, including \`userData.turret\`.
+
+- BLUE SENTINEL: low-profile turret, sloped cheek armor, compact sensor/rangefinder cluster and cool sensor accents.
+- RED BASTION: raised reinforced turret, side armor slabs, command cupola, protected rangefinder and warm sensor accents.
+- Both: sloped front glacis, engine-deck grilles, fenders, return rollers, hub caps, 36 instanced track shoes and 60 instanced wheel fasteners.
+- Repeated tread and fastener detail is instanced; no external model, texture, paid asset, API or service was added.
+- Existing collision and movement code was not changed.
+
+### Changed files
+
+- \`game-data/models/blue-alert-models.js\`
+- \`game-data/models/preview.html\`
+- \`scripts/validate_model_kit.py\`
+- \`scripts/validate_model_preview_browser.mjs\`
+- \`game-data/models/README.md\`
+- \`docs/EVOLUTION_LOG.md\`
+
+### Validation and evidence boundary
+
+- Static model-kit contract and Node syntax checks: added to the existing CI workflow; result pending for this branch head.
+- Desktop and 390×844 mobile WebGL preview: added assertions for both faction profiles, 36 tread instances, 60 wheel-fastener instances, signature parts and camera framing; result pending for this branch head.
+- V94 browser/runtime and OpenRTS/native interaction checks: required by the existing workflow; result pending for this branch head.
+- Physical Samsung hardware test: not performed.
+- The OpenRTS smoke test is a separate native-engine interaction check; it does not prove that the Three.js tank models are imported into OpenRTS.
+- No claim of release or merge to \`main\`; this work remains isolated in its feature branch until review and validation.
