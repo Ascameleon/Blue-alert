@@ -59,7 +59,7 @@ def main():
         "gas-mask-optic-lens", "respirator-filter-housing", "respirator-filter-cap",
         "respirator-filter-vent", "respirator-breathing-hose", "gas-mask-chin-guard",
         "angular-pauldron", "articulated-knee-guard", "rifle-top-rail", "rifle-ejection-port",
-        "createInfantrySurfaceTextures", "FIELDWEAVE_CERAMIC_MICROSCUFF_V1", "fabricBump", "armorBump", "metalBump",
+        "createInfantrySurfaceTextures", "FIELDWEAVE_CERAMIC_MICROSCUFF_V2", "fabricBump", "armorBump", "metalBump",
         "head.scale.setScalar(.82)", "helmet shell above is the sole crown surface",
     )
     missing = [name for name in REQUIRED_HERO_PARTS if name not in model]
@@ -96,7 +96,7 @@ def main():
 
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=8", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=9", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")
