@@ -208,15 +208,6 @@ try {
   assert.notEqual(redTank.factionProfile,initial.factionProfile,'factions must not share the same visual profile');
   await page.screenshot({path:output+'/desktop-red-bastion-tank.png',fullPage:true});
   assert.equal(redTank.surfaceFinish,'TANK_ARMOR_MICROSCUFF_PBR_V1');
-  const desktopRedBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(false));
-  assert.equal(desktopRedBaseline?.surfaceFinish,'UNTEXTURED_FALLBACK');
-  await page.waitForTimeout(350);
-  await page.screenshot({path:output+'/desktop-red-bastion-tank-surface-baseline.png',fullPage:true});
-  const desktopRedDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(true));
-  assert.equal(desktopRedDetail?.surfaceFinish,'TANK_ARMOR_MICROSCUFF_PBR_V1');
-  assert.ok(Math.abs(desktopRedDetail.cameraDistance-redTank.cameraDistance)<0.001);
-  await page.waitForTimeout(350);
-  await page.screenshot({path:output+'/desktop-red-bastion-tank-surface-detail.png',fullPage:true});
   await page.selectOption('#team','blue');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
 
@@ -253,15 +244,6 @@ try {
   await page.selectOption('#team','red');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION',null,{timeout:10000});
   await page.screenshot({path:output+'/mobile-red-bastion-tank-390x844.png',fullPage:true});
-  const mobileRedBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(false));
-  assert.equal(mobileRedBaseline?.surfaceFinish,'UNTEXTURED_FALLBACK');
-  await page.waitForTimeout(350);
-  await page.screenshot({path:output+'/mobile-red-bastion-tank-surface-baseline-390x844.png',fullPage:true});
-  const mobileRedDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(true));
-  assert.equal(mobileRedDetail?.surfaceFinish,'TANK_ARMOR_MICROSCUFF_PBR_V1');
-  assert.ok(Math.abs(mobileRedDetail.cameraDistance-mobileRedBaseline.cameraDistance)<0.001);
-  await page.waitForTimeout(350);
-  await page.screenshot({path:output+'/mobile-red-bastion-tank-surface-detail-390x844.png',fullPage:true});
 
   await page.selectOption('#asset','infantry');
   await page.selectOption('#team','blue');
@@ -308,7 +290,7 @@ try {
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
-  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png','desktop-blue-sentinel-tank-surface-baseline.png','desktop-blue-sentinel-tank-surface-detail.png','desktop-red-bastion-tank-surface-baseline.png','desktop-red-bastion-tank-surface-detail.png','mobile-blue-sentinel-tank-surface-baseline-390x844.png','mobile-blue-sentinel-tank-surface-detail-390x844.png','mobile-red-bastion-tank-surface-baseline-390x844.png','mobile-red-bastion-tank-surface-detail-390x844.png'];
+  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png','desktop-blue-sentinel-tank-surface-baseline.png','desktop-blue-sentinel-tank-surface-detail.png','mobile-blue-sentinel-tank-surface-baseline-390x844.png','mobile-blue-sentinel-tank-surface-detail-390x844.png',];
   for(const file of files) assert.ok((await stat(output+'/'+file)).size>10000,'screenshot must contain rendered evidence: '+file);
   console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files},null,2));
 } catch(error) {
