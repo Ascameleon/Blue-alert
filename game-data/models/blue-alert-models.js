@@ -102,58 +102,84 @@ const createTankSurfaceTextures = (THREE, isRed) => {
     return texture;
   };
   const armorMap=makeTexture(faction+'-tank-ceramic-paint-mottle',ctx=>{
-    ctx.fillStyle='#f2f2f2';ctx.fillRect(0,0,256,256);
-    const shades=['#666666','#7c7c7c','#929292','#aaaaaa','#c7c7c7'];
-    // Broad, irregular paint fade patches read at RTS camera distance without
-    // turning the armor into a noisy camouflage pattern.
-    for(let i=0;i<46;i++){
-      const cx=random()*256,cy=random()*256,rx=12+random()*30,ry=7+random()*19;
-      ctx.beginPath();
-      for(let p=0;p<11;p++){
-        const a=p/11*Math.PI*2,w=.68+random()*.62;
-        const x=cx+Math.cos(a)*rx*w,y=cy+Math.sin(a)*ry*w;
-        if(p===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-      }
-      ctx.closePath();ctx.globalAlpha=.24+random()*.17;
-      ctx.fillStyle=shades[Math.floor(random()*shades.length)];ctx.fill();
-    }
-    // Soft grime blooms break up large flat panels while remaining faction-neutral.
-    for(let i=0;i<18;i++){
-      const x=random()*256,y=random()*256,r=7+random()*23;
+    ctx.fillStyle='#f7f7f7';ctx.fillRect(0,0,256,256);
+    // Restrained diffuse paint ageing: broad soft tonal drift, not hard-edged camouflage patches.
+    for(let i=0;i<22;i++){
+      const x=random()*256,y=random()*256,r=20+random()*44;
       const gradient=ctx.createRadialGradient(x,y,1,x,y,r);
-      gradient.addColorStop(0,'rgba(48,48,48,0.20)');
-      gradient.addColorStop(1,'rgba(48,48,48,0)');
-      ctx.globalAlpha=1;ctx.fillStyle=gradient;
-      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+      gradient.addColorStop(0,'rgba(74,74,74,0.065)');
+      gradient.addColorStop(.55,'rgba(108,108,108,0.028)');
+      gradient.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=gradient;
+      ctx.beginPath();
+      ctx.ellipse(x,y,r,r*(.42+random()*.48),random()*Math.PI,0,Math.PI*2);
+      ctx.fill();
     }
-    // Directional paint scratches and chipped edges, visible on the hull and turret.
-    for(let i=0;i<230;i++){
-      const x=random()*256,y=random()*256,length=3+random()*27,angle=(random()-.5)*.42;
-      ctx.globalAlpha=.15+random()*.19;
-      ctx.strokeStyle=random()>.64?'#414141':'#ffffff';
-      ctx.lineWidth=.4+random()*1.05;
+    // Very light contact grime follows a consistent service direction.
+    for(let i=0;i<14;i++){
+      const x=random()*256,y=random()*256,length=10+random()*34,angle=(random()-.5)*.18;
+      const x2=x+Math.cos(angle)*length,y2=y+Math.sin(angle)*length;
+      const gradient=ctx.createLinearGradient(x,y,x2,y2);
+      gradient.addColorStop(0,'rgba(60,60,60,0)');
+      gradient.addColorStop(.5,'rgba(60,60,60,0.065)');
+      gradient.addColorStop(1,'rgba(60,60,60,0)');
+      ctx.strokeStyle=gradient;ctx.lineWidth=.8+random()*1.6;
+      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x2,y2);ctx.stroke();
+    }
+    // Sparse fine handling scratches preserve the painted-armor read at tactical scale.
+    for(let i=0;i<150;i++){
+      const x=random()*256,y=random()*256,length=4+random()*18,angle=(random()-.5)*.65;
+      ctx.globalAlpha=.055+random()*.075;
+      ctx.strokeStyle=random()>.6?'#ffffff':'#555555';
+      ctx.lineWidth=.35+random()*.55;
       ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(angle)*length,y+Math.sin(angle)*length);ctx.stroke();
     }
     ctx.globalAlpha=1;
   },true);
   const metalMap=makeTexture(faction+'-tank-brushed-metal-albedo',ctx=>{
-    ctx.fillStyle='#f0f0f0';ctx.fillRect(0,0,256,256);
-    for(let i=0;i<220;i++){const y=random()*256;ctx.globalAlpha=.08+random()*.13;ctx.strokeStyle=random()>.5?'#626262':'#ffffff';ctx.lineWidth=.35+random()*.7;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(256,y+(random()-.5)*4);ctx.stroke();}
+    ctx.fillStyle='#f5f5f5';ctx.fillRect(0,0,256,256);
+    for(let i=0;i<180;i++){
+      const y=random()*256;
+      ctx.globalAlpha=.04+random()*.08;
+      ctx.strokeStyle=random()>.5?'#707070':'#ffffff';
+      ctx.lineWidth=.3+random()*.5;
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(256,y+(random()-.5)*3);ctx.stroke();
+    }
     ctx.globalAlpha=1;
   },true);
   const roughnessMap=makeTexture(faction+'-tank-roughness-variation',ctx=>{
-    ctx.fillStyle='#e8e8e8';ctx.fillRect(0,0,256,256);
-    for(let i=0;i<5200;i++){const v=Math.round(112+random()*143);ctx.fillStyle='rgb('+v+','+v+','+v+')';const size=.8+random()*1.4;ctx.fillRect(random()*256,random()*256,size,size);}
+    ctx.fillStyle='#e5e5e5';ctx.fillRect(0,0,256,256);
+    for(let i=0;i<3200;i++){
+      const v=Math.round(180+random()*58);
+      ctx.fillStyle='rgb('+v+','+v+','+v+')';
+      const size=.5+random()*.9;
+      ctx.fillRect(random()*256,random()*256,size,size);
+    }
   });
   const armorBump=makeTexture(faction+'-tank-armor-microscuff-relief',ctx=>{
     ctx.fillStyle='#808080';ctx.fillRect(0,0,256,256);
-    for(let i=0;i<220;i++){const x=random()*256,y=random()*256;ctx.globalAlpha=.30+random()*.25;ctx.strokeStyle=random()>.5?'#d0d0d0':'#454545';ctx.lineWidth=.65+random()*1.25;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(random()-.5)*18,y+(random()-.5)*4);ctx.stroke();}
-    for(let i=0;i<76;i++){ctx.globalAlpha=.18+random()*.22;ctx.fillStyle=random()>.5?'#c4c4c4':'#555555';ctx.beginPath();ctx.ellipse(random()*256,random()*256,1+random()*3,.7+random()*1.8,random(),0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<145;i++){
+      const x=random()*256,y=random()*256,length=4+random()*16,angle=(random()-.5)*.55;
+      ctx.globalAlpha=.13+random()*.09;
+      ctx.strokeStyle=random()>.5?'#b8b8b8':'#4b4b4b';
+      ctx.lineWidth=.45+random()*.45;
+      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(angle)*length,y+Math.sin(angle)*length);ctx.stroke();
+    }
+    for(let i=0;i<44;i++){
+      ctx.globalAlpha=.08+random()*.1;
+      ctx.fillStyle=random()>.5?'#bdbdbd':'#555555';
+      ctx.beginPath();ctx.ellipse(random()*256,random()*256,.6+random()*1.8,.5+random()*1.2,random(),0,Math.PI*2);ctx.fill();
+    }
     ctx.globalAlpha=1;
   });
   const metalBump=makeTexture(faction+'-tank-brushed-metal-relief',ctx=>{
     ctx.fillStyle='#808080';ctx.fillRect(0,0,256,256);
-    for(let y=0;y<256;y+=2){ctx.globalAlpha=.28+random()*.18;ctx.strokeStyle=y%2?'#bdbdbd':'#555555';ctx.lineWidth=.45+random()*.45;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(256,y+(random()-.5)*2);ctx.stroke();}
+    for(let y=0;y<256;y+=3){
+      ctx.globalAlpha=.12+random()*.08;
+      ctx.strokeStyle=y%2?'#b0b0b0':'#595959';
+      ctx.lineWidth=.3+random()*.4;
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(256,y+(random()-.5)*1.5);ctx.stroke();
+    }
     ctx.globalAlpha=1;
   });
   const maps={armorMap,metalMap,roughnessMap,armorBump,metalBump};
