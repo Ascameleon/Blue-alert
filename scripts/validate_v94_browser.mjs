@@ -314,6 +314,22 @@ try {
     'desktop critical building damage must show scorch and fire while the building remains alive');
   await desktop.screenshot({ path: output + '/desktop-v94-building-critical.png', fullPage: true });
 
+  // The infantry rig must follow actual V94 displacement, not merely animate in the preview.
+  const infantryReady = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  assert.ok(infantryReady?.profile === 'BLUE_SENTINEL_RIFLEMAN', 'V94 must attach the Blue Sentinel infantry rig to a live unit');
+  const infantryWalkStart = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
+  await desktop.waitForFunction(start => {
+    const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
+    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 &&
+      Math.abs(state.leftLeg - state.rightLeg) > 0.1;
+  }, infantryWalkStart.position, { timeout: 5000, polling: 50 });
+  const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 &&
+    desktopInfantryGait.walkAmount > 0.2 &&
+    Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04,
+    'desktop V94 infantry arms and legs must animate in response to real movement');
+  await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
+
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
   await desktop.close();
@@ -551,9 +567,23 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     'mobile critical building damage must show scorch and fire while the building remains alive');
   await mobile.screenshot({ path: output + '/mobile-v94-building-critical-390x844.png', fullPage: true });
 
+  const mobileInfantryReady = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  assert.ok(mobileInfantryReady?.profile === 'BLUE_SENTINEL_RIFLEMAN', 'mobile V94 must load the faction infantry rig');
+  const mobileInfantryWalkStart = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
+  await mobile.waitForFunction(start => {
+    const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
+    return state && state.position[0] > start[0] + 0.25 && state.walkAmount > 0.15 &&
+      Math.abs(state.leftLeg - state.rightLeg) > 0.08;
+  }, mobileInfantryWalkStart.position, { timeout: 6000, polling: 50 });
+  const mobileInfantryGait = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 &&
+    mobileInfantryGait.walkAmount > 0.15,
+    'mobile V94 infantry gait must follow actual unit displacement');
+  await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true });
+
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'mobile-v94-infantry-gait-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
@@ -565,6 +595,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     touchTargets,
     mobileCommands,
     combatRig,
+    desktopInfantryGait,
+    mobileInfantryGait,
     muzzleError,
     successfulThree,
     screenshots: ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png']
