@@ -425,11 +425,11 @@ const createInfantrySurfaceTextures = (THREE, isRed) => {
         if (p === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       }
       ctx.closePath();
-      ctx.globalAlpha = .10 + random() * .12;
+      ctx.globalAlpha = .26 + random() * .20;
       ctx.fillStyle = shades[Math.floor(random() * shades.length)];
       ctx.fill();
     }
-    ctx.globalAlpha = .055;
+    ctx.globalAlpha = .09;
     ctx.fillStyle = '#555';
     for (let i = 0; i < 3600; i++) ctx.fillRect(random() * 256, random() * 256, .7 + random() * 1.2, .7 + random() * 1.2);
     ctx.globalAlpha = 1;
@@ -438,7 +438,7 @@ const createInfantrySurfaceTextures = (THREE, isRed) => {
     ctx.fillStyle = '#ededed'; ctx.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 115; i++) {
       const x = random() * 256, y = random() * 256;
-      ctx.globalAlpha = .08 + random() * .16;
+      ctx.globalAlpha = .18 + random() * .24;
       ctx.strokeStyle = random() > .5 ? '#555' : '#fff';
       ctx.lineWidth = .35 + random() * 1.1;
       ctx.beginPath(); ctx.moveTo(x, y);
@@ -446,7 +446,7 @@ const createInfantrySurfaceTextures = (THREE, isRed) => {
       ctx.stroke();
     }
     for (let i = 0; i < 34; i++) {
-      ctx.globalAlpha = .07 + random() * .1;
+      ctx.globalAlpha = .15 + random() * .18;
       ctx.fillStyle = '#777';
       ctx.beginPath(); ctx.ellipse(random() * 256, random() * 256, 2 + random() * 7, 1 + random() * 3, random(), 0, Math.PI * 2); ctx.fill();
     }
@@ -456,7 +456,7 @@ const createInfantrySurfaceTextures = (THREE, isRed) => {
     ctx.fillStyle = '#ededed'; ctx.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 210; i++) {
       const y = random() * 256;
-      ctx.globalAlpha = .035 + random() * .09;
+      ctx.globalAlpha = .08 + random() * .16;
       ctx.strokeStyle = random() > .5 ? '#555' : '#fff';
       ctx.lineWidth = .3 + random() * .8;
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y + (random() - .5) * 5); ctx.stroke();
@@ -473,9 +473,9 @@ const createInfantrySurfaceTextures = (THREE, isRed) => {
   });
   const fabricBump = makeTexture(faction + '-fabric-micro-weave', ctx => {
     ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 256, 256);
-    ctx.globalAlpha = .18; ctx.strokeStyle = '#bcbcbc'; ctx.lineWidth = .7;
+    ctx.globalAlpha = .26; ctx.strokeStyle = '#bcbcbc'; ctx.lineWidth = .7;
     for (let y = 0; y < 256; y += 5) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y + 2); ctx.stroke(); }
-    ctx.globalAlpha = .12; ctx.strokeStyle = '#555';
+    ctx.globalAlpha = .20; ctx.strokeStyle = '#555';
     for (let x = 0; x < 256; x += 5) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 2, 256); ctx.stroke(); }
     ctx.globalAlpha = 1;
   });
@@ -483,7 +483,7 @@ const createInfantrySurfaceTextures = (THREE, isRed) => {
     ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 150; i++) {
       const x = random() * 256, y = random() * 256;
-      ctx.globalAlpha = .12 + random() * .18;
+      ctx.globalAlpha = .24 + random() * .25;
       ctx.strokeStyle = random() > .5 ? '#c4c4c4' : '#555';
       ctx.lineWidth = .5 + random() * 1.1;
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (random() - .5) * 14, y + (random() - .5) * 3); ctx.stroke();
@@ -492,7 +492,7 @@ const createInfantrySurfaceTextures = (THREE, isRed) => {
   });
   const metalBump = makeTexture(faction + '-metal-brush-relief', ctx => {
     ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 256, 256);
-    ctx.globalAlpha = .13; ctx.strokeStyle = '#bdbdbd'; ctx.lineWidth = .6;
+    ctx.globalAlpha = .22; ctx.strokeStyle = '#bdbdbd'; ctx.lineWidth = .6;
     for (let y = 0; y < 256; y += 3) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y + 1); ctx.stroke(); }
     ctx.globalAlpha = 1;
   });
@@ -527,11 +527,11 @@ export function createInfantry(THREE, options={}) {
       material.bumpScale = bumpScale;
       material.needsUpdate = true;
     };
-    applySurface(uniform, surfaceTextures.fabricMap, surfaceTextures.fabricBump, .004);
-    applySurface(cloth, surfaceTextures.fabricMap, surfaceTextures.fabricBump, .006);
-    applySurface(armor, surfaceTextures.armorMap, surfaceTextures.armorBump, .0045);
-    applySurface(metal, surfaceTextures.metalMap, surfaceTextures.metalBump, .002);
-    applySurface(rifleMat, surfaceTextures.metalMap, surfaceTextures.metalBump, .0015);
+    applySurface(uniform, surfaceTextures.fabricMap, surfaceTextures.fabricBump, .008);
+    applySurface(cloth, surfaceTextures.fabricMap, surfaceTextures.fabricBump, .010);
+    applySurface(armor, surfaceTextures.armorMap, surfaceTextures.armorBump, .007);
+    applySurface(metal, surfaceTextures.metalMap, surfaceTextures.metalBump, .003);
+    applySurface(rifleMat, surfaceTextures.metalMap, surfaceTextures.metalBump, .0025);
   }
 
   const addInstances = (parent, name, size, material, transforms) => {
@@ -718,7 +718,7 @@ export function createInfantry(THREE, options={}) {
     animationRig,
     renderProfile:'SENTINEL_BASTION_HERO_ARMOR_V2',
     armorDetailParts: renderOptimization.sourceMeshCount,
-    surfaceFinish: surfaceTextures ? 'FIELDWEAVE_CERAMIC_MICROSCUFF_V1' : 'UNTEXTURED_FALLBACK',
+    surfaceFinish: surfaceTextures ? 'FIELDWEAVE_CERAMIC_MICROSCUFF_V2' : 'UNTEXTURED_FALLBACK',
     surfaceTextureCount: surfaceTextures ? Object.values(surfaceTextures).filter(Boolean).length : 0,
     surfaceMaterialCount: surfaceTextures ? [uniform,cloth,armor,metal,rifleMat].filter(material => material.map && material.bumpMap && material.roughnessMap).length : 0,
     headScale: .82,
