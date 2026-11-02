@@ -8,12 +8,14 @@ MODEL = Path("game-data/models/blue-alert-models.js")
 PREVIEW = Path("game-data/models/preview.html")
 GAME = Path("BLUE_ALERTS_v94_ASSET_INTEGRATION.html")
 REQUIRED_EXPORTS = (
-    "createTank", "createInfantry", "createBuilding", "createLandscape",
+    "createTank", "createInfantry", "updateInfantryAnimation", "createBuilding", "createLandscape",
     "createTree", "createRock", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion", "createMuzzleFlash",
     "createHarvester", "createCitadel", "createRelay", "createOreNode",
 )
 REQUIRED_PREVIEW = (
+    "updateInfantryAnimation", "BLUE_SENTINEL_RIFLEMAN", "RED_BASTION_RIFLEMAN",
+    "infantry-assault-rifle", "infantry-torso-rig", "left-leg-pivot", "right-leg-pivot",
     "Avion d’attaque", "Hélicoptère d’assaut", "Drone de reconnaissance",
     "Projectile", "Explosion", "Flash de bouche", "createMuzzleFlash", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion",
@@ -48,7 +50,7 @@ def main():
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
-    for token in ("blue-alert-models.js?v=4", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode"):
+    for token in ("blue-alert-models.js?v=4", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")
@@ -58,6 +60,7 @@ def main():
     module = scripts[-1].split("</script>", 1)[0]
     node_check(module, "preview module")
     print(f"PASS: {len(REQUIRED_EXPORTS)} exported asset constructors and {len(REQUIRED_PREVIEW)} preview hooks.")
+    print("PASS: faction-specific infantry profiles and deterministic gait are wired into V94.")
     print(f"PASS: model kit ({len(model)} chars) and preview module JavaScript syntax valid.")
 
 if __name__ == "__main__":
