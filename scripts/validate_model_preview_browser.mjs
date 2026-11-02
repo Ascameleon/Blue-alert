@@ -96,6 +96,8 @@ try {
   assert.ok(initial.physicalMaterialCount>0,'PBR physical materials must be present');
   assert.ok(initial.canvasWidth>0 && initial.canvasHeight>0,'WebGL canvas must have a backing resolution');
   assert.equal(initial.team,'blue');
+  assert.equal(initial.surfaceFinish,'TANK_ARMOR_MICROSCUFF_PBR_V1','blue tank must bind original PBR paint and metal maps');
+  assert.ok(initial.surfaceTextureCount>=5&&initial.surfaceMaterialCount>=5,'blue tank must bind five cached surface maps to five physical materials');
   assert.equal(initial.factionProfile,'BLUE_SENTINEL','blue faction must use its own low-profile turret signature');
   assert.equal(initial.trackShoeInstances,36,'both tracks must expose 36 instanced tread shoes');
   assert.equal(initial.wheelBoltInstances,60,'twelve road wheels must expose 60 instanced wheel bolts');
@@ -108,6 +110,17 @@ try {
   assert.ok(initial.triangleCount<5000,'bevelled tank geometry must remain within the preview triangle budget');
   for(const name of ['front-glacis','engine-deck-grilles-instanced','reactive-armor-tiles-instanced','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheeks-instanced','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
   await page.screenshot({path:output+'/desktop-blue-sentinel-tank.png',fullPage:true});
+  const desktopBlueBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(false));
+  assert.equal(desktopBlueBaseline?.surfaceFinish,'UNTEXTURED_FALLBACK');
+  assert.ok(Math.abs(desktopBlueBaseline.cameraDistance-initial.cameraDistance)<0.001);
+  await page.waitForTimeout(350);
+  await page.screenshot({path:output+'/desktop-blue-sentinel-tank-surface-baseline.png',fullPage:true});
+  const desktopBlueDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(true));
+  assert.equal(desktopBlueDetail?.surfaceFinish,'TANK_ARMOR_MICROSCUFF_PBR_V1');
+  assert.ok(desktopBlueDetail.surfaceTextureCount>=5&&desktopBlueDetail.surfaceMaterialCount>=5);
+  assert.ok(Math.abs(desktopBlueDetail.cameraDistance-initial.cameraDistance)<0.001);
+  await page.waitForTimeout(350);
+  await page.screenshot({path:output+'/desktop-blue-sentinel-tank-surface-detail.png',fullPage:true});
 
   // Both faction riflemen must render their own equipment silhouette and live gait rig.
   await page.selectOption('#asset','infantry');
@@ -194,6 +207,16 @@ try {
   for(const name of ['front-glacis','engine-deck-grilles-instanced','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
   assert.notEqual(redTank.factionProfile,initial.factionProfile,'factions must not share the same visual profile');
   await page.screenshot({path:output+'/desktop-red-bastion-tank.png',fullPage:true});
+  assert.equal(redTank.surfaceFinish,'TANK_ARMOR_MICROSCUFF_PBR_V1');
+  const desktopRedBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(false));
+  assert.equal(desktopRedBaseline?.surfaceFinish,'UNTEXTURED_FALLBACK');
+  await page.waitForTimeout(350);
+  await page.screenshot({path:output+'/desktop-red-bastion-tank-surface-baseline.png',fullPage:true});
+  const desktopRedDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(true));
+  assert.equal(desktopRedDetail?.surfaceFinish,'TANK_ARMOR_MICROSCUFF_PBR_V1');
+  assert.ok(Math.abs(desktopRedDetail.cameraDistance-redTank.cameraDistance)<0.001);
+  await page.waitForTimeout(350);
+  await page.screenshot({path:output+'/desktop-red-bastion-tank-surface-detail.png',fullPage:true});
   await page.selectOption('#team','blue');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
 
@@ -218,9 +241,27 @@ try {
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='tank' && window.__BLUE_ALERTS_PREVIEW__().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
   await page.waitForTimeout(400);
   await page.screenshot({path:output+'/mobile-blue-sentinel-tank-390x844.png',fullPage:true});
+  const mobileBlueBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(false));
+  assert.equal(mobileBlueBaseline?.surfaceFinish,'UNTEXTURED_FALLBACK');
+  await page.waitForTimeout(350);
+  await page.screenshot({path:output+'/mobile-blue-sentinel-tank-surface-baseline-390x844.png',fullPage:true});
+  const mobileBlueDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(true));
+  assert.equal(mobileBlueDetail?.surfaceFinish,'TANK_ARMOR_MICROSCUFF_PBR_V1');
+  assert.ok(Math.abs(mobileBlueDetail.cameraDistance-mobileBlueBaseline.cameraDistance)<0.001);
+  await page.waitForTimeout(350);
+  await page.screenshot({path:output+'/mobile-blue-sentinel-tank-surface-detail-390x844.png',fullPage:true});
   await page.selectOption('#team','red');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION',null,{timeout:10000});
   await page.screenshot({path:output+'/mobile-red-bastion-tank-390x844.png',fullPage:true});
+  const mobileRedBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(false));
+  assert.equal(mobileRedBaseline?.surfaceFinish,'UNTEXTURED_FALLBACK');
+  await page.waitForTimeout(350);
+  await page.screenshot({path:output+'/mobile-red-bastion-tank-surface-baseline-390x844.png',fullPage:true});
+  const mobileRedDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setTankSurfaceFinish(true));
+  assert.equal(mobileRedDetail?.surfaceFinish,'TANK_ARMOR_MICROSCUFF_PBR_V1');
+  assert.ok(Math.abs(mobileRedDetail.cameraDistance-mobileRedBaseline.cameraDistance)<0.001);
+  await page.waitForTimeout(350);
+  await page.screenshot({path:output+'/mobile-red-bastion-tank-surface-detail-390x844.png',fullPage:true});
 
   await page.selectOption('#asset','infantry');
   await page.selectOption('#team','blue');
@@ -267,7 +308,7 @@ try {
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
-  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
+  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png','desktop-blue-sentinel-tank-surface-baseline.png','desktop-blue-sentinel-tank-surface-detail.png','desktop-red-bastion-tank-surface-baseline.png','desktop-red-bastion-tank-surface-detail.png','mobile-blue-sentinel-tank-surface-baseline-390x844.png','mobile-blue-sentinel-tank-surface-detail-390x844.png','mobile-red-bastion-tank-surface-baseline-390x844.png','mobile-red-bastion-tank-surface-detail-390x844.png'];
   for(const file of files) assert.ok((await stat(output+'/'+file)).size>10000,'screenshot must contain rendered evidence: '+file);
   console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files},null,2));
 } catch(error) {
