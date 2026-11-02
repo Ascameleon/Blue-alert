@@ -95,8 +95,10 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
       if (material?.isMeshPhysicalMaterial) physicalMaterialCount++;
     }
   });
+  const bounds=current?new THREE.Box3().setFromObject(current):null;
   return {
     asset:document.querySelector('#asset').value,
+    boundsMinY:bounds?.min.y??null,
     meshCount,triangleCount,physicalMaterialCount,genericDecorationCount,
     factionProfile:current?.userData?.factionProfile||null,
     hasAnimationRig:!!current?.userData?.animationRig,
