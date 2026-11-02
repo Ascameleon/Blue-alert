@@ -365,7 +365,8 @@ try {
   assert.ok(desktopExplosionState.modelExplosionLives[desktopExplosionIndex] < desktopKill.spawnedExplosionLife, 'desktop death explosion simulation lifetime must advance');
   await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
   const desktopFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
-  assert.ok(desktopFreeze, 'desktop cleanup probe must freeze only new combat spawns while existing VFX expire');
+  assert.ok(desktopFreeze?.combatSuppressed === true && desktopFreeze?.combatOrdersCleared === true,
+    'desktop cleanup probe must quiesce AI orders while existing VFX expire');
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
@@ -401,13 +402,23 @@ try {
     'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
 
   const desktopBuildingFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
-  assert.ok(desktopBuildingFreeze?.combatSuppressed === true,
-    'desktop building-damage QA must freeze unrelated combat before its controlled projectile burst');
-  await desktop.waitForFunction(() => {
-    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-    return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-      state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-  }, null, { timeout: 15000, polling: 50 });
+  assert.ok(desktopBuildingFreeze?.combatSuppressed === true && desktopBuildingFreeze?.combatOrdersCleared === true,
+    'desktop building-damage QA must quiesce unrelated combat orders before its controlled projectile burst');
+  try {
+    await desktop.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
+    }, null, { timeout: 15000, polling: 50 });
+  } catch (error) {
+    const diagnostic = await desktop.evaluate(() => ({
+      state: window.__BLUE_ALERTS_COMBAT_QA__?.state(),
+      hasFocus: document.hasFocus(),
+      visibilityState: document.visibilityState
+    }));
+    console.log('DESKTOP_BUILDING_PREP_TIMEOUT ' + JSON.stringify(diagnostic));
+    throw error;
+  }
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(desktopBuildingStart?.shooterKind,
     'desktop building-damage QA must use a live blue combat unit');
@@ -821,7 +832,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileExplosionIndex >= 0 && mobileExplosionState.modelExplosionLives[mobileExplosionIndex] < mobileKill.spawnedExplosionLife, 'mobile death explosion simulation lifetime must advance');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
   const mobileFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
-  assert.ok(mobileFreeze, 'mobile cleanup probe must freeze only new combat spawns while existing VFX expire');
+  assert.ok(mobileFreeze?.combatSuppressed === true && mobileFreeze?.combatOrdersCleared === true,
+    'mobile cleanup probe must quiesce AI orders while existing VFX expire');
   const mobileCleanupStartedAt = Date.now();
   try {
     await mobile.waitForFunction(() => {
@@ -830,8 +842,12 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
     }, null, { timeout: 15000, polling: 50 });
   } catch (error) {
-    const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
-    console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
+    const diagnostic = await mobile.evaluate(() => ({
+      state: window.__BLUE_ALERTS_COMBAT_QA__?.state(),
+      hasFocus: document.hasFocus(),
+      visibilityState: document.visibilityState
+    }));
+    console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(diagnostic));
     throw error;
   }
   const mobileClean = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());

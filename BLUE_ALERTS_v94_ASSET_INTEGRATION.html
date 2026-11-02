@@ -4455,7 +4455,20 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     state: combatState,
     freezeNewCombat() {
       qaSuppressCombat = true;
-      return combatState();
+      let clearedOrders = 0;
+      for (const unit of units) {
+        if (!unit || unit.dead) continue;
+        if (unit.atkTarget || unit.attackMove || unit.dest || unit.path) clearedOrders += 1;
+        unit.atkTarget = null;
+        unit.attackMove = false;
+        unit.savedAttackMoveRoute = null;
+        unit.combatRouteGoal = null;
+        unit.dest = null;
+        unit.path = null;
+        unit.pathIdx = 0;
+        unit.stuckTime = 0;
+      }
+      return { ...combatState(), combatOrdersCleared: true, clearedOrders };
     },
     resumeCombat() {
       qaSuppressCombat = false;
