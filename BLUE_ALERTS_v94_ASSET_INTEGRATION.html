@@ -321,6 +321,14 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 })();
 </script>
 
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
 <script type="module">
 let BLUE_MODELS = null;
 try {
@@ -420,6 +428,40 @@ const CFG = {
 };
 
 /* ─── Three.js setup ─────────────────────────────────────── */
+// Real CC0 glTF vehicle and fortification assets. Existing procedural models remain as a
+// deterministic fallback if the asset CDN or GLTFLoader is unavailable.
+let BLUE_EXTERNAL_ASSETS = Object.create(null);
+let BLUE_EXTERNAL_ASSET_STATUS = 'fallback';
+try {
+  const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
+  const gltfLoader = new GLTFLoader();
+  const externalAssetDefs = {
+    mainBattleTank: 'https://cdn.3dassets.dev/assets/23667/v1/model.glb',
+    lightTank: 'https://cdn.3dassets.dev/assets/23673/v1/model.glb',
+    guardTower: 'https://cdn.3dassets.dev/assets/23692/v1/model.glb'
+  };
+  const externalLoads = await Promise.allSettled(Object.entries(externalAssetDefs).map(async ([key, url]) => {
+    const gltf = await Promise.race([
+      gltfLoader.loadAsync(url),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('asset timeout: ' + key)), 12000))
+    ]);
+    return [key, gltf.scene];
+  }));
+  for (const result of externalLoads) {
+    if (result.status === 'fulfilled') BLUE_EXTERNAL_ASSETS[result.value[0]] = result.value[1];
+    else console.warn('BLUE ALERTS CC0 asset unavailable; native fallback retained.', result.reason);
+  }
+  BLUE_EXTERNAL_ASSET_STATUS = Object.keys(BLUE_EXTERNAL_ASSETS).length ? 'loaded' : 'fallback';
+} catch (externalAssetError) {
+  console.warn('BLUE ALERTS GLB loader unavailable; native fallback retained.', externalAssetError);
+}
+window.__BLUE_ALERTS_EXTERNAL_ASSETS__ = Object.freeze({
+  status: BLUE_EXTERNAL_ASSET_STATUS,
+  loaded: Object.keys(BLUE_EXTERNAL_ASSETS),
+  license: 'CC0-1.0',
+  source: '3DAssets.dev — Tanks, Military Vehicles and Field Camp'
+});
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x536c78);
 scene.fog = new THREE.Fog(0x536c78, 105, 220);
@@ -1587,6 +1629,23 @@ window.__BLUE_ALERTS_VEGETATION_QA = Object.freeze({
   }
 });
 
+// Real CC0 guard towers establish readable military perimeter silhouettes.
+if (BLUE_EXTERNAL_ASSETS.guardTower) {
+  for (const [x,z,team] of [[-52,-20,1],[52,-20,2]]) {
+    const tower = BLUE_EXTERNAL_ASSETS.guardTower.clone(true);
+    tower.name = team === 1 ? 'BLUE_SENTINEL_GUARD_TOWER' : 'RED_BASTION_GUARD_TOWER';
+    tower.scale.setScalar(0.92);
+    tower.position.set(x,0,z);
+    tower.traverse(part => {
+      if (!part.isMesh) return;
+      part.castShadow = !isMobile;
+      part.receiveShadow = true;
+      if (part.material) part.material = part.material.clone();
+    });
+    scene.add(tower);
+  }
+}
+
 /* ─── Game state ─────────────────────────────────────────── */
 const buildings = [];
 const units = [];
@@ -2038,13 +2097,33 @@ function createUnit(x, z, team, kind) {
       const heavy = kind === 'heavy';
       speed = heavy ? 2.3 : 3.6; hp = heavy ? 320 : 160;
       dmg = heavy ? 42 : 24; range = heavy ? 12 : 10.5;
-      const tank = BLUE_MODELS.createTank(THREE, { team: team === 1 ? 'blue' : 'red', variant: heavy ? 'heavy' : 'light', scale: heavy ? 1.16 : 1.0 });
-      // The procedural asset's cannon points along +X. Rotate -90° so its forward
-      // axis matches the RTS +Z heading, then expose the nested combat rig to the
-      // existing unit controller (which operates on the outer unit group).
-      tank.rotation.y = -Math.PI / 2;
-      g.add(tank);
-      g.userData.turret = tank.userData.turret || null;
+      const externalSource = BLUE_EXTERNAL_ASSETS[heavy ? 'mainBattleTank' : 'lightTank'];
+      let tank;
+      if (externalSource) {
+        // GLB source models are metre-scaled and face +Z. Clone geometry/materials per
+        // faction so team tinting never mutates the shared cached source model.
+        tank = externalSource.clone(true);
+        tank.scale.setScalar(heavy ? 0.40 : 0.48);
+        tank.traverse(part => {
+          if (!part.isMesh) return;
+          if (part.material) {
+            const tint = part.material.clone();
+            if (tint.color) tint.color.lerp(new THREE.Color(team === 1 ? 0x318fc2 : 0xc34d42), 0.22);
+            part.material = tint;
+          }
+          part.castShadow = !isMobile;
+          part.receiveShadow = true;
+        });
+        g.add(tank);
+        g.userData.turret = tank.getObjectByName('turret') || null;
+        g.userData.externalVehicleAsset = heavy ? 'cc0-main-battle-tank' : 'cc0-light-tank';
+      } else {
+        tank = BLUE_MODELS.createTank(THREE, { team: team === 1 ? 'blue' : 'red', variant: heavy ? 'heavy' : 'light', scale: heavy ? 1.16 : 1.0 });
+        // Procedural model cannon faces +X; align its heading to the RTS +Z axis.
+        tank.rotation.y = -Math.PI / 2;
+        g.add(tank);
+        g.userData.turret = tank.userData.turret || null;
+      }
       if (g.userData.turret && BLUE_MODELS.createMuzzleFlash) {
         const muzzleFlash = BLUE_MODELS.createMuzzleFlash(THREE, {
           team: team === 1 ? 'blue' : 'red',
