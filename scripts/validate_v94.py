@@ -265,6 +265,8 @@ def main():
         raise SystemExit("FAIL: logistics corridor wear is missing connected road/gantry detail: " + ", ".join(missing))
     if "blocksMovement: false" not in wear_section:
         raise SystemExit("FAIL: battlefield wear must remain visual-only and non-blocking")
+    if "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))" not in browser_test:
+        raise SystemExit("FAIL: desktop environment screenshots must clear the completed-mission overlay after its dedicated evidence capture")
 
     kill_start = source.index("function killUnit(u)")
     kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
