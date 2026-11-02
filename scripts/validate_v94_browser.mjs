@@ -390,6 +390,24 @@ try {
     mobileMissionHud.left >= 0 && mobileMissionHud.right <= mobileMissionHud.viewportWidth + 1 &&
     mobileMissionHud.text.includes('Livrer 600 minerais'),
     'mobile HUD must expose the active mission objective without horizontal overflow');
+  const mobileToastClearance = await mobile.evaluate(() => {
+    const toast = document.getElementById('toast');
+    const commands = document.getElementById('mobileCommands');
+    const mission = document.getElementById('mobileMission');
+    toast.textContent = 'MISSION — OBJECTIF MIS À JOUR';
+    toast.style.opacity = '1';
+    const rect = element => {
+      const r = element.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    };
+    const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    const t = rect(toast), c = rect(commands), m = rect(mission);
+    return { toast: t, commands: c, mission: m, overlapsCommands: overlaps(t, c), overlapsMission: overlaps(t, m) };
+  });
+  assert.ok(!mobileToastClearance.overlapsCommands && !mobileToastClearance.overlapsMission,
+    'mobile mission notifications must not cover command controls or the objective HUD');
+  await mobile.screenshot({ path: output + '/mobile-v94-mission-toast-clearance-390x844.png', fullPage: true });
+  await mobile.evaluate(() => { document.getElementById('toast').style.opacity = '0'; });
   const mobileMissionProgress = await mobile.evaluate(() => {
     window.__BLUE_ALERTS_MISSION_QA__.recordDelivery(600);
     for (let i = 0; i < 3; i++) window.__BLUE_ALERTS_MISSION_QA__.recordProduction('light');
