@@ -1151,6 +1151,7 @@ const units = [];
 const ores = [];
 const projectiles = [];
 const fx = [];
+let qaSuppressCombat = false; // QA-only gate; production gameplay remains unchanged unless explicitly enabled.
 let impactSequence = 0;
 let lastImpactEvent = null;
 const orderMarks = [];
@@ -3399,7 +3400,7 @@ function tick() {
         }
       }
 
-      if (combatTarget && u.dmg > 0) {
+      if (!qaSuppressCombat && combatTarget && u.dmg > 0) {
         const tx = combatTarget.g ? combatTarget.g.position.x : combatTarget.x;
         const tz = combatTarget.g ? combatTarget.g.position.z : combatTarget.z;
         const dx = tx - u.g.position.x;
@@ -3578,7 +3579,7 @@ function tick() {
         const dx = nearest.g.position.x - b.x;
         const dz = nearest.g.position.z - b.z;
         if (b.head) b.head.rotation.y = Math.atan2(dx, dz);
-        if (b.cd <= 0) {
+        if (!qaSuppressCombat && b.cd <= 0) {
           b.cd = 1.0;
           fireProjectile(b, nearest);
         }
@@ -3981,6 +3982,14 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
   });
   window.__BLUE_ALERTS_COMBAT_QA__ = Object.freeze({
     state: combatState,
+    freezeNewCombat() {
+      qaSuppressCombat = true;
+      return combatState();
+    },
+    resumeCombat() {
+      qaSuppressCombat = false;
+      return combatState();
+    },
     fire() {
       const shooter = units.find(u => !u.dead && u.team === 1 && u.dmg > 0);
       const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);

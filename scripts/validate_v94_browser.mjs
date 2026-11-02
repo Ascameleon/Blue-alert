@@ -136,6 +136,7 @@ try {
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.equal(desktopMetrics.camera?.defaultDistance, 38, 'desktop opening camera must use the closer tactical framing');
   assert.equal(desktopMetrics.camera?.distance, 38, 'desktop opening camera must start at the authored tactical distance');
+  await desktop.waitForTimeout(900);
   const desktopCameraBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(48));
   assert.equal(desktopCameraBaseline?.distance, 48, 'desktop A/B baseline must use the original 48-unit camera distance');
   await desktop.waitForTimeout(300);
@@ -145,6 +146,7 @@ try {
   assert.deepEqual(desktopCameraCloser?.target, desktopCameraBaseline?.target, 'desktop A/B screenshots must preserve the exact same camera target');
   assert.equal(desktopCameraCloser?.yaw, desktopCameraBaseline?.yaw, 'desktop A/B screenshots must preserve camera yaw');
   assert.equal(desktopCameraCloser?.pitch, desktopCameraBaseline?.pitch, 'desktop A/B screenshots must preserve camera pitch');
+  assert.ok(desktopCameraBaseline.distance / desktopCameraCloser.distance >= 1.2, 'desktop A/B framing must create a clearly visible scale increase of at least 20%');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-tactical-camera-framing.png', fullPage: true });
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
@@ -314,6 +316,8 @@ try {
   assert.ok(desktopExplosionState.frameCount >= desktopKill.frameCount + 2 && desktopExplosionState.lastFrameDelta > 0, 'desktop requestAnimationFrame loop must continue after unit destruction');
   assert.ok(desktopExplosionState.modelExplosionLives[desktopExplosionIndex] < desktopKill.spawnedExplosionLife, 'desktop death explosion simulation lifetime must advance');
   await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
+  const desktopFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  assert.ok(desktopFreeze, 'desktop cleanup probe must freeze only new combat spawns while existing VFX expire');
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
@@ -327,6 +331,7 @@ try {
   }
   const desktopClean = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   console.log('DESKTOP_COMBAT_VFX ' + JSON.stringify({ shot: desktopShot, kill: desktopKill, afterCleanup: desktopClean }));
+  await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeCombat());
 
   const combatProbe = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA.arm());
   assert.ok(combatProbe.shooterId && combatProbe.targetId, 'combat probe must arm real in-game 3D units');
@@ -448,6 +453,7 @@ try {
   assert.ok(mobileMetrics.startOverlayHidden && !mobileMetrics.fallback && !mobileMetrics.runtimeError && !mobileMetrics.startupError, 'mobile game must start in the 3D runtime without fallback/errors');
   assert.equal(mobileMetrics.camera?.defaultDistance, 40, 'mobile opening camera must use the portrait-safe tactical framing');
   assert.equal(mobileMetrics.camera?.distance, 40, 'mobile opening camera must start at the authored tactical distance');
+  await mobile.waitForTimeout(900);
   const mobileCameraBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(48));
   assert.equal(mobileCameraBaseline?.distance, 48, 'mobile A/B baseline must use the original 48-unit camera distance');
   await mobile.waitForTimeout(300);
@@ -457,6 +463,7 @@ try {
   assert.deepEqual(mobileCameraCloser?.target, mobileCameraBaseline?.target, 'mobile A/B screenshots must preserve the exact same camera target');
   assert.equal(mobileCameraCloser?.yaw, mobileCameraBaseline?.yaw, 'mobile A/B screenshots must preserve camera yaw');
   assert.equal(mobileCameraCloser?.pitch, mobileCameraBaseline?.pitch, 'mobile A/B screenshots must preserve camera pitch');
+  assert.ok(mobileCameraBaseline.distance / mobileCameraCloser.distance >= 1.15, 'mobile A/B framing must create a clearly visible scale increase of at least 15%');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-tactical-camera-framing-390x844.png', fullPage: false });
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
@@ -674,6 +681,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileExplosionIndex = mobileExplosionState.modelExplosionPositions.findIndex(p => Math.abs(p.x - mobileKill.targetPosition.x) < 0.001 && Math.abs(p.z - mobileKill.targetPosition.z) < 0.001);
   assert.ok(mobileExplosionIndex >= 0 && mobileExplosionState.modelExplosionLives[mobileExplosionIndex] < mobileKill.spawnedExplosionLife, 'mobile death explosion simulation lifetime must advance');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
+  const mobileFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  assert.ok(mobileFreeze, 'mobile cleanup probe must freeze only new combat spawns while existing VFX expire');
   const mobileCleanupStartedAt = Date.now();
   try {
     await mobile.waitForFunction(() => {
@@ -687,6 +696,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     throw error;
   }
   const mobileClean = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeCombat());
   const mobileCleanupElapsedMs = Date.now() - mobileCleanupStartedAt;
   console.log('MOBILE_VFX_CLEANUP_PERFORMANCE ' + JSON.stringify({
     elapsedMs: mobileCleanupElapsedMs,

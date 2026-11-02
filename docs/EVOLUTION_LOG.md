@@ -294,3 +294,11 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Added read-only QA diagnostics for the current/default camera distance and explicit browser assertions at desktop and mobile sizes. Added dedicated fresh gameplay screenshots for the opening camera framing.
 - Intended visible effect: a closer, more legible tactical composition without enlarging units or changing game balance. This is a presentation improvement, not a claim that the soldier models have reached commercial-grade quality.
 - Exact-head browser/OpenRTS validation and visual comparison are pending. No release/version or merge is authorized by this entry. Budget remains 0 €.
+
+
+### Camera A/B proof and combat-cleanup isolation — 2026-11-02
+
+- Exact-head workflow [41425794195](https://github.com/Ascameleon/Blue-alert/actions/runs/41425794195) on `e7cfce3f1fdc1e2382bc37d1165e8cda2f6fde82` passed the static/model checks but failed in the desktop VFX cleanup wait. The log showed active combat continuing to launch projectiles and create impact effects while the test waited for a globally empty VFX queue; the timeout was not caused by a missing death explosion and the threshold was not relaxed.
+- Added a QA-only `freezeNewCombat` / `resumeCombat` switch around desktop and mobile cleanup probes. It prevents new unit/turret shots during the isolated cleanup window while existing projectiles, explosions, muzzle flashes and impact effects continue their normal lifecycle. The switch is exposed only by the `?qa=1` diagnostics and is restored after the probe; live gameplay behavior is unchanged.
+- Camera evidence now waits for the opening HUD to settle, then captures the original 48-unit frame and the closer desktop 38 / mobile 40 frame from the same runtime, target, yaw, pitch, lighting and viewport. The browser test asserts the camera pose is unchanged and the framing scale delta is at least 20% desktop / 15% mobile.
+- No merge, version or release is claimed until the corrected exact-head workflow and both A/B screenshot pairs are inspected.

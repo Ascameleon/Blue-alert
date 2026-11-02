@@ -212,7 +212,7 @@ def main():
     qa_start = source.index("const combatState =")
     qa_end = source.index("if (new URLSearchParams(location.search).get('qa') === '1')", qa_start)
     qa_section = source[qa_start:qa_end]
-    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition")
+    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition", "qaSuppressCombat", "freezeNewCombat", "resumeCombat")
     missing = [token for token in required_qa if token not in qa_section]
     if missing:
         raise SystemExit("FAIL: combat QA must track the exact death explosion: " + ", ".join(missing))
@@ -224,6 +224,8 @@ def main():
         "desktopExplosionIndex",
         "mobileExplosionIndex",
         "spawnedExplosionLife",
+        "freezeNewCombat",
+        "resumeCombat",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
