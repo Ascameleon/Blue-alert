@@ -166,3 +166,12 @@ The existing V94 `createUnit(..., 'infantry')` path now loads the faction-specif
 - Both pouch instance groups are now parented to the torso rig. They follow torso breathing and retain their batched draw calls.
 - Fix commit: `97ef049e6698e48ed665cab153690074e47a5738`.
 - The preceding workflow did not reach V94 browser or OpenRTS tests. A new exact-head run is required.
+
+
+### Animated boot-contact correction
+
+- Workflow `41383652505` confirmed the pouch-parenting correction and reported 53 infantry meshes, 1,732 triangles and 55 draw calls, but the live gait preview measured `boundsMinY = -0.0484`.
+- Cause: the 0.58-radian leg swing rotated the long boot toe below the ground plane even though the neutral stance was aligned.
+- Raised both hip pivots to Y=0.72 and reduced stride swing to 0.32 radians. The opposing arm/leg phase and displacement-linked gait remain intact.
+- Fix commit: `f3578c2691111fed3da6600df5bfb794b86319fa`.
+- The preceding run did not reach V94 gameplay or OpenRTS tests. A fresh exact-head workflow must verify the animated ground clearance and full runtime suite.
