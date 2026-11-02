@@ -169,6 +169,8 @@ try {
   assert.deepEqual(desktopCorridorDetail?.camera, desktopCorridorBaseline?.camera, 'desktop corridor A/B must preserve camera pose');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-logistics-corridor-wear-detail.png', fullPage: true });
+  const desktopWearReset = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('base'));
+  assert.equal(desktopWearReset?.name, 'base', 'desktop wear A/B must restore the default tactical camera before the camera test');
 
   await desktop.waitForTimeout(900);
   const desktopCameraBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(48));
@@ -545,6 +547,8 @@ try {
   assert.deepEqual(mobileCorridorDetail?.camera, mobileCorridorBaseline?.camera, 'mobile corridor A/B must preserve camera pose');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-logistics-corridor-wear-detail-390x844.png', fullPage: false });
+  const mobileWearReset = await mobile.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('base'));
+  assert.equal(mobileWearReset?.name, 'base', 'mobile wear A/B must restore the default tactical camera before the camera test');
 
   await mobile.waitForTimeout(900);
   const mobileCameraBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(48));
