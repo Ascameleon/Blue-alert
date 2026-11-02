@@ -302,3 +302,60 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Added a QA-only `freezeNewCombat` / `resumeCombat` switch around desktop and mobile cleanup probes. It prevents new unit/turret shots during the isolated cleanup window while existing projectiles, explosions, muzzle flashes and impact effects continue their normal lifecycle. The switch is exposed only by the `?qa=1` diagnostics and is restored after the probe; live gameplay behavior is unchanged.
 - Camera evidence now waits for the opening HUD to settle, then captures the original 48-unit frame and the closer desktop 38 / mobile 40 frame from the same runtime, target, yaw, pitch, lighting and viewport. The browser test asserts the camera pose is unchanged and the framing scale delta is at least 20% desktop / 15% mobile.
 - No merge, version or release is claimed until the corrected exact-head workflow and both A/B screenshot pairs are inspected.
+
+
+### Evergreen visual-focus initialization correction — 2026-11-02
+
+- Exact-head workflow [41431162131](https://github.com/Ascameleon/Blue-alert/actions/runs/41431162131) exposed a literal escaped-newline syntax error in the tree-focus declaration. The following correction commit separated the declaration into a real JavaScript line break; the subsequent exact-head workflow [41431268727](https://github.com/Ascameleon/Blue-alert/actions/runs/41431268727) passed the V94 syntax/static stage.
+- Review of the corrected head found a second QA-only defect before visual acceptance: `firstTreeFocus` was declared but never assigned, so the new desktop/mobile foliage camera hook would throw instead of capturing the actual tree.
+- The deterministic placement loop now records the first accepted tree's existing `x`, `z` and `scale` once, without changing the random sequence, instance transforms, tree count, pathing or render groups.
+- Added a static source contract for the assignment. A fresh exact-head browser/standalone/OpenRTS/native workflow and visual inspection remain required. No merge, release or commercial-quality claim is made.
+
+
+### Evergreen live-runtime A/B capture and desktop-page ordering correction — 2026-11-02
+
+- Code review of the browser acceptance sequence found the desktop foliage focus was invoked after the desktop Playwright page had already been closed. Moved the desktop focus/capture before context release; mobile capture remains on the live mobile page.
+- Added a same-runtime A/B switch on the existing foliage InstancedMesh. It swaps only the geometry between the exact previous three-cone silhouette and the new branch/needle geometry, keeping the same tree instances, transform, camera, lighting, viewport and draw group.
+- Desktop and 390×844 mobile now capture both the legacy baseline and detailed tree from the exact PR head. The QA-only legacy geometry is allocated only when the test toggles it and is disposed immediately after restoring the detailed geometry.
+- This is evidence instrumentation, not an extra production draw call or a new gameplay asset. Exact-head validation and visual inspection are pending; no release or merge is authorized.
+
+
+### Evergreen A/B validator-scope correction — 2026-11-02
+
+- Exact-head workflow [41432189610](https://github.com/Ascameleon/Blue-alert/actions/runs/41432189610) passed the repository prototype check but stopped at the V94 static validator because the geometry-section assertion incorrectly searched for the QA geometry swap methods outside the geometry-construction function.
+- Kept the legacy geometry-construction requirement inside the tree geometry section and moved the `setLegacy` / same-InstancedMesh swap requirements to a source-wide QA contract check, matching their actual runtime location.
+- No runtime geometry, transforms, instance count or draw groups changed. Fresh exact-head browser, standalone, OpenRTS/native and screenshot checks remain mandatory.
+
+
+### Desktop evergreen A/B moved ahead of mission-complete overlay — 2026-11-02
+
+- Inspection of the earlier crater A/B artifact showed the desktop mission-complete overlay obscured the scene when late visual-focus captures were taken. The same ordering would have obscured the new desktop tree A/B.
+- Moved the desktop evergreen focus and legacy/detail pair to immediately after the live infantry-gait capture and before the citadel-destruction mission-completion test. The gameplay page remains active and unobscured; later mission, industrial-yard and terrain checks continue unchanged.
+- Mobile A/B already runs before any full victory overlay and remains in its existing live mobile sequence.
+- Exact-head browser, standalone, OpenRTS/native checks and inspection of all four tree screenshots remain pending. No visual acceptance or merge is claimed.
+
+
+### Mobile construction-cost assertion isolation — 2026-11-02
+
+- Exact-head workflow [41432551605](https://github.com/Ascameleon/Blue-alert/actions/runs/41432551605) completed desktop V94 gameplay, desktop tree A/B capture, mission, combat/VFX and building-damage checks, then failed at the mobile power-station cost assertion: actual credits were 4,735 versus expected 4,650. The placement itself succeeded; asynchronous combat/harvester income changed the credit balance during the touch assertion.
+- Root cause: the test compared the whole live credit balance while the mobile simulation continued granting kill and resource-delivery rewards. This made an exact construction-cost assertion timing-dependent.
+- Added a QA-only economy-reward freeze around desktop and mobile construction-cost checks. It gates only reward-credit additions from enemy kills, building kills and harvester deliveries; the build transaction still deducts its configured 350 credits, mission delivery accounting and the live production gameplay path remain unchanged unless the explicit QA hook is called.
+- The browser checks still require exactly one placed power station and exactly 350 credits deducted, and now assert that reward credits are restored immediately after each placement test. Static validation requires the new QA hooks. No gameplay cost, test threshold or production balance was changed.
+- The failed run's desktop A/B screenshots show a plainly visible geometric difference between the legacy three-cone silhouette and the new branch/needle form. The detailed form is still angular and needs visual-quality review; mobile A/B captures and a full exact-head passing workflow remain outstanding. No merge or release is authorized.
+
+
+### Evergreen branch-mass visual rejection and needle-spray revision — 2026-11-02
+
+- Inspected the exact-head desktop and 390×844 mobile A/B captures from workflow [#314](https://github.com/Ascameleon/Blue-alert/actions/runs/41434104005), artifact \`openrts-graphical-smoke-test\`, under \`v94-browser/desktop-v94-woodland-tree-{baseline,detail}.png\` and \`v94-browser/mobile-v94-woodland-tree-{baseline,detail}-390x844.png\`.
+- Rejected the first detailed geometry: the new vertical cone tufts read as repeated spikes and made the tree look less natural, despite passing the earlier structural checks. This is a visual-quality rejection, not an accepted improvement.
+- Reworked the existing three-whorl instanced foliage: each of the 17 tapered branch arms now carries three overlapping, low-poly dodecahedral needle masses aligned along the bough direction, with decreasing outer sprays and restrained facet-tone variation. Removed the isolated vertical tip cones.
+- Preserved the existing deterministic tree transforms, trunk/foliage instance counts, collision/pathing behavior, material contract and three render groups. No external assets or paid services.
+- Exposed \`needleSpraysPerArm\` and strengthened static/browser contracts to require exactly three sprays per branch, at least 51 clusters and at least 1,500 foliage triangles. Desktop/mobile same-runtime A/B capture remains the acceptance evidence.
+- Pending a fresh exact-head browser capture, screenshot inspection and complete regression/OpenRTS/native checks. The previous screenshots are the rejected baseline for this revision; no merge, version, release or commercial-grade claim is authorized.
+
+
+### Needle-spray validator contract correction — 2026-11-02
+
+- Exact-head workflow [#315](https://github.com/Ascameleon/Blue-alert/actions/runs/41436059900) passed the repository prototype syntax check and then stopped at the V94 static validator.
+- The runtime correctly declares the helper as a const arrow function, but the new source contract incorrectly searched for a function declaration. Corrected the validator token to match the actual declaration; no runtime geometry or gameplay behavior changed.
+- Browser/WebGL capture, standalone build and OpenRTS/native checks did not run on that failed attempt. A new exact-head workflow is required before visual acceptance.

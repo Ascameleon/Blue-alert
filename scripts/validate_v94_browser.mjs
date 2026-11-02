@@ -180,9 +180,16 @@ try {
   assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
     desktopMetrics.vegetation.trunkInstances === desktopMetrics.vegetation.treeCount &&
     desktopMetrics.vegetation.foliageInstances === desktopMetrics.vegetation.treeCount &&
-    desktopMetrics.vegetation.foliageTiers === 3 && desktopMetrics.vegetation.rockInstances >= 30 &&
+    desktopMetrics.vegetation.foliageTiers === 3 &&
+    desktopMetrics.vegetation.branchWhorls === 3 &&
+    desktopMetrics.vegetation.branchArms >= 17 &&
+    desktopMetrics.vegetation.needleSpraysPerArm === 3 &&
+    desktopMetrics.vegetation.needleClusters === desktopMetrics.vegetation.branchArms * 3 &&
+    desktopMetrics.vegetation.needleClusters >= 51 &&
+    desktopMetrics.vegetation.foliageTriangles >= 1500 &&
+    desktopMetrics.vegetation.rockInstances >= 30 &&
     desktopMetrics.vegetation.renderGroups === 3 && desktopMetrics.vegetation.blocksMovement === false,
-    'desktop vegetation must render layered tree silhouettes and field rocks in three non-blocking instanced groups');
+    'desktop vegetation must render detailed instanced evergreen branch whorls and needle clusters without adding draw groups');
   assert.ok(desktopMetrics.environment?.runtimeIntegrated &&
     desktopMetrics.environment.clusterCount === 4 &&
     desktopMetrics.environment.cargoCrates === 18 &&
@@ -190,6 +197,8 @@ try {
     desktopMetrics.environment.clearanceZones === 4 &&
     desktopMetrics.environment.blocksMovement === false,
     'desktop V94 must contain four non-blocking industrial clusters, 18 instanced crates and eight barrels');
+  const desktopEconomyFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeEconomyRewards());
+  assert.ok(desktopEconomyFreeze?.economyRewardsFrozen, 'desktop construction-cost QA must freeze asynchronous reward credits');
   const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
   assert.ok(buildBefore, 'build-zone QA diagnostics must be available');
   assert.ok(buildBefore.hq.modelsLoaded, 'the procedural model library must load from inside the single HTML file');
@@ -239,6 +248,8 @@ try {
     assert.equal(rejected.credits, afterValidCredits,
       'an invalid placement must not consume credits');
   }
+  const desktopEconomyResume = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeEconomyRewards());
+  assert.equal(desktopEconomyResume?.economyRewardsFrozen, false, 'desktop construction-cost QA must restore economy rewards after the placement assertions');
 
   await desktop.locator('#btnSound').click();
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : OFF', 'desktop sound toggle must respond');
@@ -402,6 +413,20 @@ try {
   const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 && desktopInfantryGait.walkAmount > 0.2 && Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04, 'desktop V94 infantry arms and legs must animate in response to real movement');
   await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
+  const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
+  assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
+    desktopTreeDetail.needleSpraysPerArm === 3 &&
+    desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 3 &&
+    desktopTreeDetail.needleClusters >= 51 && desktopTreeDetail.foliageTriangles >= 1500,
+    'desktop live V94 must expose a complete instanced evergreen asset for close visual inspection');
+  const desktopTreeBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
+  assert.equal(desktopTreeBaseline, 'legacy', 'desktop A/B baseline must restore the previous three-cone evergreen geometry');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-baseline.png', fullPage: true });
+  assert.equal(await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(false)), 'detailed',
+    'desktop A/B comparison must restore the detailed branch-and-needle geometry on the same instanced mesh');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-detail.png', fullPage: true });
   const missionVictory = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.destroyEnemyCitadel());
   assert.ok(missionVictory.enemyCitadelDestroyed && missionVictory.complete &&
     missionVictory.completedCount === 3 && missionVictory.progressPercent === 100,
@@ -422,6 +447,7 @@ try {
   assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must be available');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
+
 
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
@@ -595,6 +621,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
 
   // Real touch placement on the 390x844 mobile viewport.
+  const mobileEconomyFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeEconomyRewards());
+  assert.ok(mobileEconomyFreeze?.economyRewardsFrozen, 'mobile construction-cost QA must freeze asynchronous reward credits');
   const mobilePlacementBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
   const mobileBuildPoint = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-24, -12));
   assert.ok(mobileBuildPoint.visible, 'mobile construction target must be visible above the bottom HUD');
@@ -607,6 +635,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     'a real mobile touch must place exactly one power station');
   assert.equal(mobileBuildAfter.credits, mobilePlacementBefore.credits - 350,
     'a real mobile touch placement must deduct the configured power-station cost');
+  const mobileEconomyResume = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeEconomyRewards());
+  assert.equal(mobileEconomyResume?.economyRewardsFrozen, false, 'mobile construction-cost QA must restore economy rewards after the placement assertion');
 
   const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(mobileCombatBefore?.livingBlueCombatUnits > 0 && mobileCombatBefore?.livingRedCombatUnits > 0, 'mobile combat QA must find live units on both factions');
@@ -760,9 +790,24 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
 
+  const mobileTreeDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
+  assert.ok(mobileTreeDetail?.branchWhorls === 3 && mobileTreeDetail.branchArms >= 17 &&
+    mobileTreeDetail.needleSpraysPerArm === 3 &&
+    mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 3 &&
+    mobileTreeDetail.needleClusters >= 51 && mobileTreeDetail.foliageTriangles >= 1500,
+    'mobile live V94 must expose the same detailed evergreen asset within the mobile draw-call budget');
+  const mobileTreeBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
+  assert.equal(mobileTreeBaseline, 'legacy', 'mobile A/B baseline must restore the previous three-cone evergreen geometry');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-baseline-390x844.png', fullPage: true });
+  assert.equal(await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(false)), 'detailed',
+    'mobile A/B comparison must restore the detailed branch-and-needle geometry on the same instanced mesh');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-detail-390x844.png', fullPage: true });
+
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
@@ -780,7 +825,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       desktop: { baseline: desktopCameraBaseline, improved: desktopCameraCloser },
       mobile: { baseline: mobileCameraBaseline, improved: mobileCameraCloser }
     },
-    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png']
+    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png']
   }, null, 2));
 } catch (error) {
   console.error(error);

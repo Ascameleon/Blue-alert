@@ -1031,6 +1031,116 @@ createBuildZoneVisual();
 // Every transform is deterministic; props remain visual-only and never alter pathing.
 function createLayeredTreeFoliageGeometry() {
   const tiers = [
+    { radius: .82, height: 1.28, y: 1.10, light: .76, branches: 6, branchLength: .78, branchRise: .20, branchRadius: .065 },
+    { radius: .65, height: 1.12, y: 1.62, light: .88, branches: 6, branchLength: .62, branchRise: .18, branchRadius: .058 },
+    { radius: .47, height: .96, y: 2.08, light: 1.00, branches: 5, branchLength: .46, branchRise: .15, branchRadius: .050 }
+  ];
+  const needleSprays = [
+    { at: .43, length: .22, width: .17, tone: .92 },
+    { at: .68, length: .21, width: .16, tone: 1.00 },
+    { at: .88, length: .17, width: .125, tone: 1.07 }
+  ];
+  const positions = [], normals = [], colors = [];
+  let branchArms = 0;
+  let needleClusters = 0;
+  const up = new THREE.Vector3(0, 1, 0);
+  const appendCone = (radius, height, segments, center, direction, tone, greenShift = 1) => {
+    const indexed = new THREE.ConeGeometry(radius, height, segments, 1);
+    const part = indexed.toNonIndexed();
+    indexed.dispose();
+    const axis = direction.clone().normalize();
+    const rotation = new THREE.Quaternion().setFromUnitVectors(up, axis);
+    part.applyMatrix4(new THREE.Matrix4().compose(center, rotation, new THREE.Vector3(1, 1, 1)));
+    const p = part.getAttribute('position');
+    const n = part.getAttribute('normal');
+    for (let vertex = 0; vertex < p.count; vertex++) {
+      positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
+      normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
+      const facet = .91 + (vertex % 7) * .014;
+      const shade = tone * facet;
+      colors.push(shade * .78, shade * greenShift, shade * .80);
+    }
+    part.dispose();
+  };
+  const needleClusterBase = new THREE.DodecahedronGeometry(1, 0);
+  const appendNeedleCluster = (length, width, center, direction, tone, twist) => {
+    const indexed = needleClusterBase.clone();
+    const part = indexed.toNonIndexed();
+    indexed.dispose();
+    const axis = direction.clone().normalize();
+    const rotation = new THREE.Quaternion().setFromUnitVectors(up, axis);
+    rotation.multiply(new THREE.Quaternion().setFromAxisAngle(axis, twist));
+    const scale = new THREE.Vector3(width, length, width * .90);
+    part.applyMatrix4(new THREE.Matrix4().compose(center, rotation, scale));
+    const p = part.getAttribute('position');
+    const n = part.getAttribute('normal');
+    for (let vertex = 0; vertex < p.count; vertex++) {
+      positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
+      normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
+      const facet = .84 + (vertex % 5) * .032;
+      const shade = tone * facet;
+      colors.push(shade * .72, shade * 1.02, shade * .74);
+    }
+    part.dispose();
+  };
+  for (let tierIndex = 0; tierIndex < tiers.length; tierIndex++) {
+    const tier = tiers[tierIndex];
+    appendCone(tier.radius, tier.height, 7, new THREE.Vector3(0, tier.y, 0), up, tier.light * .88, 1);
+    for (let branchIndex = 0; branchIndex < tier.branches; branchIndex++) {
+      const angle = branchIndex / tier.branches * Math.PI * 2 + tierIndex * .19;
+      const radial = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
+      const origin = new THREE.Vector3(radial.x * .12, tier.y - tier.height * .25, radial.z * .12);
+      const branchVector = new THREE.Vector3(
+        radial.x * tier.branchLength,
+        tier.branchRise,
+        radial.z * tier.branchLength
+      );
+      const branchLength = branchVector.length();
+      const branchDirection = branchVector.normalize();
+      appendCone(
+        tier.branchRadius,
+        branchLength,
+        5,
+        origin.clone().addScaledVector(branchDirection, branchLength * .5),
+        branchDirection,
+        tier.light * .74,
+        .96
+      );
+      branchArms++;
+      for (let sprayIndex = 0; sprayIndex < needleSprays.length; sprayIndex++) {
+        const spray = needleSprays[sprayIndex];
+        const center = origin.clone().addScaledVector(branchDirection, branchLength * spray.at);
+        appendNeedleCluster(
+          spray.length,
+          spray.width,
+          center,
+          branchDirection,
+          tier.light * spray.tone,
+          angle + sprayIndex * .71
+        );
+        needleClusters++;
+      }
+    }
+  }
+  needleClusterBase.dispose();
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.userData = {
+    branchWhorls: tiers.length,
+    branchArms,
+    needleClusters,
+    needleSpraysPerArm: needleSprays.length,
+    triangleCount: positions.length / 9
+  };
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+
+function createLegacyLayeredTreeFoliageGeometry() {
+  const tiers = [
     { radius: .88, height: 1.45, y: 1.10, light: .76 },
     { radius: .70, height: 1.30, y: 1.62, light: .88 },
     { radius: .52, height: 1.10, y: 2.08, light: 1.00 }
@@ -1057,6 +1167,7 @@ function createLayeredTreeFoliageGeometry() {
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.userData = { branchWhorls: 0, branchArms: 0, needleClusters: 0, triangleCount: positions.length / 9 };
   geometry.computeBoundingSphere();
   return geometry;
 }
@@ -1082,12 +1193,14 @@ treeFoliage.receiveShadow = !isMobile;
 const treeDummy = new THREE.Object3D();
 const treeTones = [0x4d7950, 0x416e49, 0x587f50];
 let placedTreeCount = 0;
+let firstTreeFocus = null;
 for (let i = 0; i < treeCapacity; i++) {
   const x = (terrainRandom() - 0.5) * 185;
   const z = (terrainRandom() - 0.5) * 145;
   if (Math.abs(z) < 7) continue;
   if (insideBuildZone(x, z, 0) || (Math.abs(x) < 55 && Math.abs(z) < 35) || insideIndustrialSet(x, z, 5)) continue;
   const scale = 0.5 + terrainRandom() * 1.4;
+  if (!firstTreeFocus) firstTreeFocus = { x, z, scale };
   treeDummy.position.set(x, 0, z);
   treeDummy.rotation.set(0, terrainHash(i, 181) * Math.PI * 2, 0);
   treeDummy.scale.setScalar(scale);
@@ -1139,10 +1252,45 @@ window.__BLUE_ALERTS_VEGETATION = Object.freeze({
   treeCount: placedTreeCount,
   trunkInstances: treeTrunks.count,
   foliageInstances: treeFoliage.count,
-  foliageTiers: 3,
+  foliageTiers: treeFoliageGeometry.userData.branchWhorls,
+  branchWhorls: treeFoliageGeometry.userData.branchWhorls,
+  branchArms: treeFoliageGeometry.userData.branchArms,
+  needleClusters: treeFoliageGeometry.userData.needleClusters,
+  needleSpraysPerArm: treeFoliageGeometry.userData.needleSpraysPerArm,
+  foliageTriangles: treeFoliageGeometry.userData.triangleCount,
   rockInstances: battlefieldRocks.count,
   renderGroups: 3,
   blocksMovement: false
+});
+let legacyTreeFoliageGeometry = null;
+window.__BLUE_ALERTS_VEGETATION_QA = Object.freeze({
+  focus() {
+    if (!firstTreeFocus) throw new Error('No deterministic battlefield tree is available for visual QA');
+    camTarget.set(firstTreeFocus.x, 1.35, firstTreeFocus.z);
+    camYaw = .4;
+    camPitch = .62;
+    camDist = isMobile ? 6.2 : 7.2;
+    camVelX = 0;
+    camVelZ = 0;
+    return {
+      ...window.__BLUE_ALERTS_VEGETATION,
+      focus: firstTreeFocus,
+      cameraDistance: camDist
+    };
+  },
+  setLegacy(enabled) {
+    if (enabled) {
+      if (!legacyTreeFoliageGeometry) legacyTreeFoliageGeometry = createLegacyLayeredTreeFoliageGeometry();
+      treeFoliage.geometry = legacyTreeFoliageGeometry;
+      return 'legacy';
+    }
+    treeFoliage.geometry = treeFoliageGeometry;
+    if (legacyTreeFoliageGeometry) {
+      legacyTreeFoliageGeometry.dispose();
+      legacyTreeFoliageGeometry = null;
+    }
+    return 'detailed';
+  }
 });
 
 /* ─── Game state ─────────────────────────────────────────── */
@@ -1152,6 +1300,7 @@ const ores = [];
 const projectiles = [];
 const fx = [];
 let qaSuppressCombat = false; // QA-only gate; production gameplay remains unchanged unless explicitly enabled.
+let qaSuppressEconomyRewards = false; // QA-only gate for deterministic construction-cost assertions.
 let impactSequence = 0;
 let lastImpactEvent = null;
 const orderMarks = [];
@@ -2493,7 +2642,7 @@ function killUnit(u) {
   selected.delete(u);
   if (u.team === 2) {
     kills++;
-    credits += 50 + Math.floor(Math.random() * 40);
+    if (!qaSuppressEconomyRewards) credits += 50 + Math.floor(Math.random() * 40);
   }
   sfx('boom');
   updateHUD();
@@ -2646,7 +2795,7 @@ function applyDamage(target, amount, fromTeam) {
       if (target.scorch) { scene.remove(target.scorch); disposeObject3D(target.scorch); target.scorch = null; }
       for (const material of (target.damageMaterials || [])) material.dispose();
       scene.remove(target.g);
-      if (target.team === 2) { kills++; credits += 100; }
+      if (target.team === 2) { kills++; if (!qaSuppressEconomyRewards) credits += 100; }
       sfx('boom');
       refreshPower();
     }
@@ -3345,7 +3494,7 @@ function tick() {
             setAutoRoute(u, ref.x, ref.z);
           } else {
             const gained = Math.floor(u.cargo);
-            credits += gained;
+            if (!qaSuppressEconomyRewards) credits += gained;
             recordMissionDelivery(gained);
             u.cargo = 0;
             u.harvestState = 'seek';
@@ -3989,6 +4138,14 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     resumeCombat() {
       qaSuppressCombat = false;
       return combatState();
+    },
+    freezeEconomyRewards() {
+      qaSuppressEconomyRewards = true;
+      return { ...combatState(), economyRewardsFrozen: qaSuppressEconomyRewards };
+    },
+    resumeEconomyRewards() {
+      qaSuppressEconomyRewards = false;
+      return { ...combatState(), economyRewardsFrozen: qaSuppressEconomyRewards };
     },
     fire() {
       const shooter = units.find(u => !u.dead && u.team === 1 && u.dmg > 0);

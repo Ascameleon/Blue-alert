@@ -96,7 +96,11 @@ def main():
         "battlefield-trees-foliage-instanced",
         "battlefield-rocks-instanced",
         "window.__BLUE_ALERTS_VEGETATION",
-        "foliageTiers: 3",
+        "foliageTiers: treeFoliageGeometry.userData.branchWhorls",
+        "branchWhorls: treeFoliageGeometry.userData.branchWhorls",
+        "branchArms: treeFoliageGeometry.userData.branchArms",
+        "needleClusters: treeFoliageGeometry.userData.needleClusters",
+        "foliageTriangles: treeFoliageGeometry.userData.triangleCount",
         "blocksMovement: false",
     )
     missing = [feature for feature in required_features if feature not in source]
@@ -203,6 +207,39 @@ def main():
     if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
 
+    tree_start = source.index("function createLayeredTreeFoliageGeometry()")
+    tree_end = source.index("const treeCapacity", tree_start)
+    tree_section = source[tree_start:tree_end]
+    required_tree_features = (
+        "branchWhorls",
+        "branchArms",
+        "needleClusters",
+        "new THREE.Quaternion()",
+        "new THREE.ConeGeometry(radius, height, segments, 1)",
+        "const appendNeedleCluster = (",
+        "new THREE.DodecahedronGeometry(1, 0)",
+        "needleSpraysPerArm: needleSprays.length",
+        "geometry.userData",
+        "function createLegacyLayeredTreeFoliageGeometry()",
+    )
+    missing = [feature for feature in required_tree_features if feature not in tree_section]
+    if missing:
+        raise SystemExit("FAIL: instanced evergreen asset is missing authored branch/needle geometry: " + ", ".join(missing))
+    if "foliageTriangles: treeFoliageGeometry.userData.triangleCount" not in source:
+        raise SystemExit("FAIL: evergreen geometry complexity must be exposed for browser acceptance")
+    if "const tuftDirection" in tree_section or "tier.tuftHeight" in tree_section:
+        raise SystemExit("FAIL: evergreen needle mass must not regress to isolated vertical cone spikes")
+    if "if (!firstTreeFocus) firstTreeFocus = { x, z, scale };" not in source:
+        raise SystemExit("FAIL: deterministic evergreen visual focus must track an accepted placed tree")
+    required_tree_qa = (
+        "setLegacy(enabled)",
+        "treeFoliage.geometry = legacyTreeFoliageGeometry",
+        "treeFoliage.geometry = treeFoliageGeometry",
+    )
+    missing = [token for token in required_tree_qa if token not in source]
+    if missing:
+        raise SystemExit("FAIL: evergreen A/B QA must switch the same InstancedMesh between legacy and detailed geometry: " + ", ".join(missing))
+
     kill_start = source.index("function killUnit(u)")
     kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
     kill_section = source[kill_start:kill_end]
@@ -212,7 +249,7 @@ def main():
     qa_start = source.index("const combatState =")
     qa_end = source.index("if (new URLSearchParams(location.search).get('qa') === '1')", qa_start)
     qa_section = source[qa_start:qa_end]
-    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition", "qaSuppressCombat", "freezeNewCombat", "resumeCombat")
+    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition", "qaSuppressCombat", "freezeNewCombat", "resumeCombat", "qaSuppressEconomyRewards", "freezeEconomyRewards", "resumeEconomyRewards")
     missing = [token for token in required_qa if token not in qa_section]
     if missing:
         raise SystemExit("FAIL: combat QA must track the exact death explosion: " + ", ".join(missing))
@@ -226,6 +263,16 @@ def main():
         "spawnedExplosionLife",
         "freezeNewCombat",
         "resumeCombat",
+        "desktopEconomyFreeze",
+        "mobileEconomyFreeze",
+        "freezeEconomyRewards",
+        "resumeEconomyRewards",
+        "desktopTreeBaseline",
+        "mobileTreeBaseline",
+        "desktop-v94-woodland-tree-baseline.png",
+        "mobile-v94-woodland-tree-baseline-390x844.png",
+        "setLegacy(true)",
+        "setLegacy(false)",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
