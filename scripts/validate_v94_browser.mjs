@@ -113,7 +113,8 @@ async function metrics(page) {
       terrain: window.__BLUE_ALERTS_TERRAIN || null,
       terrainDressing: window.__BLUE_ALERTS_TERRAIN_DRESSING || null,
       vegetation: window.__BLUE_ALERTS_VEGETATION || null,
-      environment: window.__BLUE_ALERTS_ENVIRONMENT || null
+      environment: window.__BLUE_ALERTS_ENVIRONMENT || null,
+      camera: window.__BLUE_ALERTS_CAMERA_QA__?.snapshot() || null
     };
   });
 }
@@ -133,6 +134,9 @@ try {
   assert.ok(desktopMetrics.webgl && !desktopMetrics.contextLost, 'desktop must render with a live WebGL context');
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
+  assert.equal(desktopMetrics.camera?.defaultDistance, 38, 'desktop opening camera must use the closer tactical framing');
+  assert.equal(desktopMetrics.camera?.distance, 38, 'desktop opening camera must start at the authored tactical distance');
+  await desktop.screenshot({ path: output + '/desktop-v94-tactical-camera-framing.png', fullPage: true });
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
   const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
   assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
@@ -432,6 +436,9 @@ try {
   assert.ok(mobileMetrics.documentWidth <= mobileMetrics.viewportWidth + 1, 'mobile game must not overflow horizontally');
   assert.ok(mobileMetrics.canvasRect.width >= 380 && mobileMetrics.canvasRect.height >= 600, 'mobile battlefield must retain a usable touch area');
   assert.ok(mobileMetrics.startOverlayHidden && !mobileMetrics.fallback && !mobileMetrics.runtimeError && !mobileMetrics.startupError, 'mobile game must start in the 3D runtime without fallback/errors');
+  assert.equal(mobileMetrics.camera?.defaultDistance, 40, 'mobile opening camera must use the portrait-safe tactical framing');
+  assert.equal(mobileMetrics.camera?.distance, 40, 'mobile opening camera must start at the authored tactical distance');
+  await mobile.screenshot({ path: output + '/mobile-v94-tactical-camera-framing-390x844.png', fullPage: false });
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
   assert.ok(mobileMetrics.terrain?.albedoMap && mobileMetrics.terrain.surfaceMode === 'procedural-albedo-grain' && mobileMetrics.terrain.textureResolution === 256 && mobileMetrics.terrain.textureChecksum > 0 && mobileMetrics.terrain.anisotropy <= 2, 'mobile terrain must use a deterministic 256px procedural albedo surface with capped anisotropy');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
@@ -739,7 +746,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     combatRig,
     muzzleError,
     successfulThree,
-    screenshots: ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png']
+    screenshots: ['desktop-v94-tactical-camera-framing.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png']
   }, null, 2));
 } catch (error) {
   console.error(error);
