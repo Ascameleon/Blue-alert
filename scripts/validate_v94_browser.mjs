@@ -299,7 +299,7 @@ try {
   assert.ok(desktopExplosionIndex >= 0, 'desktop death explosion must remain attached to its original target position');
   const desktopAnimationSnapshot = desktopExplosionState.modelExplosionAnimationSnapshots.find(p => Math.abs(p.x - desktopKill.targetPosition.x) < 0.001 && Math.abs(p.z - desktopKill.targetPosition.z) < 0.001);
   assert.ok(desktopAnimationSnapshot && desktopAnimationSnapshot.partCount >= 20 && desktopAnimationSnapshot.profile === 'cached-parts-v1',
-    'desktop explosion must use its cached animation-part profile');
+    'desktop death explosion must use the cached explosion animation-part profile');
   assert.notEqual(desktopAnimationSnapshot.checksum, desktopKill.spawnedExplosionAnimationChecksum,
     'desktop cached explosion parts must visibly animate after spawn');
   console.log('DESKTOP_EXPLOSION_LIFECYCLE ' + JSON.stringify({ before: desktopKill, after: desktopExplosionState }));
@@ -657,7 +657,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileExplosionIndex >= 0 && mobileExplosionState.modelExplosionLives[mobileExplosionIndex] < mobileKill.spawnedExplosionLife, 'mobile death explosion simulation lifetime must advance');
   const mobileAnimationSnapshot = mobileExplosionState.modelExplosionAnimationSnapshots.find(p => Math.abs(p.x - mobileKill.targetPosition.x) < 0.001 && Math.abs(p.z - mobileKill.targetPosition.z) < 0.001);
   assert.ok(mobileAnimationSnapshot && mobileAnimationSnapshot.partCount >= 20 && mobileAnimationSnapshot.profile === 'cached-parts-v1',
-    'mobile explosion must use its cached animation-part profile');
+    'mobile death explosion must use the cached explosion animation-part profile');
   assert.notEqual(mobileAnimationSnapshot.checksum, mobileKill.spawnedExplosionAnimationChecksum,
     'mobile cached explosion parts must visibly animate after spawn');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
