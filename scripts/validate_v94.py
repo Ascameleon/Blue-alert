@@ -203,6 +203,23 @@ def main():
     if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
 
+    tree_start = source.index("function createLayeredTreeFoliageGeometry()")
+    tree_end = source.index("const treeCapacity", tree_start)
+    tree_section = source[tree_start:tree_end]
+    required_tree_features = (
+        "branchWhorls",
+        "branchArms",
+        "needleClusters",
+        "new THREE.Quaternion()",
+        "new THREE.ConeGeometry(radius, height, segments, 1)",
+        "geometry.userData",
+    )
+    missing = [feature for feature in required_tree_features if feature not in tree_section]
+    if missing:
+        raise SystemExit("FAIL: instanced evergreen asset is missing authored branch/needle geometry: " + ", ".join(missing))
+    if "foliageTriangles: treeFoliageGeometry.userData.triangleCount" not in source:
+        raise SystemExit("FAIL: evergreen geometry complexity must be exposed for browser acceptance")
+
     kill_start = source.index("function killUnit(u)")
     kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
     kill_section = source[kill_start:kill_end]
