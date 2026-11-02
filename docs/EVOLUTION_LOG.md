@@ -136,3 +136,12 @@ The existing V94 `createUnit(..., 'infantry')` path now loads the faction-specif
 - Updated the static contract to assert the pivot factory (`makeArm`, `makeLeg`) and left/right pivot names remain asserted by the rendered browser diagnostics.
 - Fix commit: `37ea334339aeb7e36792efdd003e420e3d26d166`.
 - No browser, standalone-build or OpenRTS test is claimed from the failed run; a fresh exact-head workflow is required.
+
+
+### Mobile geometry-budget correction
+
+- Workflow `41382910552` passed all static checks and the standalone V94 build, then failed the desktop model-preview geometry-budget assertion for the new BLUE SENTINEL infantry. The assertion combined triangle and draw-call limits, so the failing metric was not yet isolated.
+- Reduced the per-soldier mesh count by batching repeated pouches and removing 13 redundant small meshes (duplicate fasteners, ear blocks, elbow/ankle overlays, boot soles, pack straps and a trigger-guard detail) while retaining the faction silhouette, armor carrier, articulated limbs, rifle, helmet optics and backpack.
+- Runtime optimization commit: `204ab7903cadf3b84042e889356bd9b24248cf65`.
+- The browser test now logs triangle/draw-call counts and reports the specific failed budget; test commit: `71b8f4a87fdc6a2fb57f9509f58f3f5097a22843`.
+- No desktop/mobile render or gameplay result is claimed from the failed run. The next exact-head workflow must recheck the 60-draw-call ceiling before the runtime gait tests can run.
