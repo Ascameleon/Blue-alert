@@ -134,6 +134,30 @@ try {
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
+  const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
+  assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
+  assert.equal(missionInitial.deliveredOre, 0, 'starting credits and ore in the field must not count as delivered resources');
+  assert.equal(missionInitial.combatUnitsProduced, 0, 'starting forces must not count as newly produced combat units');
+  assert.equal(missionInitial.completedCount, 0, 'mission objectives must begin incomplete');
+  assert.ok(missionInitial.objectives[2].detail.includes('Verrouillée'),
+    'the enemy citadel must be visibly locked until the delivery and production objectives are complete');
+  const prematureCitadel = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.destroyEnemyCitadel());
+  assert.ok(!prematureCitadel.enemyCitadelDestroyed && !prematureCitadel.complete &&
+    prematureCitadel.enemyCitadelAlive && prematureCitadel.enemyCitadelHp > 0,
+    'premature citadel destruction must be blocked while either prerequisite objective is incomplete');
+  assert.ok(await desktop.locator('#endOverlay').evaluate(el => el.classList.contains('hidden')),
+    'a premature citadel attack must not end the mission or show the victory overlay');
+  const missionAfterOre = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.recordDelivery(600));
+  assert.ok(missionAfterOre.objectives[0].complete && missionAfterOre.completedCount === 1,
+    'the mineral objective must complete only after a real delivery event is recorded');
+  const missionAfterProduction = await desktop.evaluate(() => {
+    for (let i = 0; i < 3; i++) window.__BLUE_ALERTS_MISSION_QA__.recordProduction('light');
+    return window.__BLUE_ALERTS_MISSION_QA__.snapshot();
+  });
+  assert.ok(missionAfterProduction.objectives[1].complete && missionAfterProduction.completedCount === 2 &&
+    !missionAfterProduction.objectives[2].complete && missionAfterProduction.progressPercent >= 66,
+    'the force objective must count three produced combat units without completing the citadel objective');
+  console.log('DESKTOP_MISSION_OBJECTIVES ' + JSON.stringify({ initial: missionInitial, afterOre: missionAfterOre, afterProduction: missionAfterProduction }));
   assert.ok(desktopMetrics.terrain?.albedoMap && desktopMetrics.terrain.surfaceMode === 'procedural-albedo-grain' && desktopMetrics.terrain.textureResolution === 512 && desktopMetrics.terrain.textureChecksum > 0 && desktopMetrics.terrain.anisotropy >= 1, 'desktop terrain must use a deterministic 512px procedural albedo surface');
   assert.ok(desktopMetrics.terrainDressing?.scrubInstances >= 160 && desktopMetrics.terrainDressing.roadMarkers === 26,
     'desktop battlefield must include instanced scrub and reflective supply-road markers');
@@ -331,6 +355,16 @@ try {
     desktopBuildingStage2.hp > 0 && desktopBuildingStage2.scorchMark && desktopBuildingStage2.flamesSpawned > 0,
     'desktop critical building damage must show scorch and fire while the building remains alive');
   await desktop.screenshot({ path: output + '/desktop-v94-building-critical.png', fullPage: true });
+  const missionVictory = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.destroyEnemyCitadel());
+  assert.ok(missionVictory.enemyCitadelDestroyed && missionVictory.complete &&
+    missionVictory.completedCount === 3 && missionVictory.progressPercent === 100,
+    'destroying the enemy citadel through the combat damage path must complete all three mission objectives');
+  assert.ok(!(await desktop.locator('#endOverlay').evaluate(el => el.classList.contains('hidden'))),
+    'mission completion must display the victory overlay');
+  assert.equal(await desktop.locator('#mBar').evaluate(el => Math.round(parseFloat(el.style.width))), 100,
+    'the mission progress bar must reach 100 percent only after all objective conditions are met');
+  console.log('DESKTOP_MISSION_COMPLETE ' + JSON.stringify(missionVictory));
+  await desktop.screenshot({ path: output + '/desktop-v94-mission-complete.png', fullPage: true });
   // Capture the authored industrial set after all camera-sensitive gameplay
   // assertions so the visual focus cannot disturb construction projection tests.
   const industrialFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('gantry'));
@@ -387,6 +421,42 @@ try {
     'mobile V94 must retain the industrial set without marking gameplay lanes as blocked');
   assert.equal(touchTargets.tabs.length, 3, 'all three mobile sidebar tabs must be present');
   assert.ok(touchTargets.tabs.every(t => t.width >= 44 && t.height >= 44), 'every mobile tab must meet the 44px touch-target minimum');
+  const mobileMissionHud = await mobile.evaluate(() => {
+    const el = document.getElementById('mobileMission');
+    const rect = el.getBoundingClientRect();
+    return { display: getComputedStyle(el).display, width: rect.width, left: rect.left, right: rect.right, viewportWidth: window.innerWidth,
+      text: document.getElementById('mobileMissionObjective').textContent };
+  });
+  assert.ok(mobileMissionHud.display !== 'none' && mobileMissionHud.width > 0 &&
+    mobileMissionHud.left >= 0 && mobileMissionHud.right <= mobileMissionHud.viewportWidth + 1 &&
+    mobileMissionHud.text.includes('Livrer 600 minerais'),
+    'mobile HUD must expose the active mission objective without horizontal overflow');
+  const mobileToastClearance = await mobile.evaluate(() => {
+    const toast = document.getElementById('toast');
+    const commands = document.getElementById('mobileCommands');
+    const mission = document.getElementById('mobileMission');
+    toast.textContent = 'MISSION — OBJECTIF MIS À JOUR';
+    toast.style.opacity = '1';
+    const rect = element => {
+      const r = element.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    };
+    const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    const t = rect(toast), c = rect(commands), m = rect(mission);
+    return { toast: t, commands: c, mission: m, overlapsCommands: overlaps(t, c), overlapsMission: overlaps(t, m) };
+  });
+  assert.ok(!mobileToastClearance.overlapsCommands && !mobileToastClearance.overlapsMission,
+    'mobile mission notifications must not cover command controls or the objective HUD');
+  await mobile.screenshot({ path: output + '/mobile-v94-mission-toast-clearance-390x844.png', fullPage: true });
+  await mobile.evaluate(() => { document.getElementById('toast').style.opacity = '0'; });
+  const mobileMissionProgress = await mobile.evaluate(() => {
+    window.__BLUE_ALERTS_MISSION_QA__.recordDelivery(600);
+    for (let i = 0; i < 3; i++) window.__BLUE_ALERTS_MISSION_QA__.recordProduction('light');
+    return { state: window.__BLUE_ALERTS_MISSION_QA__.snapshot(), count: document.getElementById('mobileMissionCount').textContent };
+  });
+  assert.ok(mobileMissionProgress.state.completedCount === 2 && mobileMissionProgress.count === '2/3',
+    'mobile mission HUD must update its objective count after gameplay progress');
+  await mobile.screenshot({ path: output + '/mobile-v94-mission-progress-390x844.png', fullPage: true });
   assert.ok(touchTargets.firstCard && touchTargets.firstCard.width >= 60 && touchTargets.firstCard.height >= 44, 'mobile build cards must remain tappable');
   const tabBox = await mobile.locator('#sidebar .tab[data-t="units"]').boundingBox();
   await mobile.touchscreen.tap(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2);
@@ -599,7 +669,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
