@@ -50,3 +50,39 @@ This log distinguishes runtime integration, static checks, browser rendering, CI
 - The mobile cleanup measurement was 33.8 FPS in the CI-emulated 390x844 browser scenario only. It is not a full-game sustained FPS claim and does not substitute for a physical Samsung test.
 - The OpenRTS graphical/input smoke test remains a separate native engine test; it does not imply that the V94 HTML runtime has been ported into OpenRTS.
 - PR #29 remains open and draft; no merge to `main` was performed.
+
+
+
+## Cycle 6 — layered battlefield vegetation and instanced field rocks
+
+- Base source: `main` at `1b0768b56bc61976391bc6fd930faa3a336e2e7c`.
+- Continued in the existing environment-content branch: `feat/blue-alerts-industrial-yard-runtime-20261102`.
+- Runtime commit: `b41bd15a1865d87978befb79f546d4d3355dbefa`.
+- Browser regression commit: `6da8d6337f32a6dd4b71823333f99d04aefc3631`.
+- Static contract commit: `0a41bc675dcdb406ebf00c4503de092e0ab72673`.
+
+### Runtime change
+
+The previous battlefield screenshot showed isolated single-cone trees and individually submitted rocks. Replaced that visual path with:
+- A three-tier, eight-sided conifer silhouette with tier-specific vertex shading, deterministic rotation and per-instance color variation.
+- Instanced trunk and foliage batches, preserving the existing deterministic placement stream and all existing build-zone/road/industrial exclusion checks.
+- One instanced dodecahedron batch for weathered field rocks, retaining the original size/rotation distribution and deterministic placement.
+- Exactly three environment render groups for trees and rocks (trunk, foliage, rocks), rather than one scene object per tree/rock.
+- All props remain visual-only; `blocksMovement:false`; unit collision, pathfinding, building placement, resources and combat code were not modified.
+
+### Changed files
+
+- `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`
+- `scripts/validate_v94_browser.mjs`
+- `scripts/validate_v94.py`
+- `docs/EVOLUTION_LOG.md`
+
+### Regression coverage and evidence boundary
+
+- Static validator now requires the layered-foliage builder, named instanced batches and vegetation diagnostics.
+- Desktop browser acceptance requires at least 50 trees and 30 rocks; mobile acceptance requires at least 30 trees and 15 rocks. Both assert matching trunk/foliage instance counts, three foliage tiers, exactly three render groups and non-blocking placement.
+- The previous exact-head industrial-yard workflow `41372567582` passed on its then-current branch head `d45cfa0b67c0fc46af64f9c42287004af09004ec`; that result does not validate these new commits.
+- Exact-head static, standalone HTML, desktop/mobile WebGL, OpenRTS build and native input tests are pending for the new branch head. No pass is claimed until that run completes.
+- The previous screenshots were inspected and establish the cone-tree baseline. New screenshots must be inspected after the exact-head workflow.
+- CI mobile is browser emulation, not a physical Samsung test. OpenRTS remains a separate native engine test and does not import the V94 Three.js vegetation.
+- No external assets, paid APIs, purchases or services were added; budget remains 0.
