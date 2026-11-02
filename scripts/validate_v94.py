@@ -216,7 +216,7 @@ def main():
         "needleClusters",
         "new THREE.Quaternion()",
         "new THREE.ConeGeometry(radius, height, segments, 1)",
-        "function appendNeedleCluster(",
+        "const appendNeedleCluster = (",
         "new THREE.DodecahedronGeometry(1, 0)",
         "needleSpraysPerArm: needleSprays.length",
         "geometry.userData",
