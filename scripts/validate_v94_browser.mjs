@@ -125,7 +125,10 @@ try {
     args: [
       '--enable-webgl', '--ignore-gpu-blocklist',
       '--use-gl=angle', '--use-angle=swiftshader',
-      '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'
+      '--enable-unsafe-swiftshader', '--disable-dev-shm-usage',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding'
     ]
   });
 
@@ -415,6 +418,11 @@ try {
   assert.ok(muzzleError < 0.05,
     'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
 
+  // Keep the desktop RAF simulation foregrounded during lifecycle cleanup.
+  // Headless Chromium can otherwise throttle RAF even while document.visibilityState
+  // reports visible, leaving transient impact sparks alive past the wall-clock timeout.
+  await desktop.bringToFront();
+  await desktop.waitForFunction(() => document.visibilityState === 'visible', null, { timeout: 3000 });
   const desktopBuildingFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(desktopBuildingFreeze?.combatSuppressed === true,
     'desktop building-damage QA must freeze unrelated combat before its controlled projectile burst');
