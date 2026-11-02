@@ -474,6 +474,10 @@ try {
     'the mission progress bar must reach 100 percent only after all objective conditions are met');
   console.log('DESKTOP_MISSION_COMPLETE ' + JSON.stringify(missionVictory));
   await desktop.screenshot({ path: output + '/desktop-v94-mission-complete.png', fullPage: true });
+  // Preserve the victory screenshot, then clear its overlay before environment evidence.
+  await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'));
+  assert.ok(await desktop.locator('#endOverlay').evaluate(el => el.classList.contains('hidden')),
+    'desktop industrial-yard and terrain evidence must not be dimmed by the completed-mission overlay');
   // Capture the authored industrial set after all camera-sensitive gameplay
   // assertions so the visual focus cannot disturb construction projection tests.
   const industrialFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('gantry'));
