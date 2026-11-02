@@ -157,12 +157,7 @@ try {
     'enemy territory, road, occupied structures and ore deposits must reject construction');
   await desktop.waitForTimeout(2800);
   await desktop.screenshot({ path: output + '/desktop-v94-gameplay.png', fullPage: true });
-  const industrialFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('gantry'));
-  assert.equal(industrialFocus?.name, 'gantry', 'industrial yard visual focus must be available for evidence capture');
-  await desktop.waitForTimeout(650);
-  await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
-  await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA.focus('base'));
-  await desktop.waitForTimeout(180);
+
 
   // Real mouse input: place a power station on the pad, then prove invalid ground
   // clicks do not spend credits or create structures.
@@ -328,6 +323,12 @@ try {
     desktopBuildingStage2.hp > 0 && desktopBuildingStage2.scorchMark && desktopBuildingStage2.flamesSpawned > 0,
     'desktop critical building damage must show scorch and fire while the building remains alive');
   await desktop.screenshot({ path: output + '/desktop-v94-building-critical.png', fullPage: true });
+  // Capture the authored industrial set after all camera-sensitive gameplay
+  // assertions so the visual focus cannot disturb construction projection tests.
+  const industrialFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('gantry'));
+  assert.equal(industrialFocus?.name, 'gantry', 'industrial yard visual focus must be available for evidence capture');
+  await desktop.waitForTimeout(650);
+  await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
 
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
