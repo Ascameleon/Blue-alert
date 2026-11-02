@@ -139,6 +139,7 @@ try {
     desktopMetrics.environment.clusterCount === 4 &&
     desktopMetrics.environment.cargoCrates === 18 &&
     desktopMetrics.environment.hazardBarrels === 8 &&
+    desktopMetrics.environment.clearanceZones === 4 &&
     desktopMetrics.environment.blocksMovement === false,
     'desktop V94 must contain four non-blocking industrial clusters, 18 instanced crates and eight barrels');
   const buildBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
@@ -360,6 +361,7 @@ try {
     mobileMetrics.environment.clusterCount === 4 &&
     mobileMetrics.environment.cargoCrates === 18 &&
     mobileMetrics.environment.hazardBarrels === 8 &&
+    mobileMetrics.environment.clearanceZones === 4 &&
     mobileMetrics.environment.blocksMovement === false,
     'mobile V94 must retain the industrial set without marking gameplay lanes as blocked');
   assert.equal(touchTargets.tabs.length, 3, 'all three mobile sidebar tabs must be present');
