@@ -143,3 +143,16 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - The gameplay cleanup assertion and FPS threshold were not relaxed. Desktop remains 512×512; mobile remains 256×256 with anisotropy capped at 2.
 - Failure retained: workflow \`41387802169\` on exact head \`ae891cbe08ccb9d8da18c39521f221bb29d5760e\`. It did not reach OpenRTS build or native interaction tests.
 - The albedo-only performance correction and a fresh exact-head workflow are required before this terrain pass can be accepted.
+
+
+### Visual review refinement — stronger soil, stone and supply-road tracks
+
+- Exact-head workflow \`41388240173\` passed on \`c929a96d460375b7341306584a08beed2b18c5e1\`: static checks, standalone V94 build, desktop and 390×844 mobile WebGL/gameplay tests, OpenRTS build, 12/12 native unit movement and real native left-click selection/right-click movement/right-click attack.
+- Inspected the actual desktop gameplay, desktop terrain-detail and mobile terrain-detail captures from artifact \`13115698760\`. The albedo map was active and stable, but the contrast was too subtle at normal play scale.
+- Increased the deterministic soil/stone patch contrast and added two gently wandering tire ruts along the supply-road shoulders. This remains an albedo-only texture; no extra shader sample, bump map, mesh displacement or gameplay collision change was reintroduced.
+- Desktop remains 512×512 and mobile 256×256; all patch placement is derived from the existing fixed terrain seed.
+- The current refinement is committed in the next branch revision. Exact-head browser/OpenRTS validation and new visual captures are pending; no pass is claimed for that revision yet.
+- Prior successful performance evidence from the exact-head run: 2026-11-02T04:28:30.7852501Z MOBILE_VFX_CLEANUP_PERFORMANCE {"elapsedMs":1527,"framesAdvanced":43,"simulatedSeconds":1.813,"averageFps":28.2}
+
+
+- Added deterministic coverage diagnostics for soil patches and the two road-shoulder ruts. Desktop/mobile browser acceptance now asserts both coverage ratios, in addition to texture resolution, checksum and surface mode.

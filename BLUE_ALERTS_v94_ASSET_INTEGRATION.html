@@ -566,6 +566,8 @@ terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3
 function createTerrainSurfaceTextures(size) {
   const albedoPixels = new Uint8Array(size * size * 4);
   let checksum = 2166136261;
+  let soilSampleCount = 0;
+  let roadRutSampleCount = 0;
   const channel = value => Math.max(0, Math.min(255, Math.round(value)));
   for (let py = 0; py < size; py++) {
     const worldZ = ((py + 0.5) / size - 0.5) * 160;
@@ -575,16 +577,21 @@ function createTerrainSurfaceTextures(size) {
       const medium = terrainNoise(worldX - 11, worldZ + 23, 0.32);
       const fine = terrainNoise(worldX + 7, worldZ - 5, 1.25);
       const fleck = terrainHash(px + 701, py - 307);
-      const soil = terrainSmoothstep(0.48, 0.72, broad * 0.62 + medium * 0.38);
-      const exposedStone = terrainSmoothstep(0.70, 0.91, medium * 0.68 + fleck * 0.32) *
-        (1 - terrainSmoothstep(0.32, 0.62, broad));
-      const grain = (fine - 0.5) * 13 + (fleck - 0.5) * 9;
-      const warm = soil * 0.54;
-      const stony = exposedStone * 0.42;
+      const soil = terrainSmoothstep(0.52, 0.75, broad * 0.60 + medium * 0.40);
+      const exposedStone = terrainSmoothstep(0.70, 0.90, medium * 0.70 + fleck * 0.30) *
+        (1 - terrainSmoothstep(0.30, 0.55, broad));
+      const rutNorth = 1 - terrainSmoothstep(0.14, 0.62,
+        Math.abs(worldZ - (4.9 + Math.sin(worldX * 0.03) * 0.32)));
+      const rutSouth = 1 - terrainSmoothstep(0.14, 0.62,
+        Math.abs(worldZ - (-4.9 + Math.sin(worldX * 0.03 + 1.4) * 0.32)));
+      const roadRuts = Math.max(rutNorth, rutSouth);
+      if (soil > 0.65) soilSampleCount++;
+      if (roadRuts > 0.55) roadRutSampleCount++;
+      const grain = (fine - 0.5) * 18 + (fleck - 0.5) * 12;
       const offset = (py * size + px) * 4;
-      const red = channel(240 + warm * 15 - stony * 7 + grain);
-      const green = channel(244 - warm * 17 - stony * 8 + grain * 0.72);
-      const blue = channel(235 - warm * 27 - stony * 3 + grain * 0.46);
+      const red = channel(250 - soil * 62 - exposedStone * 38 - roadRuts * 34 + grain);
+      const green = channel(250 - soil * 90 - exposedStone * 40 - roadRuts * 44 + grain * 0.65);
+      const blue = channel(242 - soil * 122 - exposedStone * 30 - roadRuts * 42 + grain * 0.42);
       albedoPixels[offset] = red;
       albedoPixels[offset + 1] = green;
       albedoPixels[offset + 2] = blue;
@@ -610,7 +617,9 @@ function createTerrainSurfaceTextures(size) {
   return {
     size,
     albedo: makeTexture(albedoPixels, THREE.SRGBColorSpace),
-    checksum: checksum >>> 0
+    checksum: checksum >>> 0,
+    soilCoverage: soilSampleCount / (size * size),
+    roadRutsCoverage: roadRutSampleCount / (size * size)
   };
 }
 const terrainSurfaceTextures = createTerrainSurfaceTextures(isMobile ? 256 : 512);
@@ -630,9 +639,11 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   colorCount: terrainColors.length / 3,
   vertexColors: ground.material.vertexColors,
   albedoMap: !!terrainMaterial.map,
-  surfaceMode: 'procedural-albedo-grain',
+  surfaceMode: 'procedural-soil-stone-ruts',
   textureResolution: terrainSurfaceTextures.size,
   textureChecksum: terrainSurfaceTextures.checksum,
+  soilCoverage: terrainSurfaceTextures.soilCoverage,
+  roadRutsCoverage: terrainSurfaceTextures.roadRutsCoverage,
   anisotropy: terrainSurfaceTextures.albedo.anisotropy
 });
 window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
