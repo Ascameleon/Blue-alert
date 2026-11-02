@@ -107,6 +107,16 @@ def main():
     if missing:
         raise SystemExit("FAIL: expected v94 3D/game features missing: " + ", ".join(missing))
 
+    required_tank_surface_features = (
+        "TANK_SURFACE_TEXTURE_CACHE", "createTankSurfaceTextures",
+        "TANK_ARMOR_MICROSCUFF_PBR_V1", "tankSurfaceBindings",
+        "g.userData.tankModel = tank;", "window.__BLUE_ALERTS_TANK_SURFACE_QA__",
+        "setSurfaceFinish", "surfaceTextureCount", "surfaceMaterialCount",
+    )
+    missing = [feature for feature in required_tank_surface_features if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: live procedural tank surface finish is missing: " + ", ".join(missing))
+
     required_combat_features = (
         "tank.rotation.y = -Math.PI / 2;",
         "g.userData.turret = tank.userData.turret || null;",
@@ -325,6 +335,13 @@ def main():
         "desktop-v94-road-wear-detail.png",
         "mobile-v94-road-wear-baseline-390x844.png",
         "mobile-v94-road-wear-detail-390x844.png",
+        "desktop-v94-tank-surface-baseline.png",
+        "desktop-v94-tank-surface-detail.png",
+        "mobile-v94-tank-surface-baseline-390x844.png",
+        "mobile-v94-tank-surface-detail-390x844.png",
+        "window.__BLUE_ALERTS_TANK_SURFACE_QA__",
+        "setEnabled(false)",
+        "setEnabled(true)",
         "desktop-v94-mission-complete.png",
         "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
         "desktop-v94-industrial-yard.png",
