@@ -50,3 +50,20 @@ The original v94 kit remains intact and gains additional procedural Three.js mod
 - extra reactive armour, side skirts, optics and antennae on the tank; plate carrier, pouches, knee pads and goggles on infantry; exterior lights and service vents on buildings.
 
 The interactive preview exposes all five new asset types. The assets remain original procedural geometry, deliberately avoiding paid generation APIs and unlicensed downloads. They are not AI-sculpted GLB models; rotor spin, projectile travel and explosion lifetime require the game runtime to animate the returned groups. The relay model is an asset for the existing OpenRTS capture-point design; the OpenRTS scenario XML is still not loaded by the browser prototype. Validate scale, hitboxes, animation timing and frame rate in the actual game before gameplay integration.
+
+
+## Faction-specific main battle tanks (V94)
+
+The same \`createTank(THREE, { team, variant, scale })\` entry point now produces two distinct original silhouettes:
+
+- **BLUE SENTINEL** — low-profile turret, sloped cheek plates, compact laser/rangefinder cluster and cool sensor accents.
+- **RED BASTION** — taller reinforced turret, side armor slabs, raised command cupola, protected rangefinder and warm sensor accents.
+
+Both retain the existing outer group and \`userData.turret\` contract used by V94 combat. Track belts remain continuous collision-safe chassis geometry; 36 instanced tread shoes and 60 instanced wheel fasteners add detail without creating one draw call per bolt or shoe. The sloped glacis, engine-deck grilles, fenders, return rollers and hub caps are procedural Three.js geometry. No third-party model, texture, API or paid asset is used.
+
+
+## Softened faction armor pass (V94)
+
+The BLUE SENTINEL and RED BASTION hulls and turrets now use original chamfered, bevel-extruded armor geometry rather than relying on plain rectangular boxes for their main silhouette. The front glacis, upper/lower hull, engine deck, turret shell, faction cheek plates, side skirts and heavy reinforcements share the same lightweight procedural treatment. Repeated armor details remain instanced, and the preview exposes the exact bevelled part list so desktop/mobile browser tests can verify that the runtime model—not a detached illustration—contains the new geometry.
+
+The V94 runtime already loads this model module through its BLUE_MODELS.createTank path; collision footprints, health, movement speed, turret control and weapon behavior are unchanged. This is a geometry-quality pass, not a claim of photogrammetric/PBR sculpting or AAA asset quality.
