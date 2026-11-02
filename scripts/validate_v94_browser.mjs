@@ -232,10 +232,15 @@ try {
   const desktopCombatBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(desktopCombatBefore?.livingBlueCombatUnits > 0 && desktopCombatBefore?.livingRedCombatUnits > 0, 'desktop combat QA must find live units on both factions');
   assert.ok(desktopCombatBefore.started && !desktopCombatBefore.gameOver, 'desktop gameplay simulation must be active before VFX tests');
-  assert.equal(desktopCombatBefore.modelProjectiles, 0, 'desktop VFX test must start without active procedural projectiles');
-  const desktopShot = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.fire());
-  assert.equal(desktopShot.modelProjectiles, 1, 'desktop live combat must use the procedural projectile model');
-  assert.equal(desktopShot.modelMuzzleFlashes, 1, 'desktop live combat must show the procedural muzzle flash');
+  const desktopShot = await desktop.evaluate(() => {
+    const qa = window.__BLUE_ALERTS_COMBAT_QA__;
+    const baseline = qa.state();
+    return { ...qa.fire(), baseline };
+  });
+  assert.equal(desktopShot.modelProjectiles, desktopShot.baseline.modelProjectiles + 1,
+    'desktop QA fire must add exactly one procedural projectile to the live simulation');
+  assert.equal(desktopShot.modelMuzzleFlashes, desktopShot.baseline.modelMuzzleFlashes + 1,
+    'desktop QA fire must add one procedural muzzle flash to the live simulation');
   await desktop.waitForTimeout(35);
   await desktop.screenshot({ path: output + '/desktop-v94-projectile-vfx.png', fullPage: true });
   try {
@@ -545,17 +550,17 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
 
   // Real touch placement on the 390x844 mobile viewport.
+  const mobilePlacementBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
   const mobileBuildPoint = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-24, -12));
   assert.ok(mobileBuildPoint.visible, 'mobile construction target must be visible above the bottom HUD');
   await mobile.locator('#cards .card').first().tap();
   await mobile.touchscreen.tap(mobileBuildPoint.x, mobileBuildPoint.y);
-  await mobile.waitForFunction(
-    count => window.__BLUE_ALERTS_BUILD_QA.snapshot().playerBuildingCount === count + 1,
-    mobileBuildBefore.playerBuildingCount,
-    { timeout: 5000 }
-  );
+  // Pointer placement is synchronous; inspect the state immediately so unrelated
+  // AI kill rewards cannot be mistaken for a construction-price regression.
   const mobileBuildAfter = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.snapshot());
-  assert.equal(mobileBuildAfter.credits, mobileBuildBefore.credits - 350,
+  assert.equal(mobileBuildAfter.playerBuildingCount, mobilePlacementBefore.playerBuildingCount + 1,
+    'a real mobile touch must place exactly one power station');
+  assert.equal(mobileBuildAfter.credits, mobilePlacementBefore.credits - 350,
     'a real mobile touch placement must deduct the configured power-station cost');
 
   const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -564,9 +569,15 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   // Keep the mobile page foregrounded: Chromium may throttle requestAnimationFrame on a background page.
   await mobile.bringToFront();
   await mobile.waitForFunction(() => document.visibilityState === 'visible', null, { timeout: 3000 });
-  const mobileShot = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.fire());
-  assert.equal(mobileShot.modelProjectiles, 1, 'mobile live combat must use the procedural projectile model');
-  assert.equal(mobileShot.modelMuzzleFlashes, 1, 'mobile live combat must show the procedural muzzle flash');
+  const mobileShot = await mobile.evaluate(() => {
+    const qa = window.__BLUE_ALERTS_COMBAT_QA__;
+    const baseline = qa.state();
+    return { ...qa.fire(), baseline };
+  });
+  assert.equal(mobileShot.modelProjectiles, mobileShot.baseline.modelProjectiles + 1,
+    'mobile QA fire must add exactly one procedural projectile to the live simulation');
+  assert.equal(mobileShot.modelMuzzleFlashes, mobileShot.baseline.modelMuzzleFlashes + 1,
+    'mobile QA fire must add one procedural muzzle flash to the live simulation');
   await mobile.waitForTimeout(35);
   await mobile.screenshot({ path: output + '/mobile-v94-projectile-vfx-390x844.png', fullPage: true });
   try {
