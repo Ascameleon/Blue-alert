@@ -246,6 +246,8 @@ def main():
     wear_section = source[wear_start:wear_end]
     required_wear_features = (
         "logistics-road-worn-shoulders",
+        "const segmentShade = 0.96 + terrainHash(seed, 411) * 0.08;",
+        "shoulderShading: 'per-segment-uniform-low-contrast'",
         "gantry-access-concrete-spur",
         "gantry-access-asphalt",
         "logistics-tire-wear",

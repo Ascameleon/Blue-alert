@@ -137,7 +137,8 @@ try {
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.equal(desktopMetrics.camera?.defaultDistance, 38, 'desktop opening camera must use the closer tactical framing');
   assert.equal(desktopMetrics.camera?.distance, 38, 'desktop opening camera must start at the authored tactical distance');
-  assert.ok(desktopMetrics.battlefieldWear?.roadShoulderSegments === 100 &&
+  assert.ok(desktopMetrics.battlefieldWear?.shoulderShading === 'per-segment-uniform-low-contrast' &&
+    desktopMetrics.battlefieldWear?.roadShoulderSegments === 100 &&
     desktopMetrics.battlefieldWear.accessSpur &&
     desktopMetrics.battlefieldWear.tireSegments >= 100 &&
     desktopMetrics.battlefieldWear.asphaltRepairPatches === 7 &&
@@ -515,7 +516,8 @@ try {
   assert.ok(mobileMetrics.startOverlayHidden && !mobileMetrics.fallback && !mobileMetrics.runtimeError && !mobileMetrics.startupError, 'mobile game must start in the 3D runtime without fallback/errors');
   assert.equal(mobileMetrics.camera?.defaultDistance, 40, 'mobile opening camera must use the portrait-safe tactical framing');
   assert.equal(mobileMetrics.camera?.distance, 40, 'mobile opening camera must start at the authored tactical distance');
-  assert.ok(mobileMetrics.battlefieldWear?.roadShoulderSegments === 100 &&
+  assert.ok(mobileMetrics.battlefieldWear?.shoulderShading === 'per-segment-uniform-low-contrast' &&
+    mobileMetrics.battlefieldWear?.roadShoulderSegments === 100 &&
     mobileMetrics.battlefieldWear.accessSpur &&
     mobileMetrics.battlefieldWear.tireSegments >= 100 &&
     mobileMetrics.battlefieldWear.asphaltRepairPatches === 7 &&

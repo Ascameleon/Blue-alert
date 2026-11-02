@@ -690,11 +690,10 @@ function addBattlefieldWear() {
   const pushColoredQuad = (positions, colors, a, b, c, d, hex, seed) => {
     const base = new THREE.Color(hex);
     const verts = [a, b, c, a, c, d];
-    for (let i = 0; i < verts.length; i++) {
-      const v = verts[i];
+    const segmentShade = 0.96 + terrainHash(seed, 411) * 0.08;
+    const color = base.clone().multiplyScalar(segmentShade);
+    for (const v of verts) {
       positions.push(v[0], v[1], v[2]);
-      const shade = 0.88 + terrainHash(seed + i, 411) * 0.22;
-      const color = base.clone().multiplyScalar(shade);
       colors.push(color.r, color.g, color.b);
     }
   };
@@ -926,6 +925,7 @@ function addBattlefieldWear() {
   const metrics = {
     id: 'logistics-corridor-wear-v94',
     roadShoulderSegments: 100,
+    shoulderShading: 'per-segment-uniform-low-contrast',
     accessSpur: true,
     tireSegments,
     asphaltRepairPatches: 7,
