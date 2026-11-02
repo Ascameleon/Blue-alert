@@ -193,7 +193,7 @@ export function createInfantry(THREE, options={}) {
   const makeLeg = (side, label) => {
     const pivot = new THREE.Group();
     pivot.name = label + '-leg-pivot';
-    pivot.position.set(side * .105, .62, 0);
+    pivot.position.set(side * .105, .72, 0);
     g.add(pivot);
     box(THREE, pivot, label + '-thigh', [.155, .29, .17], [0, -.145, 0], cloth);
     box(THREE, pivot, label + '-knee-pad', [.17, .13, .19], [0, -.285, .075], armor);
@@ -251,7 +251,7 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
   const dt = Number.isFinite(deltaSeconds) ? Math.max(0, Math.min(.05, deltaSeconds)) : 0;
   const intensity = Number.isFinite(movement) ? Math.max(0, Math.min(1, movement)) : 0;
   rig.phase = (rig.phase || 0) + dt * (intensity > .02 ? 11 : 2.2);
-  const swing = Math.sin(rig.phase) * .58 * intensity;
+  const swing = Math.sin(rig.phase) * .32 * intensity;
   const idle = Math.sin(rig.phase * .5) * .018;
   rig.leftLeg.rotation.x = swing + idle;
   rig.rightLeg.rotation.x = -swing + idle;
