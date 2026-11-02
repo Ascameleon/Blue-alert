@@ -223,6 +223,7 @@ try {
   assert.ok(desktopExplosionState.frameCount >= desktopKill.frameCount + 2 && desktopExplosionState.lastFrameDelta > 0, 'desktop requestAnimationFrame loop must continue after unit destruction');
   assert.ok(desktopExplosionState.modelExplosionLives[0] < desktopKill.modelExplosionLives[0], 'desktop explosion simulation lifetime must advance');
   await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
+  const desktopCleanupStartedAt = Date.now();
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
@@ -235,6 +236,15 @@ try {
     throw error;
   }
   const desktopClean = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  const desktopCleanupElapsedMs = Date.now() - desktopCleanupStartedAt;
+  const desktopCleanupFps = Number(((desktopClean.frameCount - desktopKill.frameCount) / Math.max(0.001, desktopCleanupElapsedMs / 1000)).toFixed(1));
+  console.log('DESKTOP_VFX_CLEANUP_PERFORMANCE ' + JSON.stringify({
+    elapsedMs: desktopCleanupElapsedMs,
+    framesAdvanced: desktopClean.frameCount - desktopKill.frameCount,
+    simulatedSeconds: Number((desktopClean.time - desktopKill.time).toFixed(3)),
+    averageFps: desktopCleanupFps
+  }));
+  assert.ok(desktopCleanupFps >= 5.5, 'desktop RAF must sustain at least 5.5 FPS while cached explosion parts animate');
   console.log('DESKTOP_COMBAT_VFX ' + JSON.stringify({ shot: desktopShot, kill: desktopKill, afterCleanup: desktopClean }));
 
   const combatProbe = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA.arm());
