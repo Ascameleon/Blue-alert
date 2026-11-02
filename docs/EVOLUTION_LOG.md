@@ -283,3 +283,14 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Visual review: the new tapered body, nested elbow/knee articulation, hands and walking pose are visible in the actual V94 model preview and live gait captures. The character remains a stylized procedural low-poly soldier and appears small at the normal RTS camera distance. **The commercial-grade modern target is not achieved.** No release/version was created and no PR was merged.
 - PR #37 remains open, mergeable and in draft with an accurately scoped title/body: [refine faction infantry anatomy and surface finish](https://github.com/Ascameleon/Blue-alert/pull/37). The previous successful exact head a8d5660b8dac9698016eb534f23b25090700a1f3 and current head are both preserved in the same PR lineage.
 - OpenRTS remains a separate native engine and does not import these V94 Three.js infantry meshes. Mobile browser evidence is 390×844 emulation, not a physical Samsung test. Three.js remains CDN-loaded, so the browser build requires internet access for the renderer. No paid assets, APIs, credits or services; budget remains 0 €.
+
+
+## Cycle — closer tactical opening camera framing (2026-11-02)
+
+- Base: current main `05e9f7a74bf2e0340410d7a2d3f5a1d93bd4cdc1`; branch: `art/v94-tactical-camera-framing-20261102`.
+- Visual inspection of the actual mainline captures from workflow [41416690150](https://github.com/Ascameleon/Blue-alert/actions/runs/41416690150), artifact `13128825268`, showed that the opening RTS camera at distance 48 left infantry silhouettes and equipment too small to read in both the 1440×900 desktop and 390×844 mobile gameplay views.
+- Changed only the initial/reset tactical camera framing: desktop distance 38, portrait/mobile distance 40. The player can still zoom out to the existing 95-unit maximum and zoom in to the existing 16-unit minimum. Camera target, pitch, yaw, battlefield, unit transforms, hitboxes, movement and combat logic are unchanged.
+- The base-focus, space-bar reset, desktop Center button and mobile Center button now share the responsive default distance instead of silently reverting to 48.
+- Added read-only QA diagnostics for the current/default camera distance and explicit browser assertions at desktop and mobile sizes. Added dedicated fresh gameplay screenshots for the opening camera framing.
+- Intended visible effect: a closer, more legible tactical composition without enlarging units or changing game balance. This is a presentation improvement, not a claim that the soldier models have reached commercial-grade quality.
+- Exact-head browser/OpenRTS validation and visual comparison are pending. No release/version or merge is authorized by this entry. Budget remains 0 €.
