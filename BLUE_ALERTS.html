@@ -847,6 +847,94 @@ createBuilding(20, -4, 2, 'turret');
 createBuilding(20, 8, 2, 'turret');
 const citadel = createBuilding(48, -4, 2, 'citadel');
 
+/* ─── Industrial battlefield dressing (visual-content cycle) ───────── */
+function addIndustrialYardDressing() {
+  const steel = mkMat(0x56636a, 0.52, 0.62);
+  const steelLight = mkMat(0x899398, 0.42, 0.68);
+  const concrete = mkMat(0x777b76, 0.94, 0.04);
+  const hazard = mkMat(0xc18a35, 0.72, 0.18);
+  const dark = mkMat(0x20292d, 0.76, 0.18);
+  const glass = new THREE.MeshStandardMaterial({color:0x8db8c2,roughness:0.22,metalness:0.48,transparent:true,opacity:0.78});
+
+  const makeBox = (parent,x,y,z,w,h,d,material,rx=0,ry=0,rz=0) => {
+    const mesh=addBox(parent,x,y,z,w,h,d,material);
+    mesh.rotation.set(rx,ry,rz); mesh.castShadow=true; mesh.receiveShadow=true; return mesh;
+  };
+  const makeCylinder = (parent,x,y,z,rTop,rBottom,height,material,segments=16,rx=0,rz=0) => {
+    const mesh=addCyl(parent,x,y,z,rTop,rBottom,height,material,segments);
+    mesh.rotation.x=rx;mesh.rotation.z=rz;mesh.castShadow=true;mesh.receiveShadow=true;return mesh;
+  };
+
+  // Transformer bank: ceramic insulators, bus bars and grounded steel frame.
+  const transformer = new THREE.Group(); transformer.position.set(-48,0,-22); scene.add(transformer);
+  makeBox(transformer,0,.18,0,8,.36,5,concrete);
+  for(const x of [-2.5,0,2.5]){
+    makeBox(transformer,x,1.05,0,1.65,1.45,1.55,steel);
+    makeBox(transformer,x,1.82,0,1.82,.12,1.7,dark);
+    for(const z of [-.55,.55]){
+      makeCylinder(transformer,x,2.25,z,.18,.22,.78,glass,10);
+      makeCylinder(transformer,x,2.68,z,.25,.25,.1,hazard,12);
+    }
+    for(const side of [-1,1]) makeBox(transformer,x+side*.88,1.0,0,.12,1.55,1.72,steelLight);
+  }
+  makeBox(transformer,0,3.12,0,7.4,.13,.16,hazard);
+  makeBox(transformer,0,2.92,-1.9,7.4,.1,.1,steelLight);
+  transformer.userData={kind:'environment-prop',propType:'transformer-bank',blocksMovement:false};
+
+  // Gantry crane framing a loading apron; no gameplay lane obstruction.
+  const crane = new THREE.Group(); crane.position.set(5,0,-34); scene.add(crane);
+  makeBox(crane,0,.18,0,17,.36,7,concrete);
+  for(const x of [-6.8,6.8]){
+    makeBox(crane,x,4.0,0,.48,7.7,.55,hazard);
+    makeBox(crane,x,1.0,0,1.5,.18,1.5,steel);
+    makeBox(crane,x,7.8,0,.72,.42,.8,steelLight);
+    makeBox(crane,x,4.0,-.42,.12,6.7,.1,dark);
+  }
+  makeBox(crane,0,7.45,0,14.4,.62,.72,steel);
+  makeBox(crane,0,7.08,0,13.7,.16,.9,hazard);
+  makeBox(crane,1.2,6.45,0,1.8,.95,1.1,dark);
+  makeCylinder(crane,1.2,5.45,0,.09,.09,1.1,steelLight,10);
+  makeBox(crane,1.2,4.9,0,.8,.16,.8,hazard);
+  crane.userData={kind:'environment-prop',propType:'gantry-crane',blocksMovement:false};
+
+  // Paired fuel tanks with ring ribs, access ladders and warning bands.
+  const tankGroup = new THREE.Group(); tankGroup.position.set(50,0,26); scene.add(tankGroup);
+  for(const x of [-3.2,3.2]){
+    makeCylinder(tankGroup,x,2.25,0,2.05,2.05,4.1,steel,24);
+    makeCylinder(tankGroup,x,4.32,0,1.96,2.05,.22,steelLight,24);
+    makeCylinder(tankGroup,x,.18,0,2.2,2.2,.36,concrete,24);
+    for(const y of [1.0,2.0,3.0]){
+      const rib=new THREE.Mesh(new THREE.TorusGeometry(2.06,.045,6,24),steelLight);
+      rib.position.set(x,y,0);rib.rotation.x=Math.PI/2;tankGroup.add(rib);
+    }
+    makeBox(tankGroup,x,2.0,2.06,1.15,.22,.08,hazard);
+    makeBox(tankGroup,x+1.0,2.2,-1.55,.12,3.5,.12,dark);
+    for(let step=0;step<8;step++) makeBox(tankGroup,x+1.0,.55+step*.43,-1.55,.5,.07,.12,steelLight);
+  }
+  tankGroup.userData={kind:'environment-prop',propType:'fuel-tank-cluster',blocksMovement:false};
+
+  // Perimeter barriers and cable reels: instanced-looking modular clusters.
+  const barriers = new THREE.Group(); barriers.position.set(-2,0,23); scene.add(barriers);
+  for(let i=0;i<7;i++){
+    const x=(i-3)*3.0;
+    makeBox(barriers,x,.55,0,2.65,1.1,.72,concrete,0,0,(i%2?-.035:.035));
+    makeBox(barriers,x,.88,.38,.55,.12,.035,hazard);
+  }
+  const reels = new THREE.Group(); reels.position.set(18,0,-25); scene.add(reels);
+  for(let i=0;i<3;i++){
+    const x=i*1.8;
+    makeCylinder(reels,x,.65,0,.62,.62,.28,dark,16,Math.PI/2);
+    makeCylinder(reels,x,.65,.18,.52,.52,.08,steelLight,16,Math.PI/2);
+    makeCylinder(reels,x,.65,-.18,.52,.52,.08,steelLight,16,Math.PI/2);
+    makeCylinder(reels,x,.65,0,.12,.12,.42,hazard,12,Math.PI/2);
+  }
+  barriers.userData={kind:'environment-prop',propType:'jersey-barrier-line',blocksMovement:false};
+  reels.userData={kind:'environment-prop',propType:'cable-reels',blocksMovement:false};
+  return [transformer,crane,tankGroup,barriers,reels];
+}
+const industrialYardProps = addIndustrialYardDressing();
+
+
 /* ─── Units ──────────────────────────────────────────────── */
 function createUnit(x, z, team, kind) {
   const g = new THREE.Group(); g.position.set(x, 0.04, z); scene.add(g);
