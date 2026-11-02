@@ -427,6 +427,9 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(mobileCombatBefore?.livingBlueCombatUnits > 0 && mobileCombatBefore?.livingRedCombatUnits > 0, 'mobile combat QA must find live units on both factions');
   assert.ok(mobileCombatBefore.started && !mobileCombatBefore.gameOver, 'mobile gameplay simulation must be active before VFX tests');
+  // Keep the mobile page foregrounded: Chromium may throttle requestAnimationFrame on a background page.
+  await mobile.bringToFront();
+  await mobile.waitForFunction(() => document.visibilityState === 'visible', null, { timeout: 3000 });
   const mobileShot = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.fire());
   assert.equal(mobileShot.modelProjectiles, 1, 'mobile live combat must use the procedural projectile model');
   assert.equal(mobileShot.modelMuzzleFlashes, 1, 'mobile live combat must show the procedural muzzle flash');
