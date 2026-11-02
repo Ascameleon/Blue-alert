@@ -933,31 +933,123 @@ function createBuildZoneVisual() {
 }
 createBuildZoneVisual();
 
-// Trees — deterministic placement keeps every match and visual test reproducible.
-for (let i = 0; i < (isMobile ? 100 : 160); i++) {
+// Battlefield vegetation — layered conifers and rocks, batched for desktop/mobile.
+// Every transform is deterministic; props remain visual-only and never alter pathing.
+function createLayeredTreeFoliageGeometry() {
+  const tiers = [
+    { radius: .88, height: 1.45, y: 1.10, light: .76 },
+    { radius: .70, height: 1.30, y: 1.62, light: .88 },
+    { radius: .52, height: 1.10, y: 2.08, light: 1.00 }
+  ];
+  const positions = [], normals = [], colors = [];
+  for (let tierIndex = 0; tierIndex < tiers.length; tierIndex++) {
+    const tier = tiers[tierIndex];
+    const indexed = new THREE.ConeGeometry(tier.radius, tier.height, 8, 1);
+    const part = indexed.toNonIndexed();
+    indexed.dispose();
+    part.translate(0, tier.y, 0);
+    const p = part.getAttribute('position');
+    const n = part.getAttribute('normal');
+    for (let vertex = 0; vertex < p.count; vertex++) {
+      positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
+      normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
+      const facet = .97 + (vertex % 7) * .005;
+      const tone = tier.light * facet;
+      colors.push(tone * .84, tone, tone * .82);
+    }
+    part.dispose();
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+const treeCapacity = isMobile ? 100 : 160;
+const treeTrunkGeometry = new THREE.CylinderGeometry(.10, .16, .85, 7);
+treeTrunkGeometry.translate(0, .425, 0);
+const treeFoliageGeometry = createLayeredTreeFoliageGeometry();
+const treeTrunks = new THREE.InstancedMesh(
+  treeTrunkGeometry, mkMat(0x4a3820, .96, .01), treeCapacity
+);
+treeTrunks.name = 'battlefield-trees-trunks-instanced';
+treeTrunks.castShadow = !isMobile;
+treeTrunks.receiveShadow = false;
+const treeFoliage = new THREE.InstancedMesh(
+  treeFoliageGeometry,
+  new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: .96, metalness: .01 }),
+  treeCapacity
+);
+treeFoliage.name = 'battlefield-trees-foliage-instanced';
+treeFoliage.castShadow = !isMobile;
+treeFoliage.receiveShadow = !isMobile;
+const treeDummy = new THREE.Object3D();
+const treeTones = [0x4d7950, 0x416e49, 0x587f50];
+let placedTreeCount = 0;
+for (let i = 0; i < treeCapacity; i++) {
   const x = (terrainRandom() - 0.5) * 185;
   const z = (terrainRandom() - 0.5) * 145;
   if (Math.abs(z) < 7) continue;
   if (insideBuildZone(x, z, 0) || (Math.abs(x) < 55 && Math.abs(z) < 35) || insideIndustrialSet(x, z, 5)) continue;
-  const sc = 0.5 + terrainRandom() * 1.4;
-  addCyl(scene, x, 0.4 * sc, z, 0.1 * sc, 0.16 * sc, 0.85 * sc, mkMat(0x4a3820), 6);
-  const crown = new THREE.Mesh(new THREE.ConeGeometry(sc * 0.85, 2.3 * sc, 6), i % 3 ? MAT.tree : MAT.tree2);
-  crown.position.set(x, 1.5 * sc, z);
-  crown.castShadow = true;
-  scene.add(crown);
+  const scale = 0.5 + terrainRandom() * 1.4;
+  treeDummy.position.set(x, 0, z);
+  treeDummy.rotation.set(0, terrainHash(i, 181) * Math.PI * 2, 0);
+  treeDummy.scale.setScalar(scale);
+  treeDummy.updateMatrix();
+  treeTrunks.setMatrixAt(placedTreeCount, treeDummy.matrix);
+  treeFoliage.setMatrixAt(placedTreeCount, treeDummy.matrix);
+  treeFoliage.setColorAt(placedTreeCount, new THREE.Color(treeTones[i % treeTones.length]));
+  placedTreeCount++;
 }
-// Rocks — same seeded stream, separate from gameplay randomness.
-for (let i = 0; i < (isMobile ? 48 : 80); i++) {
+treeTrunks.count = placedTreeCount;
+treeFoliage.count = placedTreeCount;
+treeTrunks.instanceMatrix.needsUpdate = true;
+treeFoliage.instanceMatrix.needsUpdate = true;
+if (treeFoliage.instanceColor) treeFoliage.instanceColor.needsUpdate = true;
+scene.add(treeTrunks, treeFoliage);
+
+// Weathered field rocks use one shared low-poly geometry and per-instance tint.
+const rockCapacity = isMobile ? 48 : 80;
+const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
+const rockMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .92, metalness: .03 });
+const battlefieldRocks = new THREE.InstancedMesh(rockGeometry, rockMaterial, rockCapacity);
+battlefieldRocks.name = 'battlefield-rocks-instanced';
+battlefieldRocks.castShadow = !isMobile;
+battlefieldRocks.receiveShadow = !isMobile;
+const rockTones = [0x686d62, 0x77796c, 0x5d645d];
+const rockDummy = new THREE.Object3D();
+let placedRockCount = 0;
+for (let i = 0; i < rockCapacity; i++) {
   const x = (terrainRandom() - 0.5) * 180;
   const z = (terrainRandom() - 0.5) * 140;
   if (Math.abs(z) < 6 || insideBuildZone(x, z, 0) || insideIndustrialSet(x, z, 3)) continue;
-  const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15 + terrainRandom() * 0.45, 0), MAT.rock);
-  r.position.set(x, 0.1, z);
-  r.scale.y = 0.4 + terrainRandom() * 0.5;
-  r.rotation.set(terrainRandom(), terrainRandom(), terrainRandom());
-  r.castShadow = true;
-  scene.add(r);
+  const radius = 0.15 + terrainRandom() * 0.45;
+  const verticalScale = 0.4 + terrainRandom() * 0.5;
+  rockDummy.position.set(x, 0.1, z);
+  rockDummy.rotation.set(terrainRandom(), terrainRandom(), terrainRandom());
+  rockDummy.scale.set(radius, radius * verticalScale, radius);
+  rockDummy.updateMatrix();
+  battlefieldRocks.setMatrixAt(placedRockCount, rockDummy.matrix);
+  battlefieldRocks.setColorAt(placedRockCount, new THREE.Color(rockTones[i % rockTones.length]));
+  placedRockCount++;
 }
+battlefieldRocks.count = placedRockCount;
+battlefieldRocks.instanceMatrix.needsUpdate = true;
+if (battlefieldRocks.instanceColor) battlefieldRocks.instanceColor.needsUpdate = true;
+scene.add(battlefieldRocks);
+
+window.__BLUE_ALERTS_VEGETATION = Object.freeze({
+  seed: 0x424c5545,
+  treeCount: placedTreeCount,
+  trunkInstances: treeTrunks.count,
+  foliageInstances: treeFoliage.count,
+  foliageTiers: 3,
+  rockInstances: battlefieldRocks.count,
+  renderGroups: 3,
+  blocksMovement: false
+});
 
 /* ─── Game state ─────────────────────────────────────────── */
 const buildings = [];
