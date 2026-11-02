@@ -138,7 +138,7 @@ try {
   const desktopCraters = await desktop.evaluate(() => window.__BLUE_ALERTS_CRATERS);
   assert.ok(desktopCraters?.craterCount === 8 && desktopCraters.debrisCount === 24 &&
     desktopCraters.clearanceVerified && desktopCraters.blocksMovement === false &&
-    desktopCraters.renderGroups === 2,
+    desktopCraters.boundsReady && desktopCraters.renderGroups === 2,
     'desktop battlefield craters must be instanced, deterministic, and clear of build, road and industrial zones');
   assert.ok(desktopMetrics.terrainDressing?.scrubInstances >= 160 && desktopMetrics.terrainDressing.roadMarkers === 26,
     'desktop battlefield must include instanced scrub and reflective supply-road markers');
@@ -384,7 +384,7 @@ try {
   const mobileCraters = await mobile.evaluate(() => window.__BLUE_ALERTS_CRATERS);
   assert.ok(mobileCraters?.craterCount === 8 && mobileCraters.debrisCount === 24 &&
     mobileCraters.clearanceVerified && mobileCraters.blocksMovement === false &&
-    mobileCraters.renderGroups === 2,
+    mobileCraters.boundsReady && mobileCraters.renderGroups === 2,
     'mobile battlefield craters must retain all instanced details without blocking RTS movement');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
