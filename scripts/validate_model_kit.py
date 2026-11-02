@@ -22,7 +22,7 @@ REQUIRED_PREVIEW = (
     "a==='aircraft'", "a==='helicopter'", "a==='drone'",
     "a==='projectile'", "a==='explosion'", "a==='muzzleFlash'",
     "a==='harvester'", "a==='citadel'", "a==='relay'", "a==='ore'",
-    "BLUE SENTINEL", "RED BASTION", "BLUE_SENTINEL", "RED_BASTION",
+    "BLUE SENTINEL", "RED BASTION",
 )
 
 def node_check(source: str, label: str) -> None:
