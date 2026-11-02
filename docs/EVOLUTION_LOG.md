@@ -37,3 +37,11 @@ The existing \`createTank(THREE, { team, variant, scale })\` API and V94 combat 
 - Physical Samsung hardware test: not performed.
 - The OpenRTS smoke test is a separate native-engine interaction check; it does not prove that the Three.js tank models are imported into OpenRTS.
 - No claim of release or merge to \`main\`; this work remains isolated in its feature branch until review and validation.
+
+
+### Regression correction — first CI attempt
+
+- The first PR workflow run \`41376877894\` failed in the existing V94 inline-module syntax check before the new model-kit/browser tests could execute.
+- Cause: the initial file replacement inserted the new constructor before the legacy constructor body instead of replacing the complete function block.
+- Correction: replace the entire \`createTank\` function region, retaining the following \`createInfantry\` export; fix commit \`602ec00be216d6d27c5f6277fdc33e036cbed86f\`.
+- The failed run is retained as evidence; no test is claimed from it. A new workflow run must validate the corrected branch head.
