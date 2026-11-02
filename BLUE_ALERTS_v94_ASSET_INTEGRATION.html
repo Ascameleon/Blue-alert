@@ -760,6 +760,8 @@ const units = [];
 const ores = [];
 const projectiles = [];
 const fx = [];
+let impactSequence = 0;
+let lastImpactEvent = null;
 const orderMarks = [];
 
 let selected = new Set();
@@ -1894,7 +1896,7 @@ function spawnImpact(pos, color, heavy) {
   ring.position.copy(pos);
   ring.position.y = Math.max(0.08, pos.y);
   scene.add(ring);
-  fx.push({ mesh: ring, geo: ringGeo, mat: ringMat, life: heavy ? 0.34 : 0.22, max: heavy ? 0.34 : 0.22, smoke: false, expand: heavy ? 1.16 : 1.13, kind: 'impact-ring' });
+  fx.push({ mesh: ring, geo: ringGeo, mat: ringMat, life: heavy ? 0.48 : 0.36, max: heavy ? 0.48 : 0.36, smoke: false, expand: heavy ? 1.16 : 1.13, kind: 'impact-ring' });
 
   const count = heavy ? 7 : 4;
   for (let i = 0; i < count; i++) {
@@ -1906,9 +1908,15 @@ function spawnImpact(pos, color, heavy) {
     scene.add(spark);
     const angle = (i / count) * Math.PI * 2 + Math.random() * 0.3;
     const speed = (heavy ? 3.8 : 2.5) * (0.7 + Math.random() * 0.5);
-    fx.push({ mesh: spark, geo, mat, life: 0.24 + Math.random() * 0.12, max: 0.36, smoke: false,
+    fx.push({ mesh: spark, geo, mat, life: 0.40 + Math.random() * 0.15, max: 0.55, smoke: false,
       velocity: new THREE.Vector3(Math.cos(angle) * speed, 1.2 + Math.random() * 1.5, Math.sin(angle) * speed), gravity: 5.5, kind: 'impact-spark' });
   }
+  impactSequence += 1;
+  lastImpactEvent = Object.freeze({
+    id: impactSequence, heavy: !!heavy, ringCount: 1, sparkCount: count,
+    x: Number(pos.x.toFixed(2)), y: Number(pos.y.toFixed(2)), z: Number(pos.z.toFixed(2)),
+    at: Number(time.toFixed(2))
+  });
 }
 
 function fireProjectile(shooter, target) {
@@ -3401,6 +3409,8 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     modelExplosionLives: fx.filter(e => e.kind === 'model-explosion').map(e => e.life),
     impactRings: fx.filter(e => e.kind === 'impact-ring').length,
     impactSparks: fx.filter(e => e.kind === 'impact-spark').length,
+    impactSequence,
+    lastImpactEvent,
     buildingSmoke: fx.filter(e => e.kind === 'building-smoke').length,
     buildingFlames: fx.filter(e => e.kind === 'building-flame').length,
     started,
