@@ -136,6 +136,14 @@ try {
   assert.equal(missionInitial.deliveredOre, 0, 'starting credits and ore in the field must not count as delivered resources');
   assert.equal(missionInitial.combatUnitsProduced, 0, 'starting forces must not count as newly produced combat units');
   assert.equal(missionInitial.completedCount, 0, 'mission objectives must begin incomplete');
+  assert.ok(missionInitial.objectives[2].detail.includes('Verrouillée'),
+    'the enemy citadel must be visibly locked until the delivery and production objectives are complete');
+  const prematureCitadel = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.destroyEnemyCitadel());
+  assert.ok(!prematureCitadel.enemyCitadelDestroyed && !prematureCitadel.complete &&
+    prematureCitadel.enemyCitadelAlive && prematureCitadel.enemyCitadelHp > 0,
+    'premature citadel destruction must be blocked while either prerequisite objective is incomplete');
+  assert.ok(await desktop.locator('#endOverlay').evaluate(el => el.classList.contains('hidden')),
+    'a premature citadel attack must not end the mission or show the victory overlay');
   const missionAfterOre = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.recordDelivery(600));
   assert.ok(missionAfterOre.objectives[0].complete && missionAfterOre.completedCount === 1,
     'the mineral objective must complete only after a real delivery event is recorded');
