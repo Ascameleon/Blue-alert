@@ -240,6 +240,32 @@ def main():
     if missing:
         raise SystemExit("FAIL: evergreen A/B QA must switch the same InstancedMesh between legacy and detailed geometry: " + ", ".join(missing))
 
+
+    wear_start = source.index("function addBattlefieldWear()")
+    wear_end = source.index("const battlefieldWear = addBattlefieldWear()", wear_start)
+    wear_section = source[wear_start:wear_end]
+    required_wear_features = (
+        "logistics-road-worn-shoulders",
+        "const segmentShade = 0.96 + terrainHash(seed, 411) * 0.08;",
+        "shoulderShading: 'per-segment-uniform-low-contrast'",
+        "gantry-access-concrete-spur",
+        "gantry-access-asphalt",
+        "logistics-tire-wear",
+        "worn-asphalt-repair-patches",
+        "road-and-spur-crack-lines",
+        "logistics-road-drain-grates",
+        "gantry-apron-worn-safety-bars",
+        "window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA",
+        "focusRoad()",
+        "focusCorridor()",
+        "setVisible(visible)",
+    )
+    missing = [feature for feature in required_wear_features if feature not in wear_section]
+    if missing:
+        raise SystemExit("FAIL: logistics corridor wear is missing connected road/gantry detail: " + ", ".join(missing))
+    if "blocksMovement: false" not in wear_section:
+        raise SystemExit("FAIL: battlefield wear must remain visual-only and non-blocking")
+
     kill_start = source.index("function killUnit(u)")
     kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
     kill_section = source[kill_start:kill_end]
@@ -249,12 +275,27 @@ def main():
     qa_start = source.index("const combatState =")
     qa_end = source.index("if (new URLSearchParams(location.search).get('qa') === '1')", qa_start)
     qa_section = source[qa_start:qa_end]
-    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition", "qaSuppressCombat", "freezeNewCombat", "resumeCombat", "qaSuppressEconomyRewards", "freezeEconomyRewards", "resumeEconomyRewards")
+    required_qa = ("modelExplosionPositions", "existingExplosionMeshes", "explosionSpawned", "spawnedExplosionLife", "targetPosition", "qaSuppressCombat", "freezeNewCombat", "resumeCombat", "qaSuppressEconomyRewards", "freezeEconomyRewards", "resumeEconomyRewards", "combatSuppressed")
     missing = [token for token in required_qa if token not in qa_section]
     if missing:
-        raise SystemExit("FAIL: combat QA must track the exact death explosion: " + ", ".join(missing))
+        raise SystemExit("FAIL: combat QA must track the exact death explosion and isolated combat state: " + ", ".join(missing))
+
+    building_qa_start = source.index("window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__")
+    building_qa_end = source.index("window.__BLUE_ALERTS_MISSION_QA__", building_qa_start)
+    building_qa_section = source[building_qa_start:building_qa_end]
+    required_building_qa = (
+        "units.find(u => !u.dead && u.team === 1 && u.kind === 'light' && u.dmg > 0 && u.g)",
+        "units.find(u => !u.dead && u.team === 1 && u.dmg > 0 && u.g)",
+        "shooterKind: shooter.kind",
+        "live blue combat unit",
+    )
+    missing = [token for token in required_building_qa if token not in building_qa_section]
+    if missing:
+        raise SystemExit("FAIL: building damage QA must retain a live blue combat shooter and report its unit kind: " + ", ".join(missing))
 
     browser_test = BROWSER_TEST.read_text(encoding="utf-8")
+    if "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))" not in browser_test:
+        raise SystemExit("FAIL: desktop environment screenshots must clear the completed-mission overlay after its dedicated evidence capture")
     required_browser_test = (
         "desktopDeath.before.modelExplosions + 1",
         "mobileDeath.before.modelExplosions + 1",
@@ -263,6 +304,9 @@ def main():
         "spawnedExplosionLife",
         "freezeNewCombat",
         "resumeCombat",
+        "desktopBuildingFreeze?.combatSuppressed === true",
+        "mobileClean.combatSuppressed === true",
+        "shooterKind",
         "desktopEconomyFreeze",
         "mobileEconomyFreeze",
         "freezeEconomyRewards",
@@ -273,6 +317,18 @@ def main():
         "mobile-v94-woodland-tree-baseline-390x844.png",
         "setLegacy(true)",
         "setLegacy(false)",
+        "battlefieldWear",
+        "focusRoad()",
+        "focusCorridor()",
+        "setVisible(false)",
+        "desktop-v94-road-wear-baseline.png",
+        "desktop-v94-road-wear-detail.png",
+        "mobile-v94-road-wear-baseline-390x844.png",
+        "mobile-v94-road-wear-detail-390x844.png",
+        "desktop-v94-mission-complete.png",
+        "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
+        "desktop-v94-industrial-yard.png",
+        "desktop-v94-terrain-surface.png",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:

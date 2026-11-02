@@ -359,3 +359,30 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Exact-head workflow [#315](https://github.com/Ascameleon/Blue-alert/actions/runs/41436059900) passed the repository prototype syntax check and then stopped at the V94 static validator.
 - The runtime correctly declares the helper as a const arrow function, but the new source contract incorrectly searched for a function declaration. Corrected the validator token to match the actual declaration; no runtime geometry or gameplay behavior changed.
 - Browser/WebGL capture, standalone build and OpenRTS/native checks did not run on that failed attempt. A new exact-head workflow is required before visual acceptance.
+
+
+## Cycle — connected logistics corridor wear (2026-11-02)
+
+- Base: merged main 628635e64aa45f74e5f2d930028eb76ee70f1fde; branch: art/v94-logistics-corridor-wear-20261102.
+- The accepted V94 surface had a flat 200-unit road slab with simple center dashes; the existing gantry apron was not connected to the main road by a distinct service surface.
+- Added one connected, deterministic, visual-only wear layer: irregular gravel shoulders, a concrete-and-asphalt gantry access spur, broken twin tire tracks, seven irregular asphalt repair patches, branching cracks, ten instanced drainage grates and eight faded apron safety bars.
+- The details are grouped into a small set of batched meshes/instances. Existing road, industrial yard, evergreen geometry, pathfinding, collision and unit behavior remain unchanged. The new layer reports its counts and exposes a QA-only visibility toggle for matched A/B screenshots.
+- Acceptance is pending exact-head static, desktop/mobile WebGL, standalone build, OpenRTS and native-input validation. The browser suite captures road and gantry-corridor baseline/detail pairs at 1440×900 and 390×844 with identical camera poses. No visual improvement or release is claimed until those images are inspected.
+- Mobile captures are browser emulation, not a physical Samsung test. Three.js remains CDN-loaded. Budget: 0 €.
+
+
+### Desktop environment evidence overlay correction — 2026-11-02
+
+- Direct inspection of the exact PR #44 workflow artifact showed the desktop industrial-yard and terrain screenshots were taken after the mission-complete test while the victory overlay still dimmed the entire 3D scene. The road/gantry A/B screenshots were clear; the later two scene captures were not acceptable as visual evidence.
+- Kept the dedicated mission-complete screenshot and its visible-overlay assertion unchanged, then hide only the overlay in the Playwright page before capturing the industrial-yard and terrain views. This is test-only evidence cleanup; it does not alter the game runtime or mission state.
+- Added a static contract requiring the overlay-clear operation in the desktop visual test. Exact-head desktop/mobile, standalone, OpenRTS build/launch and native interaction checks must pass again before PR #44 is mergeable.
+
+### Exact-head logistics corridor validation and visual inspection — 2026-11-02
+
+- Tested code/test head: `c7fcc69eefd818644f5233e3f9043e3625208869`. GitHub Actions workflow [41445930709](https://github.com/Ascameleon/Blue-alert/actions/runs/41445930709), run #322, completed successfully. All 24 reported steps passed: repository/V94/model-kit/scenario validation, JavaScript/browser checks, standalone single-file V94 build, desktop and 390×844 mobile model preview and live gameplay, OpenRTS Java 21 build/launch, 12/12 native-engine unit movement, and real native mouse selection, move and attack.
+- The exact-head graphical artifact is [13141329066](https://github.com/Ascameleon/Blue-alert/actions/runs/41445930709/artifacts/13141329066); the standalone playable V94 HTML artifact is [13141618566](https://github.com/Ascameleon/Blue-alert/actions/runs/41445930709/artifacts/13141618566).
+- Directly inspected the actual runtime A/B captures from the graphical artifact: `v94-browser/desktop-v94-road-wear-baseline.png`, `desktop-v94-road-wear-detail.png`, `desktop-v94-logistics-corridor-wear-baseline.png`, `desktop-v94-logistics-corridor-wear-detail.png`, and the four corresponding `mobile-v94-*-390x844.png` captures. The same-runtime visibility toggle preserved the QA camera pose for each pair. The new continuous spur visibly connects the main road to the loading gantry; shoulders, tire wear, repairs, cracks and drainage details are visible in both desktop and mobile browser captures. This is accepted as a material environment/route-readability improvement, not as evidence of commercial-grade or AAA quality.
+- OpenRTS evidence is separate from the V94 Three.js runtime. The interactive log records selection of a native tank, a movement order with 3.49 world units of observed movement, and an attack reducing target health from 120 to 119. The OpenRTS graphical launch log also records 12/12 units moved and no uncaught runtime exception. OpenRTS does not import the V94 procedural road or infantry meshes.
+- Files changed against the accepted main base: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, and this log. No external assets, paid APIs, credits or services were used; budget remains 0 €.
+- Evidence boundaries: 390×844 is browser emulation, not a physical Samsung test; Three.js remains CDN-loaded; the CI log includes non-blocking Node deprecation notices and OpenRTS material-parser warnings, with no failed step or uncaught exception. No game version/release was created.
+- This log-only commit follows the tested code/test head. The complete workflow must run again on the resulting exact PR head before merge. The branch and accepted mainline remain separate until that check passes.

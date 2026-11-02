@@ -114,6 +114,7 @@ async function metrics(page) {
       terrainDressing: window.__BLUE_ALERTS_TERRAIN_DRESSING || null,
       vegetation: window.__BLUE_ALERTS_VEGETATION || null,
       environment: window.__BLUE_ALERTS_ENVIRONMENT || null,
+      battlefieldWear: window.__BLUE_ALERTS_BATTLEFIELD_WEAR || null,
       camera: window.__BLUE_ALERTS_CAMERA_QA__?.snapshot() || null
     };
   });
@@ -136,6 +137,42 @@ try {
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.equal(desktopMetrics.camera?.defaultDistance, 38, 'desktop opening camera must use the closer tactical framing');
   assert.equal(desktopMetrics.camera?.distance, 38, 'desktop opening camera must start at the authored tactical distance');
+  assert.ok(desktopMetrics.battlefieldWear?.shoulderShading === 'per-segment-uniform-low-contrast' &&
+    desktopMetrics.battlefieldWear?.roadShoulderSegments === 100 &&
+    desktopMetrics.battlefieldWear.accessSpur &&
+    desktopMetrics.battlefieldWear.tireSegments >= 100 &&
+    desktopMetrics.battlefieldWear.asphaltRepairPatches === 7 &&
+    desktopMetrics.battlefieldWear.crackSegments >= 40 &&
+    desktopMetrics.battlefieldWear.drainGrates === 10 &&
+    desktopMetrics.battlefieldWear.safetyBars === 8 &&
+    desktopMetrics.battlefieldWear.blocksMovement === false &&
+    desktopMetrics.battlefieldWear.renderObjects <= 8,
+    'desktop battlefield must expose the connected, non-blocking logistics wear kit');
+
+  const desktopRoadFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.focusRoad());
+  assert.ok(desktopRoadFocus?.camera && desktopRoadFocus.visible, 'desktop road A/B focus must expose the detailed wear layer');
+  const desktopRoadBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(false));
+  assert.equal(desktopRoadBaseline?.visible, false, 'desktop road baseline must hide only the new wear layer');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-road-wear-baseline.png', fullPage: true });
+  const desktopRoadDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(true));
+  assert.equal(desktopRoadDetail?.visible, true, 'desktop road detail must restore the complete wear layer');
+  assert.deepEqual(desktopRoadDetail?.camera, desktopRoadBaseline?.camera, 'desktop road A/B must preserve camera pose');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-road-wear-detail.png', fullPage: true });
+
+  const desktopCorridorFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.focusCorridor());
+  assert.ok(desktopCorridorFocus?.camera && desktopCorridorFocus.visible, 'desktop gantry corridor focus must be available');
+  const desktopCorridorBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(false));
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-logistics-corridor-wear-baseline.png', fullPage: true });
+  const desktopCorridorDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(true));
+  assert.deepEqual(desktopCorridorDetail?.camera, desktopCorridorBaseline?.camera, 'desktop corridor A/B must preserve camera pose');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-logistics-corridor-wear-detail.png', fullPage: true });
+  const desktopWearReset = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('base'));
+  assert.equal(desktopWearReset?.name, 'base', 'desktop wear A/B must restore the default tactical camera before the camera test');
+
   await desktop.waitForTimeout(900);
   const desktopCameraBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(48));
   assert.equal(desktopCameraBaseline?.distance, 48, 'desktop A/B baseline must use the original 48-unit camera distance');
@@ -363,7 +400,17 @@ try {
   assert.ok(muzzleError < 0.05,
     'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
 
+  const desktopBuildingFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  assert.ok(desktopBuildingFreeze?.combatSuppressed === true,
+    'desktop building-damage QA must freeze unrelated combat before its controlled projectile burst');
+  await desktop.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+    return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+      state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
+  }, null, { timeout: 15000, polling: 50 });
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
+  assert.ok(desktopBuildingStart?.shooterKind,
+    'desktop building-damage QA must use a live blue combat unit');
   console.log('DESKTOP_BUILDING_STAGE1_START ' + JSON.stringify(desktopBuildingStart));
   try {
     await desktop.waitForFunction(() => {
@@ -437,6 +484,10 @@ try {
     'the mission progress bar must reach 100 percent only after all objective conditions are met');
   console.log('DESKTOP_MISSION_COMPLETE ' + JSON.stringify(missionVictory));
   await desktop.screenshot({ path: output + '/desktop-v94-mission-complete.png', fullPage: true });
+  // Preserve the victory screenshot, then clear its overlay before environment evidence.
+  await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'));
+  assert.ok(await desktop.locator('#endOverlay').evaluate(el => el.classList.contains('hidden')),
+    'desktop industrial-yard and terrain evidence must not be dimmed by the completed-mission overlay');
   // Capture the authored industrial set after all camera-sensitive gameplay
   // assertions so the visual focus cannot disturb construction projection tests.
   const industrialFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('gantry'));
@@ -479,6 +530,42 @@ try {
   assert.ok(mobileMetrics.startOverlayHidden && !mobileMetrics.fallback && !mobileMetrics.runtimeError && !mobileMetrics.startupError, 'mobile game must start in the 3D runtime without fallback/errors');
   assert.equal(mobileMetrics.camera?.defaultDistance, 40, 'mobile opening camera must use the portrait-safe tactical framing');
   assert.equal(mobileMetrics.camera?.distance, 40, 'mobile opening camera must start at the authored tactical distance');
+  assert.ok(mobileMetrics.battlefieldWear?.shoulderShading === 'per-segment-uniform-low-contrast' &&
+    mobileMetrics.battlefieldWear?.roadShoulderSegments === 100 &&
+    mobileMetrics.battlefieldWear.accessSpur &&
+    mobileMetrics.battlefieldWear.tireSegments >= 100 &&
+    mobileMetrics.battlefieldWear.asphaltRepairPatches === 7 &&
+    mobileMetrics.battlefieldWear.crackSegments >= 40 &&
+    mobileMetrics.battlefieldWear.drainGrates === 10 &&
+    mobileMetrics.battlefieldWear.safetyBars === 8 &&
+    mobileMetrics.battlefieldWear.blocksMovement === false &&
+    mobileMetrics.battlefieldWear.renderObjects <= 8,
+    'mobile battlefield must retain the connected logistics wear kit');
+
+  const mobileRoadFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.focusRoad());
+  assert.ok(mobileRoadFocus?.camera && mobileRoadFocus.visible, 'mobile road A/B focus must expose the detailed wear layer');
+  const mobileRoadBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(false));
+  assert.equal(mobileRoadBaseline?.visible, false, 'mobile road baseline must hide only the new wear layer');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-road-wear-baseline-390x844.png', fullPage: false });
+  const mobileRoadDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(true));
+  assert.equal(mobileRoadDetail?.visible, true, 'mobile road detail must restore the complete wear layer');
+  assert.deepEqual(mobileRoadDetail?.camera, mobileRoadBaseline?.camera, 'mobile road A/B must preserve camera pose');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-road-wear-detail-390x844.png', fullPage: false });
+
+  const mobileCorridorFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.focusCorridor());
+  assert.ok(mobileCorridorFocus?.camera && mobileCorridorFocus.visible, 'mobile gantry corridor focus must be available');
+  const mobileCorridorBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(false));
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-logistics-corridor-wear-baseline-390x844.png', fullPage: false });
+  const mobileCorridorDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(true));
+  assert.deepEqual(mobileCorridorDetail?.camera, mobileCorridorBaseline?.camera, 'mobile corridor A/B must preserve camera pose');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-logistics-corridor-wear-detail-390x844.png', fullPage: false });
+  const mobileWearReset = await mobile.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('base'));
+  assert.equal(mobileWearReset?.name, 'base', 'mobile wear A/B must restore the default tactical camera before the camera test');
+
   await mobile.waitForTimeout(900);
   const mobileCameraBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(48));
   assert.equal(mobileCameraBaseline?.distance, 48, 'mobile A/B baseline must use the original 48-unit camera distance');
@@ -726,7 +813,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     throw error;
   }
   const mobileClean = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
-  await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeCombat());
+  assert.ok(mobileClean.combatSuppressed === true,
+    'mobile building-damage QA must remain isolated from unrelated combat after VFX cleanup');
   const mobileCleanupElapsedMs = Date.now() - mobileCleanupStartedAt;
   console.log('MOBILE_VFX_CLEANUP_PERFORMANCE ' + JSON.stringify({
     elapsedMs: mobileCleanupElapsedMs,
@@ -737,6 +825,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   console.log('MOBILE_COMBAT_VFX ' + JSON.stringify({ shot: mobileShot, kill: mobileKill, afterCleanup: mobileClean }));
 
   const mobileBuildingStart = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
+  assert.ok(mobileBuildingStart?.shooterKind,
+    'mobile building-damage QA must use a live blue combat unit');
   console.log('MOBILE_BUILDING_STAGE1_START ' + JSON.stringify(mobileBuildingStart));
   try {
     await mobile.waitForFunction(() => {
@@ -807,7 +897,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
