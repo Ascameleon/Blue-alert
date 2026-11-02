@@ -376,6 +376,131 @@ const mergeInfantryStaticMeshes = (THREE, root) => {
   };
 };
 
+
+const INFANTRY_SURFACE_TEXTURE_CACHE = new WeakMap();
+const createInfantrySurfaceTextures = (THREE, isRed) => {
+  if (typeof document === 'undefined') return null;
+  let factionCache = INFANTRY_SURFACE_TEXTURE_CACHE.get(THREE);
+  if (!factionCache) {
+    factionCache = new Map();
+    INFANTRY_SURFACE_TEXTURE_CACHE.set(THREE, factionCache);
+  }
+  const faction = isRed ? 'red' : 'blue';
+  if (factionCache.has(faction)) return factionCache.get(faction);
+  let seed = (isRed ? 0xB45710A1 : 0x51E71A31) >>> 0;
+  const random = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const makeTexture = (name, paint, srgb = false) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (!context) return null;
+    paint(context);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.name = name;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1, 1);
+    texture.anisotropy = 4;
+    if (srgb && THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  };
+  const fabricMap = makeTexture(faction + '-fieldweave-camouflage', ctx => {
+    ctx.fillStyle = '#e9e9e9'; ctx.fillRect(0, 0, 256, 256);
+    const shades = ['#8d8d8d', '#b0b0b0', '#f8f8f8', '#c7c7c7'];
+    for (let i = 0; i < 54; i++) {
+      const cx = random() * 256, cy = random() * 256;
+      const rx = 7 + random() * 20, ry = 4 + random() * 13;
+      ctx.beginPath();
+      for (let p = 0; p < 9; p++) {
+        const a = p / 9 * Math.PI * 2;
+        const wobble = .72 + random() * .48;
+        const x = cx + Math.cos(a) * rx * wobble;
+        const y = cy + Math.sin(a) * ry * wobble;
+        if (p === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.globalAlpha = .10 + random() * .12;
+      ctx.fillStyle = shades[Math.floor(random() * shades.length)];
+      ctx.fill();
+    }
+    ctx.globalAlpha = .055;
+    ctx.fillStyle = '#555';
+    for (let i = 0; i < 3600; i++) ctx.fillRect(random() * 256, random() * 256, .7 + random() * 1.2, .7 + random() * 1.2);
+    ctx.globalAlpha = 1;
+  }, true);
+  const armorMap = makeTexture(faction + '-ceramic-armor-microscuffs', ctx => {
+    ctx.fillStyle = '#ededed'; ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 115; i++) {
+      const x = random() * 256, y = random() * 256;
+      ctx.globalAlpha = .08 + random() * .16;
+      ctx.strokeStyle = random() > .5 ? '#555' : '#fff';
+      ctx.lineWidth = .35 + random() * 1.1;
+      ctx.beginPath(); ctx.moveTo(x, y);
+      ctx.lineTo(x + (random() - .5) * 20, y + (random() - .5) * 4);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 34; i++) {
+      ctx.globalAlpha = .07 + random() * .1;
+      ctx.fillStyle = '#777';
+      ctx.beginPath(); ctx.ellipse(random() * 256, random() * 256, 2 + random() * 7, 1 + random() * 3, random(), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }, true);
+  const metalMap = makeTexture(faction + '-brushed-metal-grain', ctx => {
+    ctx.fillStyle = '#ededed'; ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 210; i++) {
+      const y = random() * 256;
+      ctx.globalAlpha = .035 + random() * .09;
+      ctx.strokeStyle = random() > .5 ? '#555' : '#fff';
+      ctx.lineWidth = .3 + random() * .8;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y + (random() - .5) * 5); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }, true);
+  const roughnessMap = makeTexture(faction + '-surface-roughness', ctx => {
+    ctx.fillStyle = '#e2e2e2'; ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 5200; i++) {
+      const v = Math.round(165 + random() * 82);
+      ctx.fillStyle = 'rgb(' + v + ',' + v + ',' + v + ')';
+      ctx.fillRect(random() * 256, random() * 256, 1 + random() * 1.5, 1 + random() * 1.5);
+    }
+  });
+  const fabricBump = makeTexture(faction + '-fabric-micro-weave', ctx => {
+    ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 256, 256);
+    ctx.globalAlpha = .18; ctx.strokeStyle = '#bcbcbc'; ctx.lineWidth = .7;
+    for (let y = 0; y < 256; y += 5) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y + 2); ctx.stroke(); }
+    ctx.globalAlpha = .12; ctx.strokeStyle = '#555';
+    for (let x = 0; x < 256; x += 5) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 2, 256); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  });
+  const armorBump = makeTexture(faction + '-armor-surface-wear', ctx => {
+    ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 150; i++) {
+      const x = random() * 256, y = random() * 256;
+      ctx.globalAlpha = .12 + random() * .18;
+      ctx.strokeStyle = random() > .5 ? '#c4c4c4' : '#555';
+      ctx.lineWidth = .5 + random() * 1.1;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + (random() - .5) * 14, y + (random() - .5) * 3); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+  const metalBump = makeTexture(faction + '-metal-brush-relief', ctx => {
+    ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 256, 256);
+    ctx.globalAlpha = .13; ctx.strokeStyle = '#bdbdbd'; ctx.lineWidth = .6;
+    for (let y = 0; y < 256; y += 3) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y + 1); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  });
+  const maps = { fabricMap, armorMap, metalMap, roughnessMap, fabricBump, armorBump, metalBump };
+  factionCache.set(faction, maps);
+  return maps;
+};
+
 export function createInfantry(THREE, options={}) {
   const { team='blue', role='rifleman', scale=1 } = options;
   const isRed = team === 'red';
@@ -393,6 +518,21 @@ export function createInfantry(THREE, options={}) {
   const accent = mat(THREE, isRed ? 0xd7834f : 0x65bcd6, .42, .36);
   const rifleMat = mat(THREE, 0x242b2d, .76, .32);
   const rubber = mat(THREE, 0x171d20, .98, .01);
+  const surfaceTextures = createInfantrySurfaceTextures(THREE, isRed);
+  if (surfaceTextures) {
+    const applySurface = (material, map, bumpMap, bumpScale) => {
+      material.map = map;
+      material.roughnessMap = surfaceTextures.roughnessMap;
+      material.bumpMap = bumpMap;
+      material.bumpScale = bumpScale;
+      material.needsUpdate = true;
+    };
+    applySurface(uniform, surfaceTextures.fabricMap, surfaceTextures.fabricBump, .004);
+    applySurface(cloth, surfaceTextures.fabricMap, surfaceTextures.fabricBump, .006);
+    applySurface(armor, surfaceTextures.armorMap, surfaceTextures.armorBump, .0045);
+    applySurface(metal, surfaceTextures.metalMap, surfaceTextures.metalBump, .002);
+    applySurface(rifleMat, surfaceTextures.metalMap, surfaceTextures.metalBump, .0015);
+  }
 
   const addInstances = (parent, name, size, material, transforms) => {
     const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(...size), material, transforms.length);
@@ -455,7 +595,7 @@ export function createInfantry(THREE, options={}) {
   helmetShell.name = 'faceted-helmet-shell'; helmetShell.position.set(0,.115,-.015); helmetShell.scale.set(1.05,.76,1.02); helmetShell.castShadow=true; head.add(helmetShell);
   beveledBox(THREE, head, 'helmet-front-brow-armor', [.34,.105,.095], [0,.018,.145], armor, [-.08,0,0], .018);
   for (const side of [-1,1]) beveledBox(THREE, head, 'helmet-temple-armor', [.105,.17,.18], [side*.155,-.025,.005], armor, [0,0,side*.08], .016);
-  sphere(THREE, head, 'helmet-shell', .19, [0, .115, -.015], cloth, [1.05, .76, 1.02]);
+  // The faceted helmet shell above is the sole crown surface; avoid a coplanar duplicate.
   box(THREE, head, 'helmet-brim', [.35, .045, .28], [0, .065, .035], dark);
   box(THREE, head, 'helmet-front-rail', [.24, .045, .035], [0, .095, .17], accent);
   if (isRed) {
@@ -490,6 +630,9 @@ export function createInfantry(THREE, options={}) {
   for (const side of [-1, 1]) {
     cylinder(THREE, head, 'helmet-side-comms-pod', .055,.065,.13, [side*.205,.035,-.015], dark, 10).rotation.z=Math.PI/2;
   }
+
+  // Reduce the oversized helmet/head silhouette toward a more credible human proportion.
+  head.scale.setScalar(.82);
 
   // Independent shoulder, elbow, hip and knee pivots make a real deterministic
   // gait possible while preserving the model's single outer transform.
@@ -575,6 +718,10 @@ export function createInfantry(THREE, options={}) {
     animationRig,
     renderProfile:'SENTINEL_BASTION_HERO_ARMOR_V2',
     armorDetailParts: renderOptimization.sourceMeshCount,
+    surfaceFinish: surfaceTextures ? 'FIELDWEAVE_CERAMIC_MICROSCUFF_V1' : 'UNTEXTURED_FALLBACK',
+    surfaceTextureCount: surfaceTextures ? Object.values(surfaceTextures).filter(Boolean).length : 0,
+    surfaceMaterialCount: surfaceTextures ? [uniform,cloth,armor,metal,rifleMat].filter(material => material.map && material.bumpMap && material.roughnessMap).length : 0,
+    headScale: .82,
     renderOptimization
   };
   g.scale.setScalar(scale);
