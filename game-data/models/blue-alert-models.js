@@ -271,6 +271,111 @@ export function createTank(THREE, options={}) {
   return g;
 }
 
+
+/**
+ * Merge opaque, static sibling meshes without crossing an animation pivot.
+ * Geometry is transformed into the owning rig group's local space; named-part
+ * metadata is retained for QA. The combat weapon receiver stays a real mesh.
+ */
+const mergeInfantryStaticMeshes = (THREE, root) => {
+  const parents = [];
+  root.traverse(node => {
+    if (node.children?.some(child => child.isMesh && !child.isInstancedMesh)) parents.push(node);
+  });
+  let sourceMeshCount = 0;
+  let mergedMeshCount = 0;
+  for (const parent of parents) {
+    if (parent.userData?.keepSeparateForCombat) continue;
+    const buckets = new Map();
+    for (const child of [...parent.children]) {
+      if (!child.isMesh || child.isInstancedMesh || child.isSkinnedMesh ||
+          child.userData?.keepSeparateForCombat || Array.isArray(child.material) ||
+          child.material?.transparent || (child.material?.opacity ?? 1) < 1 ||
+          Object.keys(child.geometry?.morphAttributes || {}).length) continue;
+      const positions = child.geometry?.getAttribute('position');
+      if (!positions) continue;
+      const key = child.material.uuid + ':' + child.renderOrder;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(child);
+    }
+    for (const items of buckets.values()) {
+      if (items.length < 2) continue;
+      const vertices = [];
+      const normals = [];
+      const uvs = [];
+      const indices = [];
+      const names = [];
+      const beveledNames = [];
+      const hasNormals = items.every(item => item.geometry.getAttribute('normal'));
+      const hasUvs = items.every(item => item.geometry.getAttribute('uv'));
+      for (const item of items) {
+        item.updateMatrix();
+        const geometry = item.geometry;
+        const position = geometry.getAttribute('position');
+        const normal = geometry.getAttribute('normal');
+        const uv = geometry.getAttribute('uv');
+        const offset = vertices.length / 3;
+        const normalMatrix = hasNormals ? new THREE.Matrix3().getNormalMatrix(item.matrix) : null;
+        const point = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        for (let i = 0; i < position.count; i++) {
+          point.fromBufferAttribute(position, i).applyMatrix4(item.matrix);
+          vertices.push(point.x, point.y, point.z);
+          if (hasNormals) {
+            direction.fromBufferAttribute(normal, i).applyMatrix3(normalMatrix).normalize();
+            normals.push(direction.x, direction.y, direction.z);
+          }
+          if (hasUvs) {
+            uvs.push(uv.getX(i), uv.getY(i));
+          }
+        }
+        if (geometry.index) {
+          for (let i = 0; i < geometry.index.count; i++) indices.push(geometry.index.getX(i) + offset);
+        } else {
+          for (let i = 0; i < position.count; i++) indices.push(i + offset);
+        }
+        const partNames = item.userData?.mergedPartNames || [item.name];
+        names.push(...partNames);
+        beveledNames.push(...(item.userData?.mergedBeveledPartNames ||
+          (geometry.userData?.beveledArmor ? partNames : [])));
+      }
+      const mergedGeometry = new THREE.BufferGeometry();
+      mergedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      if (hasNormals) mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      if (hasUvs) mergedGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      mergedGeometry.setIndex(indices);
+      if (!hasNormals) mergedGeometry.computeVertexNormals();
+      mergedGeometry.computeBoundingBox();
+      mergedGeometry.computeBoundingSphere();
+      mergedGeometry.userData.beveledArmor = beveledNames.length > 0;
+      mergedGeometry.userData.mergedPartNames = names;
+      const merged = new THREE.Mesh(mergedGeometry, items[0].material);
+      merged.name = 'infantry-merged-' + names.length + '-parts';
+      merged.userData.mergedPartNames = names;
+      merged.userData.mergedBeveledPartNames = beveledNames;
+      merged.castShadow = items.some(item => item.castShadow);
+      merged.receiveShadow = items.some(item => item.receiveShadow);
+      merged.renderOrder = items[0].renderOrder;
+      merged.frustumCulled = items.every(item => item.frustumCulled);
+      const insertAt = Math.min(...items.map(item => parent.children.indexOf(item)));
+      for (const item of items) {
+        parent.remove(item);
+        item.geometry.dispose();
+      }
+      parent.add(merged);
+      parent.children.splice(parent.children.indexOf(merged), 1);
+      parent.children.splice(Math.min(insertAt, parent.children.length), 0, merged);
+      sourceMeshCount += items.length;
+      mergedMeshCount++;
+    }
+  }
+  return {
+    sourceMeshCount,
+    mergedMeshCount,
+    savedDrawCalls: sourceMeshCount - mergedMeshCount
+  };
+};
+
 export function createInfantry(THREE, options={}) {
   const { team='blue', role='rifleman', scale=1 } = options;
   const isRed = team === 'red';
@@ -440,6 +545,7 @@ export function createInfantry(THREE, options={}) {
   // muzzle/targeting systems continue to use the same outer V94 unit contract.
   const rifleGroup = new THREE.Group();
   rifleGroup.name = 'infantry-assault-rifle';
+  rifleGroup.userData.keepSeparateForCombat = true;
   rifleGroup.position.set(.19, .69, .265);
   g.add(rifleGroup);
   const rifle = box(THREE, rifleGroup, 'rifle-receiver', [.48, .06, .075], [0, 0, 0], rifleMat);
@@ -456,6 +562,9 @@ export function createInfantry(THREE, options={}) {
   box(THREE, rifleGroup, 'rifle-magazine', [.09, .15, .065], [.02, -.095, .015], dark, [0, 0, -.12]);
   addMarking(THREE, torso, .17, .12, .205, team);
 
+  // Batch static geometry inside each rig pivot; never merge across moving joints.
+  const renderOptimization = mergeInfantryStaticMeshes(THREE, g);
+
   const animationRig = {
     leftArm, rightArm, leftLeg, rightLeg, torso, head,
     phase: 0,
@@ -465,7 +574,8 @@ export function createInfantry(THREE, options={}) {
     kind: 'infantry', role, team, factionProfile, weapon: rifle,
     animationRig,
     renderProfile:'SENTINEL_BASTION_HERO_ARMOR_V2',
-    armorDetailParts: g.children.length
+    armorDetailParts: renderOptimization.sourceMeshCount,
+    renderOptimization
   };
   g.scale.setScalar(scale);
   return g;
