@@ -100,7 +100,7 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
   });
   const signatureParts=[];
   current?.traverse(object=>{
-    if(object.isMesh && (object.name==='front-glacis' || object.name==='engine-deck-grille' || object.name==='track-shoe-instanced' || object.name==='wheel-bolts-instanced' || object.name.includes('blue-sentinel') || object.name.includes('blue-turret-cheek') || object.name.includes('red-bastion') || object.name.includes('red-turret-cheek') || object.name==='heavy-turret-reinforcement')) signatureParts.push(object.name);
+    if(object.isMesh && (object.name==='front-glacis' || object.name==='engine-deck-grilles-instanced' || object.name==='reactive-armor-tiles-instanced' || object.name==='track-shoe-instanced' || object.name==='wheel-bolts-instanced' || object.name.includes('blue-sentinel') || object.name==='blue-turret-cheeks-instanced' || object.name.includes('red-bastion') || object.name==='red-turret-cheeks-instanced' || object.name==='red-bastion-side-plates-instanced' || object.name==='heavy-turret-reinforcements-instanced')) signatureParts.push(object.name);
   });
   return {
     asset:document.querySelector('#asset').value,
@@ -108,6 +108,7 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     factionProfile:current?.userData?.factionProfile||null,
     trackShoeInstances:current?.userData?.trackShoeInstances||0,
     wheelBoltInstances:current?.userData?.wheelBoltInstances||0,
+    detailInstances:current?.userData?.detailInstances||null,
     signatureParts,
     cameraDistance:camera.position.length(),
     meshCount,triangleCount,physicalMaterialCount,genericDecorationCount,
