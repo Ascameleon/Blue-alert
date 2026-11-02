@@ -41,7 +41,7 @@ const grid=new THREE.GridHelper(80,80,0x53655e,0x718078);grid.position.y=-.12;sc
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0x56684f,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.16;ground.receiveShadow=true;scene.add(ground);
 let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
 const desc={
-tank:['Char de combat','Blindage à plusieurs niveaux, chenilles et roues détaillées, tourelle indépendante et canon.'],
+tank:['Char de combat','Deux silhouettes de faction : BLUE SENTINEL à tourelle basse et RED BASTION à tourelle renforcée, avec chenilles segmentées, galets boulonnés et blindage incliné.'],
 infantry:['Fantassin','Silhouette tactique, casque, sac à dos, bras, jambes, bottes et fusil.'],
 hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile latérale et marquage de faction.'],
 barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
@@ -75,8 +75,13 @@ else if(a==='citadel')current=createCitadel(THREE,{team:t});
 else if(a==='relay')current=createRelay(THREE,{team:t});
 else if(a==='ore')current=createOreNode(THREE);
 else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
-scene.add(current);document.querySelector('#title').textContent=desc[a][0];document.querySelector('#desc').textContent=desc[a][1];
-controls.target.set(0,a==='infantry'?.7:1,0);camera.position.set(a==='landscape'?22:8,a==='landscape'?25:7,a==='landscape'?24:11);controls.update();}
+scene.add(current);
+const profileTitle=a==='tank'?(t==='red'?'Char RED BASTION':'Char BLUE SENTINEL'):desc[a][0];
+document.querySelector('#title').textContent=profileTitle;
+const profileCopy=a==='tank'?(t==='red'?'RED BASTION — tourelle haute à plaques latérales, cupola de commandement et capteurs protégés.':'BLUE SENTINEL — tourelle basse profilée, joues inclinées et télémètre compact.'):desc[a][1];
+document.querySelector('#desc').textContent=profileCopy;
+controls.target.set(0,a==='infantry'?.7:a==='tank'?.96:1,0);
+camera.position.set(a==='landscape'?22:a==='tank'?6.4:8,a==='landscape'?25:a==='tank'?4.6:7,a==='landscape'?24:a==='tank'?7.8:11);controls.update();}
 document.querySelector('#asset').addEventListener('change',build);document.querySelector('#team').addEventListener('change',build);
 document.querySelector('#reset').addEventListener('click',build);
 function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
@@ -93,8 +98,18 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
       if (material?.isMeshPhysicalMaterial) physicalMaterialCount++;
     }
   });
+  const signatureParts=[];
+  current?.traverse(object=>{
+    if(object.isMesh && (object.name==='front-glacis' || object.name==='engine-deck-grille' || object.name==='track-shoe-instanced' || object.name==='wheel-bolts-instanced' || object.name.includes('blue-sentinel') || object.name.includes('blue-turret-cheek') || object.name.includes('red-bastion') || object.name.includes('red-turret-cheek') || object.name==='heavy-turret-reinforcement')) signatureParts.push(object.name);
+  });
   return {
     asset:document.querySelector('#asset').value,
+    team:document.querySelector('#team').value,
+    factionProfile:current?.userData?.factionProfile||null,
+    trackShoeInstances:current?.userData?.trackShoeInstances||0,
+    wheelBoltInstances:current?.userData?.wheelBoltInstances||0,
+    signatureParts,
+    cameraDistance:camera.position.length(),
     meshCount,triangleCount,physicalMaterialCount,genericDecorationCount,
     environment:!!scene.environment,
     drawCalls:renderer.info.render.calls,
