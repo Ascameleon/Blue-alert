@@ -63,6 +63,12 @@ def main():
     missing = [name for name in REQUIRED_HERO_PARTS if name not in model]
     if missing:
         raise SystemExit("FAIL: hero infantry sculpt is missing: " + ", ".join(missing))
+    REQUIRED_BATCHING = ("mergeInfantryStaticMeshes", "mergedPartNames", "mergedBeveledPartNames", "keepSeparateForCombat", "renderOptimization")
+    missing = [name for name in REQUIRED_BATCHING if name not in model]
+    if missing:
+        raise SystemExit("FAIL: infantry render batching contract missing: " + ", ".join(missing))
+    if "mergedPartNames" not in preview or "renderOptimization" not in preview:
+        raise SystemExit("FAIL: preview must retain source part names and render-batching diagnostics")
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
@@ -86,7 +92,7 @@ def main():
 
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=6", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=7", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")
