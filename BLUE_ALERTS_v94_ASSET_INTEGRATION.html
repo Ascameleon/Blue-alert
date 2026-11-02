@@ -1129,7 +1129,8 @@ treeFoliage.castShadow = !isMobile;
 treeFoliage.receiveShadow = !isMobile;
 const treeDummy = new THREE.Object3D();
 const treeTones = [0x4d7950, 0x416e49, 0x587f50];
-let placedTreeCount = 0;\nlet firstTreeFocus = null;
+let placedTreeCount = 0;
+let firstTreeFocus = null;
 for (let i = 0; i < treeCapacity; i++) {
   const x = (terrainRandom() - 0.5) * 185;
   const z = (terrainRandom() - 0.5) * 145;
