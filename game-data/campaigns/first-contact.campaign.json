@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "first-contact",
+  "title": "BLUE ALERTS: First Contact",
+  "setting": "2031",
+  "factions": ["blue-directorate", "red-front"],
+  "mapId": "industrial-logistics-basin",
+  "missions": [
+    {
+      "id": "m01-first-contact",
+      "order": 1,
+      "title": "Premier contact",
+      "briefing": "Une patrouille du Directorate a perdu le contact avec le relais du bassin logistique. Une force du Red Front occupe les abords du site.",
+      "primaryObjectives": [
+        {"id": "m01-reach-relay", "title": "Atteindre le relais", "type": "reach-zone", "zone": "relay-approach"},
+        {"id": "m01-identify-hq", "title": "Identifier le QG ennemi", "type": "reveal-target", "target": "red-hq"}
+      ],
+      "optionalObjectives": [
+        {"id": "m01-preserve-scout", "title": "Préserver le véhicule de reconnaissance", "type": "unit-survives", "unit": "blue-scout"}
+      ],
+      "success": "Le relais est sécurisé et le QG ennemi est identifié.",
+      "failure": ["Le QG bleu est détruit", "Toutes les unités de reconnaissance sont perdues"],
+      "debrief": "Le Red Front a établi une tête de pont. Le Directorate doit maintenant sécuriser les infrastructures."
+    },
+    {
+      "id": "m02-secure-yard",
+      "order": 2,
+      "title": "Sécuriser le dépôt",
+      "briefing": "Le dépôt logistique contrôle les accès au bassin. Sa prise permettra d'acheminer des renforts.",
+      "primaryObjectives": [
+        {"id": "m02-capture-yard", "title": "Capturer le dépôt central", "type": "capture-zone", "zone": "central-yard"},
+        {"id": "m02-hold-yard", "title": "Tenir le dépôt pendant 90 secondes", "type": "hold-zone", "zone": "central-yard", "durationSeconds": 90}
+      ],
+      "optionalObjectives": [
+        {"id": "m02-save-crates", "title": "Préserver les réserves", "type": "object-health", "target": "supply-cache", "minimumPercent": 70}
+      ],
+      "success": "Le dépôt est sous contrôle et reste défendable.",
+      "failure": ["Le QG bleu est détruit", "Le dépôt est repris avant la fin du délai"],
+      "debrief": "Les réserves sont sécurisées. Les transmissions signalent un convoi immobilisé au sud."
+    },
+    {
+      "id": "m03-broken-convoy",
+      "order": 3,
+      "title": "Convoi brisé",
+      "briefing": "Un camion de maintenance transporte des pièces indispensables. Il est immobilisé sur la route de drainage.",
+      "primaryObjectives": [
+        {"id": "m03-reach-truck", "title": "Rejoindre le camion", "type": "reach-unit", "unit": "utility-truck"},
+        {"id": "m03-escort-truck", "title": "Escorter le camion jusqu'au dépôt", "type": "escort", "unit": "utility-truck", "zone": "central-yard"}
+      ],
+      "optionalObjectives": [
+        {"id": "m03-no-loss", "title": "Ne perdre aucun véhicule d'escorte", "type": "group-survives", "group": "blue-escort"}
+      ],
+      "success": "Le camion atteint le dépôt.",
+      "failure": ["Le camion est détruit", "Le QG bleu est détruit"],
+      "debrief": "Les pièces sont livrées. Les ingénieurs peuvent préparer une coupure ciblée du réseau électrique."
+    },
+    {
+      "id": "m04-power-cut",
+      "order": 4,
+      "title": "Coupure de courant",
+      "briefing": "Deux sous-stations alimentent les défenses automatiques du Red Front. Les neutraliser ouvrira une fenêtre d'attaque.",
+      "primaryObjectives": [
+        {"id": "m04-substation-a", "title": "Neutraliser la sous-station nord", "type": "destroy", "target": "red-substation-north"},
+        {"id": "m04-substation-b", "title": "Neutraliser la sous-station sud", "type": "destroy", "target": "red-substation-south"}
+      ],
+      "optionalObjectives": [
+        {"id": "m04-fast", "title": "Terminer en moins de 6 minutes", "type": "time-limit", "durationSeconds": 360}
+      ],
+      "success": "Les deux sous-stations sont hors service.",
+      "failure": ["Le QG bleu est détruit"],
+      "debrief": "Les défenses du Red Front sont affaiblies. Une contre-attaque est désormais probable."
+    },
+    {
+      "id": "m05-hold-line",
+      "order": 5,
+      "title": "Tenir la ligne",
+      "briefing": "Des unités blindées et des groupes d'infanterie convergent vers le dépôt. Préparez les positions et protégez l'artillerie.",
+      "primaryObjectives": [
+        {"id": "m05-survive-waves", "title": "Repousser trois vagues ennemies", "type": "survive-waves", "waves": 3},
+        {"id": "m05-protect-hq", "title": "Maintenir le QG opérationnel", "type": "object-survives", "target": "blue-hq"}
+      ],
+      "optionalObjectives": [
+        {"id": "m05-protect-artillery", "title": "Préserver l'artillerie", "type": "unit-survives", "unit": "blue-artillery"}
+      ],
+      "success": "Les trois vagues sont repoussées et le QG tient.",
+      "failure": ["Le QG bleu est détruit"],
+      "debrief": "Le Red Front a épuisé sa force d'assaut. Son centre de commandement est exposé."
+    },
+    {
+      "id": "m06-counterstrike",
+      "order": 6,
+      "title": "Contre-offensive",
+      "briefing": "Deux routes mènent au centre de commandement ennemi : la route haute, mieux défendue, ou le drainage, plus long mais moins surveillé.",
+      "primaryObjectives": [
+        {"id": "m06-destroy-hq", "title": "Détruire le QG du Red Front", "type": "destroy", "target": "red-hq"}
+      ],
+      "optionalObjectives": [
+        {"id": "m06-capture-relay", "title": "Capturer le relais avancé", "type": "capture-zone", "zone": "forward-relay"},
+        {"id": "m06-preserve-armor", "title": "Conserver au moins un blindé lourd", "type": "one-unit-survives", "unitType": "heavy-tank"}
+      ],
+      "success": "Le QG ennemi est détruit.",
+      "failure": ["Le QG bleu est détruit", "Toutes les unités de combat sont perdues"],
+      "debrief": "Le bassin logistique est libéré. Le commandement prépare la suite de l'opération."
+    }
+  ],
+  "contentIntegrationContract": {
+    "status": "authored-data-not-yet-wired",
+    "requiredRuntimeSystems": ["objective-state-machine", "zone-capture", "escort-health-and-path", "timed-hold", "wave-director", "mission-briefing-and-debrief"],
+    "rule": "Do not display an objective as completed unless the corresponding runtime condition is evaluated by the game."
+  }
+}
