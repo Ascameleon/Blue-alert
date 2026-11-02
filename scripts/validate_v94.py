@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Static integrity checks for the BLUE ALERTS v94 3D HTML prototype."""
 from html.parser import HTMLParser
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -8,6 +9,7 @@ import tempfile
 
 HTML = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("BLUE_ALERTS_v94_ASSET_INTEGRATION.html")
 MODEL_LIBRARY = Path("game-data/models/blue-alert-models.js")
+CAMPAIGN = Path("game-data/campaigns/first-contact.campaign.json")
 
 
 class ScriptCollector(HTMLParser):
@@ -62,6 +64,8 @@ def main():
         raise SystemExit(f"FAIL: {HTML} is missing")
     if not MODEL_LIBRARY.is_file():
         raise SystemExit(f"FAIL: {MODEL_LIBRARY} is missing")
+    if not CAMPAIGN.is_file():
+        raise SystemExit(f"FAIL: {CAMPAIGN} is missing")
 
     source = HTML.read_text(encoding="utf-8")
     lower = source.lower()
@@ -112,6 +116,10 @@ def main():
         "model-explosion",
         "model-muzzle",
         "disposeObject3D",
+        "function collectFxParts",
+        "parts: collectFxParts(mesh)",
+        "parts: collectFxParts(flash)",
+        "for (const part of e.parts)",
         "const unitTarget = target.g &&",
         "if (!unitTarget) target.dead = true;",
         "window.__BLUE_ALERTS_COMBAT_QA__",
@@ -123,6 +131,40 @@ def main():
     missing = [feature for feature in required_live_vfx_features if feature not in source]
     if missing:
         raise SystemExit("FAIL: live combat VFX/death lifecycle missing: " + ", ".join(missing))
+
+    if "e.mesh.traverse(object =>" in source:
+        raise SystemExit("FAIL: model VFX hot loop must use cached mesh/material references")
+
+    campaign = json.loads(CAMPAIGN.read_text(encoding="utf-8"))
+    missions = campaign.get("missions", [])
+    if campaign.get("schemaVersion") != 1 or campaign.get("campaignId") != "first-contact":
+        raise SystemExit("FAIL: First Contact campaign identity/schema is invalid")
+    if len(missions) != 6 or [m.get("order") for m in missions] != list(range(1, 7)):
+        raise SystemExit("FAIL: campaign must contain six ordered missions")
+    mission_ids = [m.get("id") for m in missions]
+    if len(set(mission_ids)) != len(mission_ids) or any(not value for value in mission_ids):
+        raise SystemExit("FAIL: campaign mission IDs must be unique and non-empty")
+    objective_ids = []
+    objective_count = 0
+    for mission in missions:
+        for field in ("title", "briefing", "success", "debrief"):
+            if not mission.get(field):
+                raise SystemExit(f"FAIL: mission {mission.get('id')} is missing {field}")
+        if not mission.get("failure") or not mission.get("primaryObjectives"):
+            raise SystemExit(f"FAIL: mission {mission.get('id')} needs failure conditions and primary objectives")
+        if not isinstance(mission.get("optionalObjectives"), list) or not mission["optionalObjectives"]:
+            raise SystemExit(f"FAIL: mission {mission.get('id')} needs at least one optional objective")
+        for objective in mission["primaryObjectives"] + mission["optionalObjectives"]:
+            objective_count += 1
+            objective_id = objective.get("id")
+            if not objective_id:
+                raise SystemExit(f"FAIL: mission {mission.get('id')} contains an objective without an ID")
+            objective_ids.append(objective_id)
+            if not objective.get("title") or not objective.get("type"):
+                raise SystemExit(f"FAIL: objective {objective_id} needs a title and type")
+    if objective_count != 18 or len(set(objective_ids)) != objective_count:
+        raise SystemExit("FAIL: campaign must contain 18 uniquely identified objectives")
+    print(f"PASS: First Contact campaign; {len(missions)} missions and {objective_count} unique objectives.")
 
     terrain_start = source.index("/* ─── Deterministic terrain art")
     terrain_end = source.index("/* ─── Game state", terrain_start)

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "project": "BLUE ALERTS",
+  "direction": "industrial-near-future-2030s",
+  "cameraReadability": ["strategic-silhouette", "tactical-class-and-state", "close-material-detail"],
+  "factions": {
+    "blueDirectorate": {
+      "id": "blue",
+      "primary": "#416D83",
+      "dark": "#263F4B",
+      "marking": "#86A9B5",
+      "silhouette": "naval-industrial, layered armor, functional equipment"
+    },
+    "redFront": {
+      "id": "red",
+      "primary": "#963F36",
+      "dark": "#542B29",
+      "marking": "#D58A68",
+      "silhouette": "angular, asymmetric sensor profile, external stowage"
+    },
+    "neutral": {
+      "primary": "#777A72",
+      "secondary": "#68704B",
+      "warning": "#D3A747"
+    }
+  },
+  "assetContract": {
+    "delivery": ["editable-source", "glb-or-gltf", "license-record", "collision-proxy", "preview-capture"],
+    "requiredMetadata": ["assetId", "assetVersion", "sourceUrl", "license", "attribution", "unitScale", "forwardAxis", "lods", "textureBudget"],
+    "lodMinimum": 3,
+    "mobileRequired": true,
+    "mustBeIntegratedToCountAsDone": true
+  },
+  "firstSlice": {
+    "map": "first-contact-industrial-logistics-yard",
+    "friendlyUnits": ["bastion-mbt", "lynx-ifv", "ranger-squad", "warden-artillery", "utility-truck"],
+    "hostileUnits": ["redoubt-mbt", "sentry-gun", "raider-squad", "siege-carrier"],
+    "mission": "first-contact",
+    "requiredGameplay": ["select", "move", "attack", "damage", "destroy", "mission-objective-state"],
+    "validation": ["desktop-browser", "android-physical-device", "mobile-frame-time", "regression-suite"]
+  }
+}

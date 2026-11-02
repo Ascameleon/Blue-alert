@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "mapId": "industrial-logistics-basin",
+  "title": "Bassin logistique — secteur Delta",
+  "status": "layout-specification-not-runtime-integrated",
+  "units": "world-units",
+  "bounds": {"minX": -120, "maxX": 120, "minZ": -90, "maxZ": 90},
+  "terrain": {
+    "biome": "arid-industrial-basin",
+    "baseElevation": 0,
+    "elevationZones": [
+      {"id":"north-service-ridge","bounds":[-120,-90,120,-58],"height":5,"slope":"gentle"},
+      {"id":"central-yard","bounds":[-48,-30,52,34],"height":0,"slope":"flat"},
+      {"id":"south-drainage","bounds":[-120,48,120,90],"height":-2,"slope":"channel"}
+    ],
+    "surfaceLayers": ["compacted-dust","cracked-concrete","asphalt","drainage-water"],
+    "navigationRule": "All decorative props require a non-blocking collision profile unless explicitly marked as cover."
+  },
+  "lanes": [
+    {"id":"high-road","role":"fast-but-exposed","centerline":[[-100,-65],[-35,-54],[30,-55],[100,-48]],"width":13,"cover":"low","vehicleAccess":true},
+    {"id":"central-yard-lane","role":"contested-objective","centerline":[[-105,0],[-45,4],[0,0],[55,8],[105,0]],"width":18,"cover":"medium","vehicleAccess":true},
+    {"id":"south-drainage-route","role":"concealed-flank","centerline":[[-100,67],[-45,61],[20,68],[100,58]],"width":10,"cover":"high","vehicleAccess":"light-and-medium-only"}
+  ],
+  "landmarks": [
+    {"id":"blue-hq","type":"blue-command-hub","position":[-92,0,-25],"footprint":[18,14],"missionRole":"player-start"},
+    {"id":"central-yard","type":"capture-yard","position":[0,0,0],"footprint":[30,24],"missionRole":"m02-capture"},
+    {"id":"relay-approach","type":"communications-relay","position":[-22,0,-42],"footprint":[8,8],"missionRole":"m01-reach-relay"},
+    {"id":"supply-cache","type":"protected-logistics-store","position":[22,0,18],"footprint":[10,8],"missionRole":"m02-optional-preserve"},
+    {"id":"utility-truck","type":"convoy-start","position":[-70,0,55],"footprint":[5,4],"missionRole":"m03-escort"},
+    {"id":"red-substation-north","type":"power-substation","position":[62,0,-45],"footprint":[12,10],"missionRole":"m04-destroy"},
+    {"id":"red-substation-south","type":"power-substation","position":[65,0,48],"footprint":[12,10],"missionRole":"m04-destroy"},
+    {"id":"red-hq","type":"red-command-hub","position":[94,0,0],"footprint":[20,16],"missionRole":"m01-reveal-and-m06-destroy"},
+    {"id":"forward-relay","type":"capture-relay","position":[42,0,58],"footprint":[7,7],"missionRole":"m06-optional-capture"}
+  ],
+  "setDressing": {
+    "heroProps": ["transformer-bank","gantry-crane","fuel-tank-cluster","communications-array","loading-dock"],
+    "repeatedProps": ["jersey-barrier","road-light","cable-reel","pipe-rack","cargo-pallet","warning-sign","drainage-culvert"],
+    "nature": ["dry-grass-clumps","scrub-bush","weathered-rock"],
+    "damageDecals": ["tire-tracks","oil-stain","concrete-spall","scorch-mark"],
+    "densityRule": "Keep the central combat lane visually open; concentrate detail around map edges and landmark perimeters."
+  },
+  "cover": [
+    {"id":"yard-barriers-west","type":"heavy-cover","position":[-26,0,13],"blocksLineOfSight":true},
+    {"id":"yard-container-east","type":"heavy-cover","position":[27,0,-13],"blocksLineOfSight":true},
+    {"id":"drainage-pipe-banks","type":"partial-cover","position":[-5,-2,65],"blocksLineOfSight":false}
+  ],
+  "lighting": {
+    "timeOfDay":"late-afternoon-overcast",
+    "keyLight":"soft-directional-sun",
+    "fill":"cool-skylight",
+    "practicals":["amber-yard-lamps","red-warning-beacons","blue-friendly-markers"],
+    "fog":"subtle-distance-haze",
+    "postProcessing":"restrained; preserve faction color readability"
+  },
+  "mobileBudgets": {
+    "targetFrameRate":30,
+    "visibleShadowCasters":80,
+    "heroTextureMaxDimension":2048,
+    "repeatedPropTextureMaxDimension":512,
+    "instancingRequiredFor":["jersey-barrier","road-light","cable-reel","cargo-pallet","dry-grass-clumps"],
+    "fallbacks":["disable-contact-shadows","reduce-fog","use-lower-lod","reduce-particle-count"]
+  },
+  "acceptance": [
+    "All three routes are navigable by their declared vehicle classes.",
+    "Landmark positions align with the six-mission campaign zone IDs.",
+    "No decorative prop blocks touch selection or primary movement lanes.",
+    "Friendly and hostile HQs are visually distinguishable at strategic camera distance.",
+    "Mobile fallback settings preserve readable silhouettes and objective markers."
+  ]
+}
