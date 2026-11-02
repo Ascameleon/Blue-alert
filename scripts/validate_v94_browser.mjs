@@ -385,10 +385,9 @@ try {
   const mobileMissionProgress = await mobile.evaluate(() => {
     window.__BLUE_ALERTS_MISSION_QA__.recordDelivery(600);
     for (let i = 0; i < 3; i++) window.__BLUE_ALERTS_MISSION_QA__.recordProduction('light');
-    return window.__BLUE_ALERTS_MISSION_QA__.snapshot();
+    return { state: window.__BLUE_ALERTS_MISSION_QA__.snapshot(), count: document.getElementById('mobileMissionCount').textContent };
   });
-  assert.ok(mobileMissionProgress.completedCount === 2 &&
-    document.getElementById('mobileMissionCount').textContent === '2/3',
+  assert.ok(mobileMissionProgress.state.completedCount === 2 && mobileMissionProgress.count === '2/3',
     'mobile mission HUD must update its objective count after gameplay progress');
   await mobile.screenshot({ path: output + '/mobile-v94-mission-progress-390x844.png', fullPage: true });
   assert.ok(touchTargets.firstCard && touchTargets.firstCard.width >= 60 && touchTargets.firstCard.height >= 44, 'mobile build cards must remain tappable');
