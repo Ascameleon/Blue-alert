@@ -1238,6 +1238,8 @@ function addBattlefieldCraterSet() {
   craterMesh.instanceMatrix.needsUpdate = true;
   debrisMesh.count = debrisCount;
   debrisMesh.instanceMatrix.needsUpdate = true;
+  craterMesh.computeBoundingSphere();
+  debrisMesh.computeBoundingSphere();
   if (debrisMesh.instanceColor) debrisMesh.instanceColor.needsUpdate = true;
   root.add(craterMesh, debrisMesh);
   scene.add(root);
@@ -1247,6 +1249,7 @@ function addBattlefieldCraterSet() {
     debrisCount,
     clearanceVerified: valid.length === craterSpecs.length && clearOfBuildZone && clearOfRoad && clearOfIndustrial,
     blocksMovement: false,
+    boundsReady: !!craterMesh.boundingSphere && !!debrisMesh.boundingSphere,
     renderGroups: 2
   };
 }
@@ -1256,6 +1259,7 @@ window.__BLUE_ALERTS_CRATERS = Object.freeze({
   debrisCount: battlefieldCraters.debrisCount,
   clearanceVerified: battlefieldCraters.clearanceVerified,
   blocksMovement: battlefieldCraters.blocksMovement,
+  boundsReady: battlefieldCraters.boundsReady,
   renderGroups: battlefieldCraters.renderGroups
 });
 window.__BLUE_ALERTS_CRATER_QA = Object.freeze({
