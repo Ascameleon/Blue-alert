@@ -61,24 +61,17 @@ export function createTank(THREE, options={}) {
   box(THREE,g,'upper-hull',[1.9,.35,1.22],[-.12,.91,0],armor);
   box(THREE,g,'front-glacis',[.72,.2,1.22],[.82,.72,0],heavyArmor,[0,0,-.34]);
   box(THREE,g,'engine-deck',[.76,.13,.98],[-.82,1.105,0],dark);
-  for(let i=0;i<7;i++){
-    box(THREE,g,'engine-deck-grille',[.055,.025,.78],[-1.12+i*.1,1.18,0],metal);
-  }
+  for(let i=0;i<7;i++) box(THREE,g,'engine-deck-grille',[.055,.025,.78],[-1.12+i*.1,1.18,0],metal);
+
   for(const side of [-1,1]){
-    for(let i=0;i<4;i++){
-      box(THREE,g,'reactive-armor-tile',[.3,.19,.1],[-.72+i*.43,.73,side*.68],heavyArmor,[0,0,side*.05]);
-    }
+    for(let i=0;i<4;i++) box(THREE,g,'reactive-armor-tile',[.3,.19,.1],[-.72+i*.43,.73,side*.68],heavyArmor,[0,0,side*.05]);
     box(THREE,g,'side-skirt-armor',[1.62,.18,.1],[-.04,.56,side*.74],armor);
     box(THREE,g,'front-fender',[.38,.09,.2],[.94,.65,side*.79],hull,[0,0,-.12]);
     box(THREE,g,'rear-fender',[.34,.09,.2],[-1.02,.65,side*.79],hull,[0,0,.1]);
-    for(let i=0;i<2;i++){
-      cylinder(THREE,g,'smoke-discharger',.045,.055,.16,[.68+i*.15,1.05,side*.48],dark,8).rotation.z=Math.PI/2;
-    }
-    for(const x of [-.55,.25,.82]){
-      const roller=cylinder(THREE,g,'return-roller',.075,.075,.12,[x,.68,side*.84],metal,10);
-      roller.rotation.x=Math.PI/2;
-    }
+    for(let i=0;i<2;i++) cylinder(THREE,g,'smoke-discharger',.045,.055,.16,[.68+i*.15,1.05,side*.48],dark,8).rotation.z=Math.PI/2;
+    for(const x of [-.55,.25,.82]) cylinder(THREE,g,'return-roller',.075,.075,.12,[x,.68,side*.84],metal,10).rotation.x=Math.PI/2;
   }
+
   box(THREE,g,'commander-hatch',[.32,.08,.3],[-.62,1.12,.08],dark);
   cylinder(THREE,g,'hatch-rim',.19,.19,.05,[-.62,1.17,.08],metal,12);
   sphere(THREE,g,'gunner-optic',.075,[.36,1.18,.28],optics,[1,.55,.7]);
@@ -97,6 +90,7 @@ export function createTank(THREE, options={}) {
       cap.rotation.x=Math.PI/2;
     }
   }
+
   const shoeGeometry=new THREE.BoxGeometry(.105,.29,.035);
   const shoeMaterial=mat(THREE,0x56605d,.88,.28);
   const trackShoes=new THREE.InstancedMesh(shoeGeometry,shoeMaterial,36);
@@ -156,23 +150,17 @@ export function createTank(THREE, options={}) {
     }
     cylinder(THREE,turret,'red-bastion-cupola',.18,.2,.15,[-.34,.64,0],dark,12);
     cylinder(THREE,turret,'red-bastion-rangefinder',.07,.08,.18,[.1,.66,.3],optics,10).rotation.z=Math.PI/2;
-    for(const side of [-1,1]){
-      cylinder(THREE,turret,'red-bastion-smoke-bank',.055,.06,.22,[.42,.42,side*.38],dark,8).rotation.z=Math.PI/2;
-    }
+    for(const side of [-1,1]) cylinder(THREE,turret,'red-bastion-smoke-bank',.055,.06,.22,[.42,.42,side*.38],dark,8).rotation.z=Math.PI/2;
   }else{
     box(THREE,turret,'turret-body',[1.22,.36,.96],[0,.24,0],hull);
     box(THREE,turret,'blue-sentinel-crown',[.78,.12,.8],[-.12,.47,0],armor);
-    for(const side of [-1,1]){
-      box(THREE,turret,'blue-turret-cheek',[.46,.23,.16],[.16,.2,side*.53],heavyArmor,[0,0,side*.13]);
-    }
+    for(const side of [-1,1]) box(THREE,turret,'blue-turret-cheek',[.46,.23,.16],[.16,.2,side*.53],heavyArmor,[0,0,side*.13]);
     cylinder(THREE,turret,'blue-sentinel-optic',.075,.085,.16,[.38,.48,.26],optics,10).rotation.z=Math.PI/2;
     cylinder(THREE,turret,'blue-sentinel-laser-rangefinder',.045,.05,.12,[.42,.38,-.28],edge,10).rotation.z=Math.PI/2;
     box(THREE,turret,'blue-sentinel-rear-sensor',[.25,.12,.32],[-.42,.43,0],dark);
   }
   if(isHeavy){
-    for(const side of [-1,1]){
-      box(THREE,turret,'heavy-turret-reinforcement',[.5,.25,.14],[-.28,.23,side*.64],heavyArmor,[0,0,side*.08]);
-    }
+    for(const side of [-1,1]) box(THREE,turret,'heavy-turret-reinforcement',[.5,.25,.14],[-.28,.23,side*.64],heavyArmor,[0,0,side*.08]);
     box(THREE,turret,'heavy-turret-roof-armor',[.62,.1,.76],[-.16,.67,0],armor);
   }
   box(THREE,turret,'commander-hatch',[.32,.12,.31],[-.23,.53,.05],armor);
@@ -183,6 +171,7 @@ export function createTank(THREE, options={}) {
   barrelCollar.rotation.z=-Math.PI/2;
   const muzzle=cylinder(THREE,turret,'muzzle',.13,.11,.2,[isHeavy?1.76:1.66,.3,0],dark,12);
   muzzle.rotation.z=-Math.PI/2;
+
   for(const side of [-1,1]){
     cylinder(THREE,g,'exhaust',.07,.09,.22,[-1.17,.91,side*.42],dark,8);
     sphere(THREE,g,'rear-lamp',.055,[-1.3,.62,side*.42],mat(THREE,0xb74432));
@@ -195,47 +184,6 @@ export function createTank(THREE, options={}) {
   };
   g.scale.setScalar(scale);
   return g;
-}
-  const { team='blue', variant='main-battle-tank', scale=1 } = options;
-  const g = new THREE.Group(); g.name = 'BA_Tank_' + variant;
-  const hull=teamColor(THREE,team), armor=mat(THREE,PALETTE.olive), dark=mat(THREE,PALETTE.dark), metal=mat(THREE,PALETTE.metal);
-  box(THREE,g,'lower-hull',[2.55,.48,1.48],[0,.55,0],hull);
-  box(THREE,g,'upper-hull',[1.85,.35,1.22],[-.12,.91,0],armor);
-  const reactiveArmor=mat(THREE,0x858c78,.72,.24), optics=mat(THREE,0x79b6bd,.2,.62);
-  for(const side of [-1,1]){
-    for(let i=0;i<4;i++) box(THREE,g,'reactive-armor-tile',[.3,.19,.1],[-.72+i*.43,.73,side*.68],reactiveArmor);
-    box(THREE,g,'side-skirt-armor',[1.55,.16,.09],[-.05,.56,side*.72],armor);
-    for(let i=0;i<2;i++) cylinder(THREE,g,'smoke-discharger',.045,.055,.16,[.68+i*.15,1.05,side*.48],dark,8).rotation.z=Math.PI/2;
-  }
-  box(THREE,g,'commander-hatch',[.32,.08,.3],[-.62,1.12,.08],dark);
-  sphere(THREE,g,'gunner-optic',.075,[.36,1.18,.28],optics,[1,.55,.7]);
-  cylinder(THREE,g,'radio-antenna',.018,.018,.72,[-.86,1.42,-.35],dark,6);
-  // Continuous track housings with individual road wheels.
-  for (const side of [-1,1]) {
-    box(THREE,g,'track-belt',[2.65,.48,.22],[0,.39,side*.79],dark);
-    for (let i=0;i<6;i++) {
-      const wheel=cylinder(THREE,g,'road-wheel',.19,.19,.12,[ -.98+i*.39,.38,side*.84],metal,12);
-      wheel.rotation.x=Math.PI/2;
-      cylinder(THREE,g,'wheel-hub',.075,.075,.135,[-.98+i*.39,.38,side*.84],dark,10).rotation.x=Math.PI/2;
-    }
-    box(THREE,g,'track-highlight',[1.92,.035,.025],[0,.15,side*.91],mat(THREE,0x9a9b87));
-  }
-  const turret=new THREE.Group(); turret.name='rotating-turret'; turret.position.set(.05,1.12,0); g.add(turret);
-  cylinder(THREE,turret,'turret-ring',.52,.56,.12,[0,0,0],dark,16);
-  box(THREE,turret,'turret-body',[1.15,.42,.95],[0,.25,0],hull);
-  box(THREE,turret,'commander-hatch',[.32,.12,.31],[-.23,.51,.05],armor);
-  cylinder(THREE,turret,'hatch-rim',.19,.19,.05,[-.23,.59,.05],dark,12);
-  const barrel=cylinder(THREE,turret,'main-cannon',.105,.14,1.48,[.87,.28,0],metal,12);
-  barrel.rotation.z=-Math.PI/2;
-  cylinder(THREE,turret,'muzzle',.13,.11,.19,[1.58,.28,0],dark,12).rotation.z=-Math.PI/2;
-  // Rear exhausts and lamps.
-  for (const z of [-.42,.42]) {
-    cylinder(THREE,g,'exhaust',.07,.09,.22,[-1.17,.91,z],dark,8);
-    sphere(THREE,g,'rear-lamp',.055,[-1.3,.62,z],mat(THREE,0xb74432));
-  }
-  addMarking(THREE,g,.15,1.11,-.755,team);
-  g.userData={kind:'vehicle',unitType:variant,team,turret};
-  g.scale.setScalar(scale); return g;
 }
 
 export function createInfantry(THREE, options={}) {
