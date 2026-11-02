@@ -164,3 +164,19 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - A local deterministic reproduction of the exact terrain hash/noise functions measured soil-patch coverage at approximately 20.1% and road-rut coverage at approximately 0.91% for both 512px and 256px textures.
 - The browser assertion initially required more than 1% road-rut coverage, slightly above the actual deterministic 0.91% layout. Corrected only that threshold to >0.5%, which still rejects missing/near-zero ruts while matching the intended two shoulder tracks.
 - The new exact-head workflow for \`f5d8a3d\` is running; its result is not attributed to the corrected test. A fresh workflow on the threshold-corrected commit is required.
+
+
+## Battlefield impact-crater field — V94 runtime
+
+- Base: latest verified `main` commit `241bc45c1e76af6a4ad5b94dd9554469071a7e11`; implementation continues on the existing PR #33 branch `feat/blue-alerts-terrain-surface-refinement-20261102`.
+- Visual review: the exact-head terrain/rut run `41389460383` passed, but the captured terrain detail still read as broad color patches on a mostly empty field. The next non-duplicative improvement is actual low-profile 3D blast-scar geometry, not another albedo-only adjustment.
+- Runtime: added eight deterministic shallow impact craters with raised earth rims, dark centers and 24 small debris fragments. A shared radial BufferGeometry and two InstancedMesh groups keep the content to two render groups.
+- Safety: every crater is preflighted against both construction pads, the supply-road corridor and the four industrial clearance zones. All scenery is visual-only (`blocksMovement: false`); no unit height, collision, navigation, resource placement or build-zone logic changes.
+- QA: read-only crater diagnostics expose instance counts and clearance status; desktop and 390×844 mobile browser tests assert eight craters, 24 fragments and the two-group budget, then capture dedicated battlefield-crater screenshots.
+- Exact commits:
+  - Initial runtime: `06e7988590685e73f0dab3774dbbbfd8a5e343b9`.
+  - Local transform lifetime correction: `36c9aa237196e44cf0d674f71b88223a1559b518`.
+  - Desktop/mobile visual and regression coverage: `2294638209b604ca9050ce642628a2dac57ba6fd`.
+  - Static contract checks: `de01ff33eca224d7f9173afdac3a0a6094fa96f7`.
+- Exact-head workflow and fresh screenshots are pending after this documentation commit. The previous terrain/rut success applies only to `73f0145f443eecf626dbd2e4745cec49e2876181`, not to the crater changes.
+- No physical Samsung test is claimed. OpenRTS remains a separate native-engine smoke test and does not import the V94 Three.js crater geometry. Budget remains 0; no external assets or services added.
