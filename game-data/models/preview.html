@@ -76,7 +76,7 @@ else if(a==='relay')current=createRelay(THREE,{team:t});
 else if(a==='ore')current=createOreNode(THREE);
 else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
 scene.add(current);document.querySelector('#title').textContent=desc[a][0];document.querySelector('#desc').textContent=desc[a][1];
-controls.target.set(0,a==='infantry'?.7:1,0);camera.position.set(a==='landscape'?22:8,a==='landscape'?25:7,a==='landscape'?24:11);controls.update();}
+controls.target.set(0,a==='infantry'?.7:1,0);camera.position.set(a==='landscape'?22:a==='infantry'?3.6:8,a==='landscape'?25:a==='infantry'?3:7,a==='landscape'?24:a==='infantry'?4.6:11);controls.update();}
 document.querySelector('#asset').addEventListener('change',build);document.querySelector('#team').addEventListener('change',build);
 document.querySelector('#reset').addEventListener('click',build);
 function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
@@ -99,6 +99,7 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
   return {
     asset:document.querySelector('#asset').value,
     boundsMinY:bounds?.min.y??null,
+    cameraDistance:camera.position.distanceTo(controls.target),
     meshCount,triangleCount,physicalMaterialCount,genericDecorationCount,
     factionProfile:current?.userData?.factionProfile||null,
     hasAnimationRig:!!current?.userData?.animationRig,
