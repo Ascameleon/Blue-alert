@@ -218,9 +218,6 @@ def main():
         "new THREE.ConeGeometry(radius, height, segments, 1)",
         "geometry.userData",
         "function createLegacyLayeredTreeFoliageGeometry()",
-        "setLegacy(enabled)",
-        "treeFoliage.geometry = legacyTreeFoliageGeometry",
-        "treeFoliage.geometry = treeFoliageGeometry",
     )
     missing = [feature for feature in required_tree_features if feature not in tree_section]
     if missing:
@@ -229,6 +226,14 @@ def main():
         raise SystemExit("FAIL: evergreen geometry complexity must be exposed for browser acceptance")
     if "if (!firstTreeFocus) firstTreeFocus = { x, z, scale };" not in source:
         raise SystemExit("FAIL: deterministic evergreen visual focus must track an accepted placed tree")
+    required_tree_qa = (
+        "setLegacy(enabled)",
+        "treeFoliage.geometry = legacyTreeFoliageGeometry",
+        "treeFoliage.geometry = treeFoliageGeometry",
+    )
+    missing = [token for token in required_tree_qa if token not in source]
+    if missing:
+        raise SystemExit("FAIL: evergreen A/B QA must switch the same InstancedMesh between legacy and detailed geometry: " + ", ".join(missing))
 
     kill_start = source.index("function killUnit(u)")
     kill_end = source.index("function applyBuildingDamageVisuals", kill_start)
