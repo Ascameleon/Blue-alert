@@ -582,6 +582,82 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
 addBox(scene, 0, 0.015, 0, 200, 0.03, 5.0, MAT.concrete);
 addBox(scene, 0, 0.04, 0, 200, 0.025, 3.4, MAT.road);
 for (let x = -95; x < 95; x += 6) addBox(scene, x, 0.055, 0, 2.4, 0.01, 0.12, MAT.line);
+ 
+// Battlefield dressing: lightweight instanced scrub and reflective road markers.
+// Instancing keeps the extra environmental detail to a handful of draw calls on mobile.
+function addBattlefieldDressing() {
+  const tuftCount = isMobile ? 96 : 220;
+  const tuftGeometry = new THREE.ConeGeometry(0.12, 0.48, 4);
+  tuftGeometry.translate(0, 0.24, 0);
+  const tuftMaterial = new THREE.MeshStandardMaterial({
+    color: 0x788653, roughness: 1, metalness: 0
+  });
+  const tufts = new THREE.InstancedMesh(tuftGeometry, tuftMaterial, tuftCount * 2);
+  tufts.name = 'battlefield-scrub-instanced';
+  tufts.castShadow = false;
+  tufts.receiveShadow = true;
+  const dummy = new THREE.Object3D();
+  let placed = 0;
+  for (let i = 0; i < tuftCount; i++) {
+    const x = -94 + terrainHash(i, 31) * 188;
+    const z = -70 + terrainHash(i, 73) * 140;
+    if (Math.abs(z) < 8 || insideBuildZone(x, z, 0)) continue;
+    const scale = 0.55 + terrainHash(i, 97) * 0.85;
+    for (let blade = 0; blade < 2; blade++) {
+      dummy.position.set(x + (blade ? 0.09 : -0.09), 0.025, z + (blade ? -0.06 : 0.06));
+      dummy.rotation.set(0, terrainHash(i, blade + 111) * Math.PI * 2, blade ? 0.16 : -0.12);
+      dummy.scale.set(scale, scale, scale);
+      dummy.updateMatrix();
+      tufts.setMatrixAt(placed++, dummy.matrix);
+    }
+  }
+  tufts.count = placed;
+  tufts.instanceMatrix.needsUpdate = true;
+  scene.add(tufts);
+
+  const markerCount = 26;
+  const markerGeo = new THREE.CylinderGeometry(0.075, 0.11, 0.72, 7);
+  const markerMat = new THREE.MeshStandardMaterial({
+    color: 0x9b7538, roughness: 0.62, metalness: 0.28,
+    emissive: 0x241504, emissiveIntensity: 0.35
+  });
+  const markers = new THREE.InstancedMesh(markerGeo, markerMat, markerCount);
+  markers.name = 'supply-road-reflective-markers';
+  markers.castShadow = false;
+  for (let i = 0; i < markerCount / 2; i++) {
+    const x = -90 + i * 15;
+    for (const z of [-4.25, 4.25]) {
+      dummy.position.set(x, 0.36, z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      markers.setMatrixAt(i * 2 + (z > 0 ? 1 : 0), dummy.matrix);
+    }
+  }
+  markers.instanceMatrix.needsUpdate = true;
+  scene.add(markers);
+
+  const caps = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.085, 6, 5),
+    new THREE.MeshStandardMaterial({ color: 0xffc65c, emissive: 0x9b5b12, emissiveIntensity: 0.7, roughness: 0.35 }),
+    markerCount
+  );
+  caps.name = 'supply-road-marker-reflectors';
+  for (let i = 0; i < markerCount; i++) {
+    const x = -90 + Math.floor(i / 2) * 15;
+    const z = i % 2 ? 4.25 : -4.25;
+    dummy.position.set(x, 0.72, z);
+    dummy.scale.set(1, 0.7, 1);
+    dummy.updateMatrix();
+    caps.setMatrixAt(i, dummy.matrix);
+  }
+  caps.instanceMatrix.needsUpdate = true;
+  scene.add(caps);
+  return { scrubInstances: placed, roadMarkers: markerCount };
+}
+const battlefieldDressing = addBattlefieldDressing();
+window.__BLUE_ALERTS_TERRAIN_DRESSING = Object.freeze(battlefieldDressing);
+
 
 // Visible construction pads: the grid is deliberately absent from the road corridor.
 function addBuildPadVisual(name, zMin, zMax) {
