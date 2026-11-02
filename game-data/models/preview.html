@@ -165,7 +165,7 @@ window.__BLUE_ALERTS_PREVIEW_QA__=Object.freeze({
     if(document.querySelector('#asset').value!=='tank')throw new Error('Tank surface A/B requires the tank preview.');
     const cameraPosition=camera.position.clone(),target=controls.target.clone();
     tankSurfaceFinishEnabled=!!enabled;build();
-    camera.position.copy(cameraPosition);controls.target.copy(target);controls.update();renderer.render(scene,camera);
+    camera.position.copy(cameraPosition);controls.target.copy(target);controls.update();
     return window.__BLUE_ALERTS_PREVIEW__();
   }
 });
