@@ -269,6 +269,8 @@ try {
   assert.ok(desktopKill.targetDead && desktopKill.targetRemoved && desktopKill.killsDelta === 1 && desktopKill.creditsDelta >= 50 && desktopKill.explosionSpawned && desktopKill.modelExplosions === desktopDeath.before.modelExplosions + 1, 'desktop unit destruction must remove the unit, award its kill/reward and add exactly one new procedural explosion');
   assert.ok(desktopKill.flashWasActive && desktopKill.flashHidden && desktopKill.flashTimer === 0,
     'desktop unit death must immediately hide its attached turret flash and clear its timer');
+  assert.ok(desktopKill.spawnedExplosionAnimationParts >= 20 && Number.isFinite(desktopKill.spawnedExplosionAnimationChecksum),
+    'desktop death explosion must cache its animated mesh parts before the frame loop');
   await desktop.bringToFront();
   try {
     await desktop.waitForFunction(({ frameCount, time, life, position }) => {
@@ -295,6 +297,11 @@ try {
   const desktopExplosionState = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
   const desktopExplosionIndex = desktopExplosionState.modelExplosionPositions.findIndex(p => Math.abs(p.x - desktopKill.targetPosition.x) < 0.001 && Math.abs(p.z - desktopKill.targetPosition.z) < 0.001);
   assert.ok(desktopExplosionIndex >= 0, 'desktop death explosion must remain attached to its original target position');
+  const desktopAnimationSnapshot = desktopExplosionState.modelExplosionAnimationSnapshots.find(p => Math.abs(p.x - desktopKill.targetPosition.x) < 0.001 && Math.abs(p.z - desktopKill.targetPosition.z) < 0.001);
+  assert.ok(desktopAnimationSnapshot && desktopAnimationSnapshot.partCount >= 20 && desktopAnimationSnapshot.profile === 'cached-parts-v1',
+    'desktop explosion must use its cached animation-part profile');
+  assert.notEqual(desktopAnimationSnapshot.checksum, desktopKill.spawnedExplosionAnimationChecksum,
+    'desktop cached explosion parts must visibly animate after spawn');
   console.log('DESKTOP_EXPLOSION_LIFECYCLE ' + JSON.stringify({ before: desktopKill, after: desktopExplosionState }));
   assert.ok(desktopExplosionState.started && !desktopExplosionState.gameOver && desktopExplosionState.time > desktopKill.time, 'desktop simulation clock must advance while the explosion is alive');
   assert.ok(desktopExplosionState.frameCount >= desktopKill.frameCount + 2 && desktopExplosionState.lastFrameDelta > 0, 'desktop requestAnimationFrame loop must continue after unit destruction');
@@ -617,6 +624,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileKill.targetDead && mobileKill.targetRemoved && mobileKill.killsDelta === 1 && mobileKill.creditsDelta >= 50 && mobileKill.explosionSpawned && mobileKill.modelExplosions === mobileDeath.before.modelExplosions + 1, 'mobile unit destruction must remove the unit, award its kill/reward and add exactly one new procedural explosion');
   assert.ok(mobileKill.flashWasActive && mobileKill.flashHidden && mobileKill.flashTimer === 0,
     'mobile unit death must immediately hide its attached turret flash and clear its timer');
+  assert.ok(mobileKill.spawnedExplosionAnimationParts >= 20 && Number.isFinite(mobileKill.spawnedExplosionAnimationChecksum),
+    'mobile death explosion must cache its animated mesh parts before the frame loop');
   await mobile.bringToFront();
   try {
     await mobile.waitForFunction(({ frameCount, time, life, position }) => {
@@ -646,6 +655,11 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileExplosionState.frameCount >= mobileKill.frameCount + 2 && mobileExplosionState.lastFrameDelta > 0, 'mobile requestAnimationFrame loop must continue after unit destruction');
   const mobileExplosionIndex = mobileExplosionState.modelExplosionPositions.findIndex(p => Math.abs(p.x - mobileKill.targetPosition.x) < 0.001 && Math.abs(p.z - mobileKill.targetPosition.z) < 0.001);
   assert.ok(mobileExplosionIndex >= 0 && mobileExplosionState.modelExplosionLives[mobileExplosionIndex] < mobileKill.spawnedExplosionLife, 'mobile death explosion simulation lifetime must advance');
+  const mobileAnimationSnapshot = mobileExplosionState.modelExplosionAnimationSnapshots.find(p => Math.abs(p.x - mobileKill.targetPosition.x) < 0.001 && Math.abs(p.z - mobileKill.targetPosition.z) < 0.001);
+  assert.ok(mobileAnimationSnapshot && mobileAnimationSnapshot.partCount >= 20 && mobileAnimationSnapshot.profile === 'cached-parts-v1',
+    'mobile explosion must use its cached animation-part profile');
+  assert.notEqual(mobileAnimationSnapshot.checksum, mobileKill.spawnedExplosionAnimationChecksum,
+    'mobile cached explosion parts must visibly animate after spawn');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
   const mobileCleanupStartedAt = Date.now();
   try {
@@ -660,6 +674,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     throw error;
   }
   const mobileClean = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  assert.equal(mobileClean.modelExplosionAnimationSnapshots.length, 0,
+    'mobile VFX cleanup must release every cached explosion animation set');
   const mobileCleanupElapsedMs = Date.now() - mobileCleanupStartedAt;
   console.log('MOBILE_VFX_CLEANUP_PERFORMANCE ' + JSON.stringify({
     elapsedMs: mobileCleanupElapsedMs,
