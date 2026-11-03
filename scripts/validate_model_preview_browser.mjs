@@ -74,6 +74,12 @@ try {
   const baselineMetrics=await baselinePage.evaluate(()=>({canvas:!!document.querySelector('#view canvas'),width:document.querySelector('#view canvas')?.width||0,height:document.querySelector('#view canvas')?.height||0,asset:document.querySelector('#asset').value}));
   assert.ok(baselineMetrics.canvas && baselineMetrics.width>0 && baselineMetrics.height>0,'base-branch turret must render a WebGL canvas');
   await baselinePage.screenshot({path:output+'/baseline-turret.png',fullPage:true});
+  await baselinePage.selectOption('#asset','tank');
+  await baselinePage.waitForTimeout(900);
+  const baselineTankMetrics=await baselinePage.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.ok(baselineTankMetrics.canvas && baselineTankMetrics.asset==='tank' && baselineTankMetrics.meshCount>0,
+    'frozen main-branch tank must render before the new hull is compared');
+  await baselinePage.screenshot({path:output+'/baseline-tank-desktop.png',fullPage:true});
   await baselinePage.selectOption('#asset','infantry');
   await baselinePage.waitForTimeout(650);
   await baselinePage.screenshot({path:output+'/baseline-infantry-desktop.png',fullPage:true});
@@ -82,6 +88,10 @@ try {
   await baselinePage.click('#reset');
   await baselinePage.waitForTimeout(350);
   await baselinePage.screenshot({path:output+'/baseline-turret-mobile-390x844.png',fullPage:true});
+  await baselinePage.selectOption('#asset','tank');
+  await baselinePage.click('#reset');
+  await baselinePage.waitForTimeout(350);
+  await baselinePage.screenshot({path:output+'/baseline-tank-mobile-390x844.png',fullPage:true});
   await baselinePage.selectOption('#asset','infantry');
   await baselinePage.waitForTimeout(350);
   await baselinePage.screenshot({path:output+'/baseline-infantry-mobile-390x844.png',fullPage:true});
@@ -110,17 +120,18 @@ try {
   assert.deepEqual(initial.detailInstances,{engineGrilles:7,reactiveArmorTiles:8,returnRollers:6,roadWheels:12,wheelHubs:12,wheelHubCaps:12,smokeDischargers:4,trackLinks:64,closedTrackBelts:2,faction:{turretCheeks:2,turretSidePlates:0,smokeBanks:0}},'repeated chassis and closed track details must be batched');
   assert.ok(initial.cameraDistance<9,'desktop tank preview must frame the softened armor at a useful scale');
   assert.ok(initial.beveledArmorPartCount>=12,'blue tank must use bevelled armor geometry for its major silhouette and repeated plates');
-  assert.equal(initial.hullGeometryProfile,'SLOPED_CAST_HULL_PROFILE_V1','tank hull must use a cast multi-slope armor shell');
+  assert.equal(initial.hullGeometryProfile,'CAST_MULTI_STATION_HULL_V2','tank hull must use the continuous seven-station cast shell');
+  assert.equal(initial.hullStationCount,7,'tank hull must retain all seven longitudinal shape stations');
   assert.equal(initial.trackGeometryProfile,'CLOSED_STADIUM_TREAD_LOOP_V1','tank must use continuous closed track belts');
   assert.equal(initial.turretGeometryProfile,'LOW_PROFILE_CAST_TURRET_V1','tank turret must use a faction-specific cast profile');
   assert.equal(initial.trackLinkCount,64,'both track loops must carry 32 visible tread links each');
   assert.equal(initial.detailInstances?.closedTrackBelts,2,'left and right closed track belts must both render');
   assert.equal(initial.detailInstances?.trackLinks,64,'track link diagnostics must match the visible instanced links');
-  for(const name of ['lower-hull','upper-hull','front-glacis','engine-deck','track-belt-loop-left','track-belt-loop-right','cannon-mantlet','reactive-armor-tiles-instanced','side-skirt-armor-instanced','turret-body','blue-sentinel-crown','blue-turret-cheeks-instanced']) {
+  for(const name of ['cast-hull-shell','front-glacis','engine-deck','track-belt-loop-left','track-belt-loop-right','cannon-mantlet','reactive-armor-tiles-instanced','side-skirt-armor-instanced','turret-body','blue-sentinel-crown','blue-turret-cheeks-instanced']) {
     assert.ok(initial.beveledArmorParts.includes(name),'blue tank must render bevelled armor part: '+name);
   }
   assert.ok(initial.triangleCount<5000,'bevelled tank geometry must remain within the preview triangle budget');
-  for(const name of ['lower-hull','upper-hull','front-glacis','track-belt-loop-left','track-belt-loop-right','cannon-mantlet','engine-deck-grilles-instanced','reactive-armor-tiles-instanced','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheeks-instanced','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
+  for(const name of ['cast-hull-shell','front-glacis','track-belt-loop-left','track-belt-loop-right','cannon-mantlet','engine-deck-grilles-instanced','reactive-armor-tiles-instanced','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheeks-instanced','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
   await page.screenshot({path:output+'/desktop-blue-sentinel-tank.png',fullPage:true});
 
   // Both faction riflemen must render their own equipment silhouette and live gait rig.
@@ -205,7 +216,8 @@ try {
   const redTank=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(redTank.team,'red');
   assert.equal(redTank.factionProfile,'RED_BASTION','red faction must use its reinforced high turret signature');
-  assert.equal(redTank.hullGeometryProfile,'SLOPED_CAST_HULL_PROFILE_V1');
+  assert.equal(redTank.hullGeometryProfile,'CAST_MULTI_STATION_HULL_V2');
+  assert.equal(redTank.hullStationCount,7);
   assert.equal(redTank.trackGeometryProfile,'CLOSED_STADIUM_TREAD_LOOP_V1');
   assert.equal(redTank.turretGeometryProfile,'LOW_PROFILE_CAST_TURRET_V1');
   assert.equal(redTank.trackLinkCount,64);
@@ -213,12 +225,12 @@ try {
   assert.equal(redTank.wheelBoltInstances,60);
   assert.ok(redTank.meshCount<=45 && redTank.drawCalls<=60,'red tank must share the same mobile-friendly draw-call budget');
   assert.ok(redTank.beveledArmorPartCount>=12,'red tank must use bevelled armor geometry');
-  for(const name of ['lower-hull','upper-hull','front-glacis','turret-body','red-bastion-roof-plate','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) {
+  for(const name of ['cast-hull-shell','front-glacis','turret-body','red-bastion-roof-plate','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) {
     assert.ok(redTank.beveledArmorParts.includes(name),'red tank must render bevelled armor part: '+name);
   }
   assert.ok(redTank.triangleCount<5000,'red bevelled tank geometry must remain within the preview triangle budget');
   assert.deepEqual(redTank.detailInstances.faction,{turretCheeks:2,turretSidePlates:2,smokeBanks:2},'red reinforced turret details must be instanced');
-  for(const name of ['lower-hull','upper-hull','front-glacis','track-belt-loop-left','track-belt-loop-right','cannon-mantlet','engine-deck-grilles-instanced','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
+  for(const name of ['cast-hull-shell','front-glacis','track-belt-loop-left','track-belt-loop-right','cannon-mantlet','engine-deck-grilles-instanced','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
   assert.notEqual(redTank.factionProfile,initial.factionProfile,'factions must not share the same visual profile');
   await page.screenshot({path:output+'/desktop-red-bastion-tank.png',fullPage:true});
   await page.selectOption('#team','blue');
@@ -294,7 +306,7 @@ try {
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
-  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
+  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','baseline-tank-desktop.png','baseline-tank-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
   for(const file of files) assert.ok((await stat(output+'/'+file)).size>10000,'screenshot must contain rendered evidence: '+file);
   console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files},null,2));
 } catch(error) {

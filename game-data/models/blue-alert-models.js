@@ -131,6 +131,70 @@ const createTrackLoopGeometry = (THREE, halfStraight, radius, depth) => {
   return geometry;
 };
 
+const createCastHullGeometry = (THREE, stations) => {
+  const ringSize = 6;
+  const positions = [];
+  const uvs = [];
+  const hullIndices = [];
+  const glacisIndices = [];
+  const ringFor = station => {
+    const [x,bottomY,bottomWidth,shoulderY,shoulderWidth,deckY,deckWidth] = station;
+    return [
+      [x,bottomY,-bottomWidth],
+      [x,bottomY,bottomWidth],
+      [x,shoulderY,shoulderWidth],
+      [x,deckY,deckWidth],
+      [x,deckY,-deckWidth],
+      [x,shoulderY,-shoulderWidth]
+    ];
+  };
+  for (const station of stations) {
+    const x = station[0];
+    ringFor(station).forEach((point,index) => {
+      positions.push(...point);
+      uvs.push((x + 1.4) / 2.8, index / ringSize);
+    });
+  }
+  const capCenters = [stations[0],stations[stations.length - 1]].map(station => {
+    const ring = ringFor(station);
+    const y = ring.reduce((sum,point) => sum + point[1],0) / ring.length;
+    const z = ring.reduce((sum,point) => sum + point[2],0) / ring.length;
+    positions.push(station[0],y,z);
+    uvs.push((station[0] + 1.4) / 2.8,0.5);
+    return positions.length / 3 - 1;
+  });
+  for (let segment = 0; segment < stations.length - 1; segment++) {
+    for (let edgeIndex = 0; edgeIndex < ringSize; edgeIndex++) {
+      const a = segment * ringSize + edgeIndex;
+      const b = segment * ringSize + (edgeIndex + 1) % ringSize;
+      const c = (segment + 1) * ringSize + (edgeIndex + 1) % ringSize;
+      const d = (segment + 1) * ringSize + edgeIndex;
+      const target = edgeIndex === 3 && segment >= 4 ? glacisIndices : hullIndices;
+      target.push(a,c,b,a,d,c);
+    }
+  }
+  const endBase = (stations.length - 1) * ringSize;
+  for (let edgeIndex = 0; edgeIndex < ringSize; edgeIndex++) {
+    const next = (edgeIndex + 1) % ringSize;
+    hullIndices.push(capCenters[0],edgeIndex,next);
+    hullIndices.push(capCenters[1],endBase + next,endBase + edgeIndex);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setIndex([...hullIndices,...glacisIndices]);
+  geometry.addGroup(0,hullIndices.length,0);
+  geometry.addGroup(hullIndices.length,glacisIndices.length,1);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  geometry.userData.beveledArmor = true;
+  geometry.userData.armoredProfile = true;
+  geometry.userData.castHullShell = true;
+  geometry.userData.hullStationCount = stations.length;
+  return geometry;
+};
+
 export function createTank(THREE, options={}) {
   const { team='blue', variant='main-battle-tank', scale=1 } = options;
   const isRed = team === 'red';
@@ -167,14 +231,25 @@ export function createTank(THREE, options={}) {
     return mesh;
   };
 
-  // Cast, multi-slope hull shells replace the old rectangular chassis blocks.
-  createArmoredProfileMesh(THREE,g,'lower-hull',[
-    [-1.34,.08],[1.34,.08],[1.18,.27],[.93,.53],[.56,.58],[-.88,.54],[-1.26,.30]
-  ],1.48,hull,[0,.23,0],.05);
-  createArmoredProfileMesh(THREE,g,'upper-hull',[
-    [-.96,.05],[.80,.05],[1.00,.17],[.78,.40],[.46,.47],[-.68,.44],[-.96,.22]
-  ],1.18,armor,[-.12,.66,0],.04);
-  beveledBox(THREE,g,'front-glacis',[.72,.2,1.22],[.82,.72,0],heavyArmor,[0,0,-.34],.028);
+  // A single cast shell replaces the stacked hull blocks. Seven longitudinal
+  // stations form the rear taper, shoulder transitions and integrated front glacis.
+  const hullStations = [
+    [-1.38,.20,.56,.56,.65,.82,.48],
+    [-1.20,.20,.64,.67,.73,1.03,.55],
+    [-.88,.20,.68,.72,.76,1.12,.57],
+    [-.42,.20,.69,.74,.77,1.13,.58],
+    [.50,.20,.69,.74,.77,1.13,.58],
+    [.82,.20,.67,.65,.74,.94,.54],
+    [1.32,.20,.62,.30,.66,.36,.42]
+  ];
+  const hullGeometry = createCastHullGeometry(THREE,hullStations);
+  const hullShell = new THREE.Mesh(hullGeometry,[hull,heavyArmor]);
+  hullShell.name = 'cast-hull-shell';
+  hullShell.userData.mergedPartNames = ['cast-hull-shell','front-glacis'];
+  hullShell.userData.mergedBeveledPartNames = ['cast-hull-shell','front-glacis'];
+  hullShell.castShadow = true;
+  hullShell.receiveShadow = true;
+  g.add(hullShell);
   beveledBox(THREE,g,'engine-deck',[.76,.13,.98],[-.82,1.105,0],dark,null,.018);
 
   const grilleTransforms=Array.from({length:7},(_,i)=>({position:[-1.12+i*.1,1.18,0]}));
@@ -339,7 +414,8 @@ export function createTank(THREE, options={}) {
 
   g.userData={
     kind:'vehicle',unitType:variant,team,turret,factionProfile,
-    hullGeometryProfile:'SLOPED_CAST_HULL_PROFILE_V1',
+    hullGeometryProfile:'CAST_MULTI_STATION_HULL_V2',
+    hullStationCount:hullStations.length,
     trackGeometryProfile:'CLOSED_STADIUM_TREAD_LOOP_V1',
     turretGeometryProfile:'LOW_PROFILE_CAST_TURRET_V1',
     trackLinkCount:shoeTransforms.length,
@@ -360,7 +436,7 @@ export function createTank(THREE, options={}) {
   };
   const beveledArmorParts = [];
   g.traverse(object => {
-    if (object.isMesh && object.geometry?.userData?.beveledArmor) beveledArmorParts.push(object.name);
+    if (object.isMesh && object.geometry?.userData?.beveledArmor) beveledArmorParts.push(...(object.userData?.mergedBeveledPartNames || [object.name]));
   });
   g.userData.beveledArmorPartCount = beveledArmorParts.length;
   g.userData.beveledArmorParts = beveledArmorParts;
