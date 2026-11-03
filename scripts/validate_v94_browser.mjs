@@ -195,6 +195,12 @@ try {
     desktopMetrics.terrain.anisotropy <= 2 &&
     desktopMetrics.terrain.normalStrength >= 1.15,
     'desktop terrain must expose deterministic 512px PBR maps with bounded sampling and authored relief strength');
+  assert.ok(desktopMetrics.terrain.surfaceCoverage?.dry >= 0.45 &&
+    desktopMetrics.terrain.surfaceCoverage?.soil >= 0.12 &&
+    desktopMetrics.terrain.surfaceCoverage?.stone >= 0.004,
+    'desktop terrain must contain deterministic dry-grass, compacted-soil and exposed-stone strata: ' +
+      JSON.stringify(desktopMetrics.terrain.surfaceCoverage));
+  console.log('DESKTOP_FIELD_SURFACE_COVERAGE ' + JSON.stringify(desktopMetrics.terrain.surfaceCoverage));
   const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
   assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
   assert.equal(missionInitial.deliveredOre, 0, 'starting credits and ore in the field must not count as delivered resources');
@@ -652,6 +658,12 @@ try {
     mobileMetrics.terrain.anisotropy <= 2 &&
     mobileMetrics.terrain.normalStrength >= 1.15,
     'mobile terrain must use deterministic 256px albedo, normal and roughness maps with capped anisotropy and authored relief strength');
+  assert.ok(mobileMetrics.terrain.surfaceCoverage?.dry >= 0.45 &&
+    mobileMetrics.terrain.surfaceCoverage?.soil >= 0.12 &&
+    mobileMetrics.terrain.surfaceCoverage?.stone >= 0.004,
+    'mobile terrain must contain deterministic dry-grass, compacted-soil and exposed-stone strata: ' +
+      JSON.stringify(mobileMetrics.terrain.surfaceCoverage));
+  console.log('MOBILE_FIELD_SURFACE_COVERAGE ' + JSON.stringify(mobileMetrics.terrain.surfaceCoverage));
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&
