@@ -86,6 +86,16 @@ async function loadGame(page, options = {}) {
   });
   assert.ok(startupState.canvas && !startupState.fallback && !startupState.runtimeError && !startupState.startupError,
     '3D startup must complete without fallback or error UI: ' + JSON.stringify(startupState));
+  if (options.freezeCombatAtStart) {
+    await page.waitForFunction(
+      () => typeof window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat === 'function',
+      null,
+      { timeout: 10000 }
+    );
+    const frozen = await page.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.freezeNewCombat());
+    assert.equal(frozen?.combatSuppressed, true,
+      'mobile QA must suppress autonomous combat before the simulation starts');
+  }
   await page.locator('#btnStart').click();
   await page.waitForFunction(() => document.getElementById('startOverlay')?.classList.contains('hidden'));
   await page.waitForTimeout(1200);
@@ -555,7 +565,7 @@ try {
     isMobile: true,
     hasTouch: true
   });
-  await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true });
+  await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true, freezeCombatAtStart: true });
   const mobileMetrics = await metrics(mobile);
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
@@ -816,6 +826,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     throw error;
   }
   const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+  assert.equal(mobileCombatBefore?.combatSuppressed, true,
+    'mobile QA must remain isolated from autonomous combat after the early freeze');
   assert.ok(mobileCombatBefore?.livingBlueCombatUnits > 0 && mobileCombatBefore?.livingRedCombatUnits > 0,
     'mobile combat QA must retain live units on both factions after autonomous fire is drained');
   assert.ok(mobileCombatBefore.started && !mobileCombatBefore.gameOver,
