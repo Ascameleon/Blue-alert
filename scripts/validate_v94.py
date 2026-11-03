@@ -9,6 +9,7 @@ import tempfile
 HTML = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("BLUE_ALERTS_v94_ASSET_INTEGRATION.html")
 MODEL_LIBRARY = Path("game-data/models/blue-alert-models.js")
 BROWSER_TEST = Path("scripts/validate_v94_browser.mjs")
+WORKFLOW = Path(".github/workflows/openrts-build.yml")
 
 
 class ScriptCollector(HTMLParser):
@@ -63,6 +64,17 @@ def main():
         raise SystemExit(f"FAIL: {HTML} is missing")
     if not MODEL_LIBRARY.is_file():
         raise SystemExit(f"FAIL: {MODEL_LIBRARY} is missing")
+    if not WORKFLOW.is_file():
+        raise SystemExit(f"FAIL: {WORKFLOW} is missing")
+
+    workflow_text = WORKFLOW.read_text(encoding="utf-8")
+    readiness_deadline_index = workflow_text.find("readiness_deadline=$((SECONDS + 60))")
+    controller_ready_index = workflow_text.find('grep -q "battlefield controller online"')
+    runtime_ready_index = workflow_text.find('grep -q "BLUE ALERTS runtime loaded 12 units"')
+    movement_deadline_index = workflow_text.find("movement_deadline=$((SECONDS + 20))")
+    if not (0 <= readiness_deadline_index < controller_ready_index < movement_deadline_index and
+            0 <= readiness_deadline_index < runtime_ready_index < movement_deadline_index):
+        raise SystemExit("FAIL: OpenRTS movement timeout must start only after the runtime and battlefield controller are ready")
 
     source = HTML.read_text(encoding="utf-8")
     lower = source.lower()
@@ -90,7 +102,10 @@ def main():
         "terrainSurfaceTextures.albedo",
                         "textureResolution: terrainSurfaceTextures.size",
         "textureChecksum: terrainSurfaceTextures.checksum",
-        "surfaceMode: 'procedural-albedo-grain'",
+        "surfaceMode: 'procedural-albedo-normal-roughness'",
+        "terrainMaterial.normalMap = terrainSurfaceTextures.normal",
+        "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness",
+        "setMicroRelief(enabled)",
         "function createLayeredTreeFoliageGeometry",
         "battlefield-trees-trunks-instanced",
         "battlefield-trees-foliage-instanced",
@@ -202,10 +217,66 @@ def main():
     terrain_section = source[terrain_start:terrain_end]
     if "Math.random()" in terrain_section:
         raise SystemExit("FAIL: terrain prop placement must be deterministic")
-    if "vertexColors: true" not in terrain_section:
-        raise SystemExit("FAIL: terrain must use deterministic vertex color variation")
+    if ("vertexColors: true" not in terrain_section or
+            "terrainBaselineColors" not in terrain_section or
+            "fieldColor.toArray(terrainColors, i * 3);" not in terrain_section or
+            "terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));" not in terrain_section):
+        raise SystemExit("FAIL: terrain must keep an authored macro vertex field with an accepted-mainline A/B baseline")
     if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
+    if "terrainMaterial.normalMap = terrainSurfaceTextures.normal" not in terrain_section or "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness" not in terrain_section:
+        raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
+    if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
+        raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
+    required_field_surface = (
+        "new THREE.PlaneGeometry(200, 160, 120, 96)",
+        "const terrainBaselineColors = new Float32Array",
+        "const terrainFieldCoverage = {",
+        "const terrainColorChecksum = colors =>",
+        "const fieldMix = broad * 0.68 + medium * 0.32;",
+        "const dry = terrainSmoothstep(0.56, 0.69, fieldMix);",
+        "const soil = terrainSmoothstep(0.62, 0.74,",
+        "const exposedStone = terrainSmoothstep(0.78, 0.90,",
+        "fieldColor.toArray(terrainColors, i * 3);",
+        "terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));",
+        "terrainBaselineColorChecksum",
+        "terrainFieldColorChecksum",
+        "setFieldStrata(enabled)",
+        "terrainMaterial.normalScale.set(0.92, 0.92)",
+        "setMicroRelief(enabled)",
+        "* 3.0;",
+        "const micro = terrainNoise(",
+        "const grainNoise = terrainNoise(",
+        "const fiberPatch = terrainSmoothstep(0.22, 0.68, micro);",
+        "const grassFiber = Math.pow(Math.max(0, fiberWave), 3.2) * fiberPatch *",
+        "const soilGrain = terrainSmoothstep(",
+        "const stoneGrain = terrainSmoothstep(",
+        "heightField[py * size + px] = micro * 0.18 + grainNoise * 0.12 +",
+        "const dryTint = dry * 0.16;",
+        "const soilTint = soil * 0.30;",
+        "const stoneTint = exposedStone * 0.22;",
+        "const fiberTone = grassFiber * 18;",
+        "const soilTone = soilGrain * 20;",
+        "const stoneTone = stoneGrain * 14;",
+        "const albedoRed = channel(240 + dryTint * 5 - soilTint * 72 + stoneTint * 6 +",
+        "const albedoGreen = channel(242 - dryTint * 28 - soilTint * 86 + stoneTint * 4 +",
+        "const albedoBlue = channel(234 - dryTint * 45 - soilTint * 78 + stoneTint * 8 +",
+        "let redSum = 0, greenSum = 0, blueSum = 0;",
+        "grassFiber: grassFiberSamples / (size * size)",
+        "soilGrain: soilGrainSamples / (size * size)",
+        "stoneGrain: stoneGrainSamples / (size * size)",
+        "createTerrainSurfaceTextures(isMobile ? 256 : 512)",
+        "meanAlbedo: {",
+        "surfaceCoverage: terrainSurfaceTextures.coverage",
+        "surfaceAlbedo: terrainSurfaceTextures.meanAlbedo",
+        "meshResolution: { widthSegments: terrainGeometry.parameters.widthSegments, heightSegments: terrainGeometry.parameters.heightSegments }",
+        "vertexTint: 'authored-field-strata'",
+        "fieldStrataMode: 'domain-warped-vertex-color'",
+        "normalField: 'microstructure-only',"
+    )
+    missing_field_surface = [token for token in required_field_surface if token not in terrain_section]
+    if missing_field_surface:
+        raise SystemExit("FAIL: authored field strata, PBR response and measurable coverage are incomplete: " + ", ".join(missing_field_surface))
 
     tree_start = source.index("function createLayeredTreeFoliageGeometry()")
     tree_end = source.index("const treeCapacity", tree_start)
@@ -329,6 +400,49 @@ def main():
         "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
         "desktop-v94-industrial-yard.png",
         "desktop-v94-terrain-surface.png",
+        "mobileTerrainFocus",
+        "mobileTerrainBaseline",
+        "mobileTerrainDetail",
+        "const mobileCombatStart = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());",
+        "MOBILE_COMBAT_START ",
+        "mobileCombatBefore?.combatSuppressed",
+        "toast.style.opacity = '0'",
+        "mobile-v94-terrain-microrelief-baseline-390x844.png",
+        "mobile-v94-terrain-microrelief-detail-390x844.png",
+        "surfaceCoverage?.grassFiber >= 0.08",
+        "surfaceCoverage?.soilGrain >= 0.004",
+        "surfaceCoverage?.stoneGrain >= 0.0005",
+        "textureResolution === 512",
+        "mobileMetrics.terrain.textureResolution === 256",
+        "vertexCount >= 11000",
+        "widthSegments === 120",
+        "heightSegments === 96",
+        "normalStrength >= 0.90",
+        "normalStrength <= 0.95",
+        "desktop-v94-gameplay-field-baseline.png",
+        "desktop-v94-gameplay-field-detail.png",
+        "mobile-v94-gameplay-field-baseline-390x844.png",
+        "mobile-v94-gameplay-field-detail-390x844.png",
+        "terrainFocus?.textureResolution, 512",
+        "mobileTerrainFocus?.textureResolution, 256",
+        "vertexTint === 'authored-field-strata'",
+        "fieldStrataMode === 'domain-warped-vertex-color'",
+        "fieldCoverage?.dry >= 0.25",
+        "fieldCoverage?.soil >= 0.10",
+        "fieldCoverage?.stone >= 0.002",
+        "surfaceAlbedo?.r >= 210",
+        "surfaceAlbedo?.g >= 210",
+        "surfaceAlbedo?.b >= 200",
+        "setFieldStrata(false)",
+        "setFieldStrata(true)",
+        "desktop-v94-field-strata-baseline.png",
+        "desktop-v94-field-strata-detail.png",
+        "mobile-v94-field-strata-baseline-390x844.png",
+        "mobile-v94-field-strata-detail-390x844.png",
+        "procedural-albedo-normal-roughness",
+        "normalField === 'microstructure-only'",
+        "normalStrength >= 0.90",
+        "normalStrength <= 0.95",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:

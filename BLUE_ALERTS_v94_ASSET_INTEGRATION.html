@@ -563,65 +563,191 @@ function insideBuildZone(x, z, radius = 0) {
   const southPad = z - radius >= BUILD_ZONE.roadHalfWidth;
   return northPad || southPad;
 }
-const terrainGeometry = new THREE.PlaneGeometry(200, 160, 60, 48);
+const terrainGeometry = new THREE.PlaneGeometry(200, 160, 120, 96);
 const terrainPositions = terrainGeometry.attributes.position;
 const terrainColors = new Float32Array(terrainPositions.count * 3);
-const grassColor = new THREE.Color(0x3d5635);
-const dryColor = new THREE.Color(0x746b43);
-const shadedColor = new THREE.Color(0x29422f);
-const soilColor = new THREE.Color(0x62513d);
+const terrainBaselineColors = new Float32Array(terrainPositions.count * 3);
 const terrainSmoothstep = (a, b, value) => {
   const t = Math.max(0, Math.min(1, (value - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
+// Keep the accepted V94 field as an A/B baseline. The default field adds
+// domain-warped dry grass, compacted soil and sparse exposed stone at the
+// actual terrain-vertex scale; the texture map below is only microstructure.
+const grassColor = new THREE.Color(0x3d5635);
+const dryColor = new THREE.Color(0x746b43);
+const shadedColor = new THREE.Color(0x29422f);
+const soilColor = new THREE.Color(0x62513d);
+const stoneColor = new THREE.Color(0x777568);
+let dryFieldVertices = 0, soilFieldVertices = 0, stoneFieldVertices = 0;
+const terrainColorChecksum = colors => {
+  let checksum = 2166136261;
+  for (let i = 0; i < colors.length; i++) {
+    checksum = Math.imul(checksum ^ Math.round(colors[i] * 65535), 16777619);
+  }
+  return checksum >>> 0;
+};
 for (let i = 0; i < terrainPositions.count; i++) {
   const x = terrainPositions.getX(i);
   const z = terrainPositions.getY(i);
-  const broad = terrainNoise(x, z, 0.035);
-  const medium = terrainNoise(x + 13, z - 7, 0.11);
-  const fine = terrainNoise(x - 5, z + 11, 0.42);
-  const moisture = broad * 0.62 + medium * 0.27 + fine * 0.11;
-  const color = grassColor.clone();
-  color.lerp(dryColor, terrainSmoothstep(0.57, 0.82, moisture) * 0.42);
-  color.lerp(shadedColor, terrainSmoothstep(0.12, 0.42, 1 - moisture) * 0.28);
+  const warpX = (terrainNoise(x + 31, z - 17, 0.035) - 0.5) * 9;
+  const warpZ = (terrainNoise(x - 43, z + 29, 0.035) - 0.5) * 9;
+  const broad = terrainNoise(x + warpX + 29, z + warpZ - 17, 0.055);
+  const medium = terrainNoise(x - 11, z + 23, 0.14);
+  const fine = terrainNoise(x + 7, z - 5, 0.82);
+  const fieldMix = broad * 0.68 + medium * 0.32;
+  const dry = terrainSmoothstep(0.56, 0.69, fieldMix);
+  const soil = terrainSmoothstep(0.62, 0.74, medium * 0.58 + broad * 0.42) * (1 - dry * 0.58);
+  const exposedStone = terrainSmoothstep(0.78, 0.90,
+    medium * 0.52 + fine * 0.20 + terrainHash(i + 701, -307) * 0.28) *
+    (1 - soil * 0.72) * (1 - dry * 0.25);
+  if (dry > 0.32) dryFieldVertices++;
+  if (soil > 0.32) soilFieldVertices++;
+  if (exposedStone > 0.28) stoneFieldVertices++;
+
+  // Reconstruct the accepted mainline V94 color field for a controlled A/B.
+  const baseBroad = terrainNoise(x, z, 0.035);
+  const baseMedium = terrainNoise(x + 13, z - 7, 0.11);
+  const baseFine = terrainNoise(x - 5, z + 11, 0.42);
+  const moisture = baseBroad * 0.62 + baseMedium * 0.27 + baseFine * 0.11;
+  const baselineColor = grassColor.clone();
+  baselineColor.lerp(dryColor, terrainSmoothstep(0.57, 0.82, moisture) * 0.42);
+  baselineColor.lerp(shadedColor, terrainSmoothstep(0.12, 0.42, 1 - moisture) * 0.28);
   const roadShoulder = 1 - terrainSmoothstep(3.4, 7.8, Math.abs(z));
-  color.lerp(soilColor, roadShoulder * 0.24);
-  color.multiplyScalar(0.94 + fine * 0.12);
-  color.toArray(terrainColors, i * 3);
+  baselineColor.lerp(soilColor, roadShoulder * 0.24);
+  baselineColor.multiplyScalar(0.94 + baseFine * 0.12);
+  baselineColor.toArray(terrainBaselineColors, i * 3);
+
+  // Stronger but bounded macro color separation survives the normal RTS view.
+  const fieldColor = grassColor.clone();
+  fieldColor.lerp(dryColor, dry * 0.82);
+  fieldColor.lerp(soilColor, soil * 0.76);
+  fieldColor.lerp(stoneColor, exposedStone * 0.58);
+  fieldColor.lerp(shadedColor, terrainSmoothstep(0.12, 0.42, 1 - fieldMix) * 0.18);
+  fieldColor.lerp(soilColor, roadShoulder * 0.24);
+  fieldColor.multiplyScalar(0.96 + fine * 0.08);
+  fieldColor.toArray(terrainColors, i * 3);
 }
+const terrainFieldCoverage = {
+  dry: dryFieldVertices / terrainPositions.count,
+  soil: soilFieldVertices / terrainPositions.count,
+  stone: stoneFieldVertices / terrainPositions.count
+};
+const terrainBaselineColorChecksum = terrainColorChecksum(terrainBaselineColors);
+const terrainFieldColorChecksum = terrainColorChecksum(terrainColors);
 terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
 function createTerrainSurfaceTextures(size) {
   const albedoPixels = new Uint8Array(size * size * 4);
+  const roughnessPixels = new Uint8Array(size * size * 4);
+  const normalPixels = new Uint8Array(size * size * 4);
+  const heightField = new Float32Array(size * size);
   let checksum = 2166136261;
+  let redSum = 0, greenSum = 0, blueSum = 0;
+  let drySamples = 0, soilSamples = 0, stoneSamples = 0;
+  let grassFiberSamples = 0, soilGrainSamples = 0, stoneGrainSamples = 0;
   const channel = value => Math.max(0, Math.min(255, Math.round(value)));
   for (let py = 0; py < size; py++) {
     const worldZ = ((py + 0.5) / size - 0.5) * 160;
     for (let px = 0; px < size; px++) {
       const worldX = ((px + 0.5) / size - 0.5) * 200;
-      const broad = terrainNoise(worldX + 29, worldZ - 17, 0.075);
-      const medium = terrainNoise(worldX - 11, worldZ + 23, 0.32);
-      const fine = terrainNoise(worldX + 7, worldZ - 5, 1.25);
+      // Domain-warp the field strata so soil and dry-grass boundaries read as
+      // irregular natural patches instead of a soft, uniform noise wash.
+      const warpX = (terrainNoise(worldX + 31, worldZ - 17, 0.035) - 0.5) * 9;
+      const warpZ = (terrainNoise(worldX - 43, worldZ + 29, 0.035) - 0.5) * 9;
+      const broad = terrainNoise(worldX + warpX + 29, worldZ + warpZ - 17, 0.055);
+      const medium = terrainNoise(worldX - 11, worldZ + 23, 0.14);
+      const fine = terrainNoise(worldX + 7, worldZ - 5, 0.82);
+      const micro = terrainNoise(worldX + 17, worldZ - 29, 1.7);
+      const grainNoise = terrainNoise(worldX - 31, worldZ + 23, 3.4);
       const fleck = terrainHash(px + 701, py - 307);
-      const soil = terrainSmoothstep(0.48, 0.72, broad * 0.62 + medium * 0.38);
-      const exposedStone = terrainSmoothstep(0.70, 0.91, medium * 0.68 + fleck * 0.32) *
-        (1 - terrainSmoothstep(0.32, 0.62, broad));
-      const grain = (fine - 0.5) * 13 + (fleck - 0.5) * 9;
-      const warm = soil * 0.54;
-      const stony = exposedStone * 0.42;
+      const fieldMix = broad * 0.68 + medium * 0.32;
+      const dry = terrainSmoothstep(0.56, 0.69, fieldMix);
+      const soil = terrainSmoothstep(0.62, 0.74, medium * 0.58 + broad * 0.42) * (1 - dry * 0.58);
+      const exposedStone = terrainSmoothstep(0.78, 0.90, medium * 0.52 + fine * 0.20 + fleck * 0.28) *
+        (1 - soil * 0.72) * (1 - dry * 0.25);
+
+      // Fine grass fibers follow a gently changing wind direction. Soil grains
+      // and stone flecks use separate deterministic high-frequency fields.
+      const fiberAngle = 0.42 + (medium - 0.5) * 0.45;
+      const fiberWave = Math.sin((worldX * Math.cos(fiberAngle) +
+        worldZ * Math.sin(fiberAngle)) * 1.8 + (micro - 0.5) * 1.8);
+      const fiberPatch = terrainSmoothstep(0.22, 0.68, micro);
+      const grassFiber = Math.pow(Math.max(0, fiberWave), 3.2) * fiberPatch *
+        (1 - soil * 0.9) * (1 - exposedStone * 0.9);
+      const soilGrain = terrainSmoothstep(0.62, 0.82, micro * 0.58 + grainNoise * 0.42) * soil;
+      const stoneGrain = terrainSmoothstep(0.76, 0.92, grainNoise * 0.55 + fleck * 0.45) * exposedStone;
+      if (dry > 0.32) drySamples++;
+      if (soil > 0.32) soilSamples++;
+      if (exposedStone > 0.28) stoneSamples++;
+      if (grassFiber > 0.22) grassFiberSamples++;
+      if (soilGrain > 0.18) soilGrainSamples++;
+      if (stoneGrain > 0.15) stoneGrainSamples++;
+      const grain = (fine - 0.5) * 8 + (micro - 0.5) * 10 +
+        (grainNoise - 0.5) * 8 + (fleck - 0.5) * 4;
       const offset = (py * size + px) * 4;
-      const red = channel(240 + warm * 15 - stony * 7 + grain);
-      const green = channel(244 - warm * 17 - stony * 8 + grain * 0.72);
-      const blue = channel(235 - warm * 27 - stony * 3 + grain * 0.46);
-      albedoPixels[offset] = red;
-      albedoPixels[offset + 1] = green;
-      albedoPixels[offset + 2] = blue;
+
+      // Layered field materials retain their broad strata while adding readable
+      // grass fibers, compacted-soil grain and sparse limestone micro-flecks.
+      // Mid-value olive grass, dry straw, compacted soil and limestone keep
+      // the battlefield readable at the normal RTS camera distance.
+      // The macro field palette is authored in vertex colors above. Keep this
+      // albedo close to neutral so PBR grain cannot wash out the whole battlefield.
+      const dryTint = dry * 0.16;
+      const soilTint = soil * 0.30;
+      const stoneTint = exposedStone * 0.22;
+      const fiberTone = grassFiber * 18;
+      const soilTone = soilGrain * 20;
+      const stoneTone = stoneGrain * 14;
+      const albedoRed = channel(240 + dryTint * 5 - soilTint * 72 + stoneTint * 6 +
+        grain + fiberTone * 0.7 - soilTone * 0.65 + stoneTone * 0.2);
+      const albedoGreen = channel(242 - dryTint * 28 - soilTint * 86 + stoneTint * 4 +
+        grain * 0.72 + fiberTone * 0.45 - soilTone * 0.55 + stoneTone * 0.2);
+      const albedoBlue = channel(234 - dryTint * 45 - soilTint * 78 + stoneTint * 8 +
+        grain * 0.45 - fiberTone * 0.2 - soilTone * 0.35 + stoneTone * 0.65);
+      albedoPixels[offset] = albedoRed;
+      albedoPixels[offset + 1] = albedoGreen;
+      albedoPixels[offset + 2] = albedoBlue;
       albedoPixels[offset + 3] = 255;
+      redSum += albedoRed;
+      greenSum += albedoGreen;
+      blueSum += albedoBlue;
+
+      const roughness = channel(210 + soil * 18 + dry * 10 - exposedStone * 24 +
+        (micro - 0.5) * 10 + (grainNoise - 0.5) * 8 +
+        grassFiber * 10 + soilGrain * 12 + stoneGrain * 8);
+      roughnessPixels[offset] = roughness;
+      roughnessPixels[offset + 1] = roughness;
+      roughnessPixels[offset + 2] = roughness;
+      roughnessPixels[offset + 3] = 255;
+      // Keep broad field masks in albedo only; the normal field represents tactile microstructure.
+      heightField[py * size + px] = micro * 0.18 + grainNoise * 0.12 +
+        grassFiber * 0.15 + soilGrain * 0.13 + stoneGrain * 0.18;
 
       if ((px & 15) === 0 && (py & 3) === 0) {
-        checksum = Math.imul(checksum ^ red ^ (green << 8) ^ (blue << 16), 16777619);
+        checksum = Math.imul(checksum ^ albedoPixels[offset] ^
+          (albedoPixels[offset + 1] << 8) ^ (albedoPixels[offset + 2] << 16) ^ roughness, 16777619);
       }
     }
   }
+
+  // Tangent-space relief follows the authored strata and high-frequency material grain.
+  for (let py = 0; py < size; py++) {
+    const up = Math.max(0, py - 1), down = Math.min(size - 1, py + 1);
+    for (let px = 0; px < size; px++) {
+      const left = Math.max(0, px - 1), right = Math.min(size - 1, px + 1);
+      const dx = (heightField[py * size + right] - heightField[py * size + left]) * 3.0;
+      const dy = (heightField[down * size + px] - heightField[up * size + px]) * 3.0;
+      let nx = -dx, ny = -dy, nz = 1;
+      const length = Math.hypot(nx, ny, nz) || 1;
+      nx /= length; ny /= length; nz /= length;
+      const offset = (py * size + px) * 4;
+      normalPixels[offset] = channel((nx * 0.5 + 0.5) * 255);
+      normalPixels[offset + 1] = channel((ny * 0.5 + 0.5) * 255);
+      normalPixels[offset + 2] = channel((nz * 0.5 + 0.5) * 255);
+      normalPixels[offset + 3] = 255;
+    }
+  }
+
   const makeTexture = (pixels, colorSpace) => {
     const texture = new THREE.DataTexture(pixels, size, size, THREE.RGBAFormat);
     texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -629,7 +755,7 @@ function createTerrainSurfaceTextures(size) {
     texture.magFilter = THREE.LinearFilter;
     texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.generateMipmaps = true;
-    texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), isMobile ? 2 : 8);
+    texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);
     if (colorSpace) texture.colorSpace = colorSpace;
     texture.needsUpdate = true;
     return texture;
@@ -637,14 +763,32 @@ function createTerrainSurfaceTextures(size) {
   return {
     size,
     albedo: makeTexture(albedoPixels, THREE.SRGBColorSpace),
-    checksum: checksum >>> 0
+    normal: makeTexture(normalPixels, THREE.NoColorSpace),
+    roughness: makeTexture(roughnessPixels, THREE.NoColorSpace),
+    checksum: checksum >>> 0,
+    meanAlbedo: {
+      r: redSum / (size * size),
+      g: greenSum / (size * size),
+      b: blueSum / (size * size)
+    },
+    coverage: {
+      dry: drySamples / (size * size),
+      soil: soilSamples / (size * size),
+      stone: stoneSamples / (size * size),
+      grassFiber: grassFiberSamples / (size * size),
+      soilGrain: soilGrainSamples / (size * size),
+      stoneGrain: stoneGrainSamples / (size * size)
+    }
   };
 }
 const terrainSurfaceTextures = createTerrainSurfaceTextures(isMobile ? 256 : 512);
 const terrainMaterial = new THREE.MeshStandardMaterial({
-  color: 0xffffff, vertexColors: true, roughness: 1, metalness: 0
+  color: 0xffffff, vertexColors: true, roughness: 0.92, metalness: 0
 });
 terrainMaterial.map = terrainSurfaceTextures.albedo;
+terrainMaterial.normalMap = terrainSurfaceTextures.normal;
+terrainMaterial.normalScale.set(0.92, 0.92);
+terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness;
 terrainMaterial.needsUpdate = true;
 const ground = new THREE.Mesh(terrainGeometry, terrainMaterial);
 ground.name = 'terrain-ground';
@@ -655,11 +799,23 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   seed: 0x424c5545,
   vertexCount: terrainPositions.count,
   colorCount: terrainColors.length / 3,
+  meshResolution: { widthSegments: terrainGeometry.parameters.widthSegments, heightSegments: terrainGeometry.parameters.heightSegments },
   vertexColors: ground.material.vertexColors,
+  vertexTint: 'authored-field-strata',
+  fieldStrataMode: 'domain-warped-vertex-color',
+  fieldCoverage: terrainFieldCoverage,
+  baselineColorChecksum: terrainBaselineColorChecksum,
+  fieldColorChecksum: terrainFieldColorChecksum,
   albedoMap: !!terrainMaterial.map,
-  surfaceMode: 'procedural-albedo-grain',
+  surfaceMode: 'procedural-albedo-normal-roughness',
+  normalMap: !!terrainMaterial.normalMap,
+  roughnessMap: !!terrainMaterial.roughnessMap,
+  normalStrength: terrainMaterial.normalScale.x,
+  normalField: 'microstructure-only',
   textureResolution: terrainSurfaceTextures.size,
   textureChecksum: terrainSurfaceTextures.checksum,
+  surfaceCoverage: terrainSurfaceTextures.coverage,
+  surfaceAlbedo: terrainSurfaceTextures.meanAlbedo,
   anisotropy: terrainSurfaceTextures.albedo.anisotropy
 });
 window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
@@ -668,7 +824,45 @@ window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
     camDist = isMobile ? 14 : 19;
     return {
       textureResolution: terrainSurfaceTextures.size,
-      checksum: terrainSurfaceTextures.checksum
+      meshResolution: { widthSegments: terrainGeometry.parameters.widthSegments, heightSegments: terrainGeometry.parameters.heightSegments },
+      checksum: terrainSurfaceTextures.checksum,
+      surfaceAlbedo: terrainSurfaceTextures.meanAlbedo,
+      normalMap: !!terrainMaterial.normalMap,
+      roughnessMap: !!terrainMaterial.roughnessMap,
+      normalStrength: terrainMaterial.normalScale.x,
+      normalField: 'microstructure-only',
+      camera: { target: camTarget.toArray(), distance: camDist, yaw: camYaw, pitch: camPitch }
+    };
+  },
+  setFieldStrata(enabled) {
+    const active = !!enabled;
+    const colors = active ? terrainColors : terrainBaselineColors;
+    const colorAttribute = terrainGeometry.attributes.color;
+    if (colorAttribute.array !== colors) {
+      colorAttribute.array = colors;
+      colorAttribute.needsUpdate = true;
+    }
+    return {
+      enabled: active,
+      mode: active ? 'domain-warped-vertex-color' : 'accepted-mainline-baseline',
+      colorChecksum: active ? terrainFieldColorChecksum : terrainBaselineColorChecksum,
+      fieldCoverage: terrainFieldCoverage,
+      meshResolution: { widthSegments: terrainGeometry.parameters.widthSegments, heightSegments: terrainGeometry.parameters.heightSegments },
+      camera: { target: camTarget.toArray(), distance: camDist, yaw: camYaw, pitch: camPitch }
+    };
+  },
+  setMicroRelief(enabled) {
+    const active = !!enabled;
+    terrainMaterial.normalMap = active ? terrainSurfaceTextures.normal : null;
+    terrainMaterial.roughnessMap = active ? terrainSurfaceTextures.roughness : null;
+    terrainMaterial.normalScale.setScalar(active ? 0.85 : 0);
+    terrainMaterial.needsUpdate = true;
+    return {
+      enabled: active,
+      normalMap: !!terrainMaterial.normalMap,
+      roughnessMap: !!terrainMaterial.roughnessMap,
+      normalStrength: terrainMaterial.normalScale.x,
+      normalField: 'microstructure-only',
     };
   }
 });
