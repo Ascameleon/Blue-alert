@@ -213,8 +213,22 @@ def main():
         raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
-    if "terrainMaterial.normalScale.set(1.15, 1.15)" not in terrain_section or "setMicroRelief(enabled)" not in terrain_section or "* 3.4;" not in terrain_section or "const soil = terrainSmoothstep(0.41, 0.63, broad * 0.64 + medium * 0.36);" not in terrain_section or "const roughness = channel(202 + soil * 24 + exposedStone * 26 -" not in terrain_section:
-        raise SystemExit("FAIL: terrain field albedo, roughness and tangent-space relief must remain deterministic and A/B switchable")
+    required_field_surface = (
+        "terrainMaterial.normalScale.set(1.15, 1.15)",
+        "setMicroRelief(enabled)",
+        "* 3.4;",
+        "const warpX = (terrainNoise(",
+        "const warpZ = (terrainNoise(",
+        "const fieldMix = broad * 0.68 + medium * 0.32;",
+        "const dryMix = dry * 0.52;",
+        "const soilMix = soil * 0.62;",
+        "coverage: {",
+        "surfaceCoverage: terrainSurfaceTextures.coverage",
+        "0x65734f", "0x88764e", "0x405540", "0x705239",
+    )
+    missing_field_surface = [token for token in required_field_surface if token not in terrain_section]
+    if missing_field_surface:
+        raise SystemExit("FAIL: authored field strata, PBR response and measurable coverage are incomplete: " + ", ".join(missing_field_surface))
 
     tree_start = source.index("function createLayeredTreeFoliageGeometry()")
     tree_end = source.index("const treeCapacity", tree_start)
