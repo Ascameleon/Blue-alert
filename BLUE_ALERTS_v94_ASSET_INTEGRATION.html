@@ -656,7 +656,7 @@ function createTerrainSurfaceTextures(size) {
     texture.magFilter = THREE.LinearFilter;
     texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.generateMipmaps = true;
-    texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), isMobile ? 2 : 8);
+    texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);
     if (colorSpace) texture.colorSpace = colorSpace;
     texture.needsUpdate = true;
     return texture;
