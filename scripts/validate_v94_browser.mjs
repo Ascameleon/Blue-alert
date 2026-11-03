@@ -801,7 +801,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   try {
     await mobile.waitForFunction(sequence => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-      return state && state.impactSequence > sequence && state.impactRings > 0 && state.impactSparks > 0;
+      const event = state?.lastImpactEvent;
+      return state && event && event.id > sequence && event.ringCount === 1 && event.sparkCount >= 4;
     }, mobileShot.impactSequence, { timeout: 9000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
