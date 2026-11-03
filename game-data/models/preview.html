@@ -116,7 +116,7 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
   current?.traverse(object=>{
     const partNames=object.userData?.mergedPartNames || [object.name];
     for(const partName of partNames){
-      if(object.isMesh && (partName.includes('ballistic-') || partName.includes('respirator-') || partName.includes('helmet-') || partName.includes('soft-shoulder-guard') || partName.includes('low-profile-knee-pad'))) infantryArmorParts.push(partName);
+      if(object.isMesh && (partName.includes('ballistic-') || partName.includes('respirator-') || partName.includes('helmet-') || partName.includes('soft-shoulder-guard') || partName.includes('low-profile-knee-pad') || partName.includes('bastion-pauldron'))) infantryArmorParts.push(partName);
       if(object.isMesh && (partName==='front-glacis' || partName==='engine-deck-grilles-instanced' || partName==='reactive-armor-tiles-instanced' || partName==='track-shoe-instanced' || partName==='wheel-bolts-instanced' || partName.includes('blue-sentinel') || partName==='blue-turret-cheeks-instanced' || partName.includes('red-bastion') || partName==='red-turret-cheeks-instanced' || partName==='red-bastion-side-plates-instanced' || partName==='heavy-turret-reinforcements-instanced')) signatureParts.push(partName);
     }
   });

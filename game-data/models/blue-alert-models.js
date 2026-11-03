@@ -757,8 +757,8 @@ export function createInfantry(THREE, options={}) {
     thumb.name = label + '-glove-thumb';
     thumb.castShadow = true; hand.add(thumb);
     if (isRed) {
-      beveledBox(THREE, pivot, label + '-bastion-pauldron', [.17,.095,.15],
-        [side*.012,-.035,.025], accent, [0,0,side*-.08], .012);
+      beveledBox(THREE, pivot, label + '-bastion-pauldron', [.13,.075,.12],
+        [side*.012,-.035,.025], armor, [0,0,side*-.08], .012);
     } else {
       box(THREE, pivot, label + '-sentinel-shoulder-mark', [.10,.045,.022],
         [side*.012,-.045,.13], accent);

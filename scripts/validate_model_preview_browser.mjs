@@ -116,12 +116,15 @@ try {
   await page.waitForTimeout(450);
   const blueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(blueInfantry.factionProfile,'BLUE_SENTINEL_RIFLEMAN','blue infantry must use the Sentinel faction profile');
-  assert.equal(blueInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V2','blue infantry must render original fabric/ceramic surface maps');
+  assert.equal(blueInfantry.surfaceFinish,'MATTE_FIELDWEAVE_PLATE_CARRIER_V3','blue infantry must render original fabric/ceramic surface maps');
   assert.ok(blueInfantry.surfaceTextureCount>=7 && blueInfantry.surfaceMaterialCount>=5,
     'blue infantry must bind cached color, roughness and micro-relief maps to its PBR materials');
-  assert.equal(blueInfantry.headScale,.82,'infantry head/helmet silhouette must use the corrected human proportion');
-  assert.equal(blueInfantry.bodyGeometryProfile,'ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1',
+  assert.equal(blueInfantry.headScale,.74,'infantry head/helmet silhouette must use the corrected human proportion');
+  assert.equal(blueInfantry.bodyGeometryProfile,'FIELD_INFANTRY_HUMAN_PROPORTIONS_V2',
     'infantry torso and limbs must use tapered anatomical loft geometry');
+  assert.equal(blueInfantry.helmetProfile,'LOW_PROFILE_BALLISTIC_HELMET_GOGGLES_V2');
+  assert.equal(blueInfantry.faceProtectionProfile,'BALLISTIC_BALACLAVA_COMPACT_RESPIRATOR_V2');
+  assert.equal(blueInfantry.uniformProfile,'MATTE_FIELD_UNIFORM_PLATE_CARRIER_V2');
   assert.equal(blueInfantry.animationJointProfile,'PELVIS_SHOULDER_ELBOW_HIP_KNEE_ANKLE_V2',
     'infantry must expose pelvis, shoulder, elbow, hip, knee and ankle articulation');
   assert.equal(blueInfantry.locomotionProfile,'PLANTED_FOOT_WEIGHT_SHIFT_V1',
@@ -178,12 +181,18 @@ try {
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION_RIFLEMAN',null,{timeout:10000});
   await page.waitForTimeout(350);
   const redInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
-  assert.equal(redInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V2','red infantry must share the same textured surface pipeline');
+  assert.equal(redInfantry.surfaceFinish,'MATTE_FIELDWEAVE_PLATE_CARRIER_V3','red infantry must share the same textured surface pipeline');
   assert.ok(redInfantry.surfaceTextureCount>=7 && redInfantry.surfaceMaterialCount>=5,'red infantry PBR maps must be bound');
+  assert.equal(redInfantry.headScale,.74,'red infantry must use the same corrected human proportions');
+  assert.equal(redInfantry.bodyGeometryProfile,'FIELD_INFANTRY_HUMAN_PROPORTIONS_V2');
+  assert.equal(redInfantry.helmetProfile,'LOW_PROFILE_BALLISTIC_HELMET_GOGGLES_V2');
+  assert.equal(redInfantry.faceProtectionProfile,'BALLISTIC_BALACLAVA_COMPACT_RESPIRATOR_V2');
+  assert.equal(redInfantry.uniformProfile,'MATTE_FIELD_UNIFORM_PLATE_CARRIER_V2');
   assert.ok(redInfantry.namedParts.includes('bastion-brow-guard') &&
-    redInfantry.namedParts.includes('bastion-jaw-guard') &&
+    redInfantry.namedParts.includes('ballistic-balaclava-face-wrap') &&
+    redInfantry.namedParts.includes('low-profile-respirator-shell') &&
     redInfantry.namedParts.includes('right-bastion-pauldron'),
-    'red infantry must render reinforced Bastion helmet and shoulder armor');
+    'red infantry must render the revised Bastion helmet, compact face protection and restrained shoulder armor');
   assert.ok(redInfantry.renderOptimization?.savedDrawCalls>=25,
     'red infantry must batch static geometry while preserving faction detail: '+JSON.stringify(redInfantry.renderOptimization));
   assert.ok(redInfantry.meshCount>=blueInfantry.meshCount-3 && redInfantry.drawCalls<=60,
