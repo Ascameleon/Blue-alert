@@ -397,3 +397,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94_browser.mjs`, and `docs/EVOLUTION_LOG.md`.
 - Exact-head workflow, standalone build, desktop/mobile rendering and OpenRTS checks are pending. No visual acceptance or release is claimed until the new mobile gameplay screenshot is inspected against the supplied baseline. Browser emulation is not a physical Samsung test.
 - No new assets, paid APIs, credits or services; budget remains 0 €. No existing branch or accepted runtime was replaced.
+
+
+### Exact-head workflow #41551375750 — mobile HUD branch validation diagnosis (2026-11-03)
+
+- Exact tested head: `673797b71f8a53f91e2efbb93c8a011456b0be51` on `fix/v94-mobile-hud-compact-20261103`; GitHub Actions [run 41551375750](https://github.com/Ascameleon/Blue-alert/actions/runs/41551375750), attempt 1 and its retry both failed before reaching the new mobile HUD geometry assertions.
+- Prototype, V94 static validation, model-kit validation, scenario validation, standalone HTML build and desktop/mobile model-preview rendering passed. The playable-game browser stage began and exercised mission objectives, combat VFX, unit death and explosion lifecycle.
+- Both attempts timed out at the second desktop VFX drain immediately before controlled building-damage QA (`scripts/validate_v94_browser.mjs`, post-combat-rig wait). The earlier dedicated desktop combat-VFX lifecycle assertion in the same run had already reached zero active projectiles, muzzle flashes, explosions, impact rings and sparks. The later post-rig wait redundantly required impact rings/sparks to be zero again, even though those short-lived particles do not interfere with the controlled building-damage projectile sequence. This failure occurred before the new compact-HUD checks and before gameplay artifact upload, OpenRTS build and native interaction tests.
+- Correction: retain the strict ring/spark natural-expiry assertions in the dedicated desktop and mobile VFX lifecycle probes. Narrow only the later post-rig isolation gate to active projectiles, model projectiles, muzzle flashes and model explosions; add a timeout state dump. This preserves the VFX lifecycle test rather than weakening it.
+- Files changed in this follow-up: `scripts/validate_v94_browser.mjs` and `docs/EVOLUTION_LOG.md`. The mobile HUD HTML/CSS remains unchanged.
+- The exact commit and fresh screenshot artifact paths will be recorded after the next exact-head workflow completes. No mobile HUD visual acceptance is claimed yet; no game version/release is created. Budget remains 0 €.

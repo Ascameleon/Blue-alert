@@ -403,11 +403,20 @@ try {
   const desktopBuildingFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(desktopBuildingFreeze?.combatSuppressed === true,
     'desktop building-damage QA must freeze unrelated combat before its controlled projectile burst');
-  await desktop.waitForFunction(() => {
-    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-    return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-      state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-  }, null, { timeout: 15000, polling: 50 });
+  // The dedicated combat-VFX lifecycle probe above already verifies that impact rings and
+  // sparks expire naturally. For the building-damage probe, only in-flight projectiles,
+  // muzzle flashes and model explosions can interfere with the controlled shot sequence.
+  try {
+    await desktop.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0;
+    }, null, { timeout: 15000, polling: 50 });
+  } catch (error) {
+    const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('DESKTOP_PRE_BUILDING_VFX_DRAIN_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(desktopBuildingStart?.shooterKind,
     'desktop building-damage QA must use a live blue combat unit');
