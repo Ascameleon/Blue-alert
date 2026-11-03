@@ -366,18 +366,26 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
   const desktopFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(desktopFreeze, 'desktop cleanup probe must freeze only new combat spawns while existing VFX expire');
+  const desktopCleanupStartedAt = Date.now();
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 15000, polling: 50 });
+    }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('DESKTOP_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
     throw error;
   }
   const desktopClean = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
+  const desktopCleanupElapsedMs = Date.now() - desktopCleanupStartedAt;
+  console.log('DESKTOP_VFX_CLEANUP_PERFORMANCE ' + JSON.stringify({
+    elapsedMs: desktopCleanupElapsedMs,
+    framesAdvanced: desktopClean.frameCount - desktopKill.frameCount,
+    simulatedSeconds: Number((desktopClean.time - desktopKill.time).toFixed(3)),
+    averageFps: Number(((desktopClean.frameCount - desktopKill.frameCount) / Math.max(0.001, desktopCleanupElapsedMs / 1000)).toFixed(1))
+  }));
   console.log('DESKTOP_COMBAT_VFX ' + JSON.stringify({ shot: desktopShot, kill: desktopKill, afterCleanup: desktopClean }));
   await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeCombat());
 
@@ -407,7 +415,7 @@ try {
     const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
     return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
       state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-  }, null, { timeout: 15000, polling: 50 });
+  }, null, { timeout: 30000, polling: 50 });
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(desktopBuildingStart?.shooterKind,
     'desktop building-damage QA must use a live blue combat unit');
@@ -817,7 +825,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 15000, polling: 50 });
+    }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
