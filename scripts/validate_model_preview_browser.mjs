@@ -77,7 +77,7 @@ try {
   await baselinePage.selectOption('#asset','tank');
   await baselinePage.waitForTimeout(900);
   const baselineTankMetrics=await baselinePage.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
-  assert.ok(baselineTankMetrics.canvas && baselineTankMetrics.asset==='tank' && baselineTankMetrics.meshCount>0,
+  assert.ok(baselineTankMetrics.canvasWidth>0 && baselineTankMetrics.canvasHeight>0 && baselineTankMetrics.asset==='tank' && baselineTankMetrics.meshCount>0,
     'frozen main-branch tank must render before the new hull is compared');
   await baselinePage.screenshot({path:output+'/baseline-tank-desktop.png',fullPage:true});
   await baselinePage.selectOption('#asset','infantry');
