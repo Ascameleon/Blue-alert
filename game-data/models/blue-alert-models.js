@@ -282,81 +282,144 @@ const mergeInfantryStaticMeshes = (THREE, root) => {
   root.traverse(node => {
     if (node.children?.some(child => child.isMesh && !child.isInstancedMesh)) parents.push(node);
   });
+
   let sourceMeshCount = 0;
   let mergedMeshCount = 0;
+  let savedDrawCalls = 0;
+  let savedMeshObjects = 0;
+  let materialGroupCount = 0;
+
   for (const parent of parents) {
-    if (parent.userData?.keepSeparateForCombat) continue;
-    const buckets = new Map();
+    // Keep each articulated parent and render layer isolated. Within that
+    // boundary, combine opaque siblings across materials using BufferGeometry
+    // groups. This removes singleton mesh objects without pretending that
+    // different materials have become one draw call.
+    const batches = new Map();
     for (const child of [...parent.children]) {
       if (!child.isMesh || child.isInstancedMesh || child.isSkinnedMesh ||
-          child.userData?.keepSeparateForCombat || Array.isArray(child.material) ||
-          child.material?.transparent || (child.material?.opacity ?? 1) < 1 ||
+          child.visible === false || child.userData?.keepSeparateForCombat ||
+          Array.isArray(child.material) || !child.material ||
+          child.material.transparent || (child.material.opacity ?? 1) < 1 ||
+          child.material.visible === false ||
           Object.keys(child.geometry?.morphAttributes || {}).length) continue;
-      const positions = child.geometry?.getAttribute('position');
+
+      const geometry = child.geometry;
+      const positions = geometry?.getAttribute('position');
       if (!positions) continue;
-      const key = child.material.uuid + ':' + child.renderOrder;
-      if (!buckets.has(key)) buckets.set(key, []);
-      buckets.get(key).push(child);
+
+      // Preserve custom vertex data rather than silently dropping it during
+      // batching. The current field-soldier meshes use position/normal/UV.
+      const unsupportedAttribute = Object.keys(geometry.attributes || {})
+        .some(name => !['position', 'normal', 'uv'].includes(name));
+      if (unsupportedAttribute) continue;
+
+      const needsUv = !!(child.material.map || child.material.bumpMap ||
+        child.material.normalMap || child.material.roughnessMap ||
+        child.material.metalnessMap || child.material.alphaMap ||
+        child.material.emissiveMap);
+      if (needsUv && !geometry.getAttribute('uv')) continue;
+
+      const key = child.renderOrder + ':' + child.layers.mask;
+      if (!batches.has(key)) batches.set(key, []);
+      batches.get(key).push(child);
     }
-    for (const items of buckets.values()) {
+
+    for (const items of batches.values()) {
       if (items.length < 2) continue;
+
+      const materialBuckets = new Map();
+      for (const item of items) {
+        const key = item.material.uuid;
+        if (!materialBuckets.has(key)) materialBuckets.set(key, []);
+        materialBuckets.get(key).push(item);
+      }
+
+      const materials = [];
       const vertices = [];
       const normals = [];
       const uvs = [];
       const indices = [];
       const names = [];
       const beveledNames = [];
+      const groups = [];
       const hasNormals = items.every(item => item.geometry.getAttribute('normal'));
-      const hasUvs = items.every(item => item.geometry.getAttribute('uv'));
-      for (const item of items) {
-        item.updateMatrix();
-        const geometry = item.geometry;
-        const position = geometry.getAttribute('position');
-        const normal = geometry.getAttribute('normal');
-        const uv = geometry.getAttribute('uv');
-        const offset = vertices.length / 3;
-        const normalMatrix = hasNormals ? new THREE.Matrix3().getNormalMatrix(item.matrix) : null;
-        const point = new THREE.Vector3();
-        const direction = new THREE.Vector3();
-        for (let i = 0; i < position.count; i++) {
-          point.fromBufferAttribute(position, i).applyMatrix4(item.matrix);
-          vertices.push(point.x, point.y, point.z);
-          if (hasNormals) {
-            direction.fromBufferAttribute(normal, i).applyMatrix3(normalMatrix).normalize();
-            normals.push(direction.x, direction.y, direction.z);
+
+      for (const materialItems of materialBuckets.values()) {
+        const materialIndex = materials.length;
+        materials.push(materialItems[0].material);
+        const groupStart = indices.length;
+
+        for (const item of materialItems) {
+          item.updateMatrix();
+          const geometry = item.geometry;
+          const position = geometry.getAttribute('position');
+          const normal = geometry.getAttribute('normal');
+          const uv = geometry.getAttribute('uv');
+          const offset = vertices.length / 3;
+          const normalMatrix = hasNormals ? new THREE.Matrix3().getNormalMatrix(item.matrix) : null;
+          const point = new THREE.Vector3();
+          const direction = new THREE.Vector3();
+
+          for (let i = 0; i < position.count; i++) {
+            point.fromBufferAttribute(position, i).applyMatrix4(item.matrix);
+            vertices.push(point.x, point.y, point.z);
+
+            if (hasNormals) {
+              direction.fromBufferAttribute(normal, i).applyMatrix3(normalMatrix).normalize();
+              normals.push(direction.x, direction.y, direction.z);
+            }
+
+            if (uv) uvs.push(uv.getX(i), uv.getY(i));
+            else uvs.push(0, 0);
           }
-          if (hasUvs) {
-            uvs.push(uv.getX(i), uv.getY(i));
+
+          if (geometry.index) {
+            for (let i = 0; i < geometry.index.count; i++) {
+              indices.push(geometry.index.getX(i) + offset);
+            }
+          } else {
+            for (let i = 0; i < position.count; i++) indices.push(i + offset);
           }
+
+          const partNames = item.userData?.mergedPartNames || [item.name];
+          names.push(...partNames);
+          beveledNames.push(...(item.userData?.mergedBeveledPartNames ||
+            (geometry.userData?.beveledArmor ? partNames : [])));
         }
-        if (geometry.index) {
-          for (let i = 0; i < geometry.index.count; i++) indices.push(geometry.index.getX(i) + offset);
-        } else {
-          for (let i = 0; i < position.count; i++) indices.push(i + offset);
-        }
-        const partNames = item.userData?.mergedPartNames || [item.name];
-        names.push(...partNames);
-        beveledNames.push(...(item.userData?.mergedBeveledPartNames ||
-          (geometry.userData?.beveledArmor ? partNames : [])));
+
+        const groupCount = indices.length - groupStart;
+        if (groupCount > 0) groups.push({ start: groupStart, count: groupCount, materialIndex });
       }
+
       const mergedGeometry = new THREE.BufferGeometry();
       mergedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
       if (hasNormals) mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-      if (hasUvs) mergedGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      else mergedGeometry.computeVertexNormals();
+      mergedGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
       mergedGeometry.setIndex(indices);
-      if (!hasNormals) mergedGeometry.computeVertexNormals();
+      for (const group of groups) {
+        mergedGeometry.addGroup(group.start, group.count, group.materialIndex);
+      }
       mergedGeometry.computeBoundingBox();
       mergedGeometry.computeBoundingSphere();
       mergedGeometry.userData.beveledArmor = beveledNames.length > 0;
       mergedGeometry.userData.mergedPartNames = names;
-      const merged = new THREE.Mesh(mergedGeometry, items[0].material);
+
+      const merged = new THREE.Mesh(
+        mergedGeometry,
+        materials.length === 1 ? materials[0] : materials
+      );
       merged.name = 'infantry-merged-' + names.length + '-parts';
       merged.userData.mergedPartNames = names;
       merged.userData.mergedBeveledPartNames = beveledNames;
+      merged.userData.mergedMaterialGroupCount = materials.length;
+      merged.userData.mergedSourceMeshCount = items.length;
       merged.castShadow = items.some(item => item.castShadow);
       merged.receiveShadow = items.some(item => item.receiveShadow);
       merged.renderOrder = items[0].renderOrder;
+      merged.layers.mask = items[0].layers.mask;
       merged.frustumCulled = items.every(item => item.frustumCulled);
+
       const insertAt = Math.min(...items.map(item => parent.children.indexOf(item)));
       for (const item of items) {
         parent.remove(item);
@@ -365,14 +428,21 @@ const mergeInfantryStaticMeshes = (THREE, root) => {
       parent.add(merged);
       parent.children.splice(parent.children.indexOf(merged), 1);
       parent.children.splice(Math.min(insertAt, parent.children.length), 0, merged);
+
       sourceMeshCount += items.length;
       mergedMeshCount++;
+      savedMeshObjects += items.length - 1;
+      savedDrawCalls += items.length - materials.length;
+      materialGroupCount += materials.length;
     }
   }
+
   return {
     sourceMeshCount,
     mergedMeshCount,
-    savedDrawCalls: sourceMeshCount - mergedMeshCount
+    savedDrawCalls,
+    savedMeshObjects,
+    materialGroupCount
   };
 };
 
