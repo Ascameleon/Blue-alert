@@ -446,6 +446,7 @@ scene.fog = new THREE.Fog(0x536c78, 105, 220);
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.15, 350);
 const isMobile = matchMedia('(max-width: 800px)').matches;
+const QA_MODE = new URLSearchParams(location.search).get('qa') === '1';
 // Keep the opening RTS view closer to the command group so unit silhouettes,
 // infantry gait and faction equipment are readable before the player zooms.
 const DEFAULT_CAMERA_DISTANCE = isMobile ? 40 : 38;
@@ -2096,7 +2097,14 @@ function createUnit(x, z, team, kind) {
       const heavy = kind === 'heavy';
       speed = heavy ? 2.3 : 3.6; hp = heavy ? 320 : 160;
       dmg = heavy ? 42 : 24; range = heavy ? 12 : 10.5;
-      const tank = BLUE_MODELS.createTank(THREE, { team: team === 1 ? 'blue' : 'red', variant: heavy ? 'heavy' : 'light', scale: heavy ? 1.16 : 1.0 });
+      const qaTrackCompare = QA_MODE && team === 1 && kind === 'light' && !window.__BLUE_ALERTS_TRACK_QA_ASSIGNED__;
+      if (qaTrackCompare) window.__BLUE_ALERTS_TRACK_QA_ASSIGNED__ = true;
+      const tank = BLUE_MODELS.createTank(THREE, {
+        team: team === 1 ? 'blue' : 'red',
+        variant: heavy ? 'heavy' : 'light',
+        scale: heavy ? 1.16 : 1.0,
+        qaTrackCompare
+      });
       // The procedural asset's cannon points along +X. Rotate -90° so its forward
       // axis matches the RTS +Z heading, then expose the nested combat rig to the
       // existing unit controller (which operates on the outer unit group).
@@ -4427,7 +4435,12 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       surfaceFinish: model?.userData?.surfaceFinish || null,
       surfaceTextureCount: model?.userData?.surfaceTextureCount || 0,
       surfaceMaterialCount: model?.userData?.surfaceMaterialCount || 0,
-      surfaceMapsEnabled: model?.userData?.surfaceMapsEnabled === true
+      surfaceMapsEnabled: model?.userData?.surfaceMapsEnabled === true,
+      trackLoopProfile: model?.userData?.trackLoopProfile || null,
+      trackLoopSegments: model?.userData?.trackLoopSegments || 0,
+      trackLoopEnabled: model?.userData?.trackLoopEnabled === true,
+      trackShoeInstances: model?.userData?.activeTrackShoeCount ?? model?.userData?.trackShoeInstances ?? 0,
+      trackGrouserInstances: model?.userData?.activeTrackGrouserCount ?? model?.userData?.trackGrouserInstances ?? 0
     };
   };
   window.__BLUE_ALERTS_CAMERA_QA__ = Object.freeze({
@@ -4469,6 +4482,14 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       }
       model.userData.surfaceMapsEnabled = !!enabled;
       return { ...tankQaSnapshot(unit), enabled: !!enabled };
+    },
+    setTankTrackLoop(enabled) {
+      const unit = tankQaUnit();
+      if (!unit) throw new Error('A live BLUE SENTINEL tank is required for runtime track-loop evidence.');
+      const model = tankQaModel(unit);
+      if (!model?.userData?.trackRig?.set) throw new Error('The live tank does not expose its QA track-loop rig.');
+      const result = model.userData.trackRig.set(!!enabled);
+      return { ...tankQaSnapshot(unit), ...result };
     }
   });
   const infantryProbe = () => {

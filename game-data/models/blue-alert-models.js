@@ -79,6 +79,100 @@ const addMarking = (THREE, group, x, y, z, team) => {
   stripe.rotation.y = Math.PI/2; return stripe;
 };
 
+const TANK_TRACK_GEOMETRY_CACHE = new WeakMap();
+const TANK_TRACK_QA_GEOMETRY_CACHE = new WeakMap();
+const createTankTrackGeometrySet = (THREE) => {
+  const cached = TANK_TRACK_GEOMETRY_CACHE.get(THREE);
+  if (cached) return cached;
+  const halfLength = 0.98, outerRadius = 0.28, innerRadius = 0.17, depth = 0.22;
+  const straightSegments = 10, arcSegments = 12;
+  const samples = [];
+  const push = (outer, inner) => samples.push({ outer, inner });
+  for (let i = 0; i < straightSegments; i++) {
+    const x = -halfLength + 2 * halfLength * i / straightSegments;
+    push([x, outerRadius], [x, innerRadius]);
+  }
+  for (let i = 0; i < arcSegments; i++) {
+    const angle = Math.PI / 2 - Math.PI * i / (arcSegments - 1);
+    push(
+      [halfLength + Math.cos(angle) * outerRadius, Math.sin(angle) * outerRadius],
+      [halfLength + Math.cos(angle) * innerRadius, Math.sin(angle) * innerRadius]
+    );
+  }
+  for (let i = 1; i <= straightSegments; i++) {
+    const x = halfLength - 2 * halfLength * i / straightSegments;
+    push([x, -outerRadius], [x, -innerRadius]);
+  }
+  for (let i = 1; i < arcSegments - 1; i++) {
+    const angle = -Math.PI / 2 - Math.PI * i / (arcSegments - 1);
+    push(
+      [-halfLength + Math.cos(angle) * outerRadius, Math.sin(angle) * outerRadius],
+      [-halfLength + Math.cos(angle) * innerRadius, Math.sin(angle) * innerRadius]
+    );
+  }
+
+  const count = samples.length;
+  const positions = [], uvs = [], indices = [];
+  const addStrip = (a, b, reverse = false) => {
+    const base = positions.length / 3;
+    for (let i = 0; i < count; i++) {
+      positions.push(a[i][0], a[i][1], a[i][2], b[i][0], b[i][1], b[i][2]);
+      uvs.push(i / count, 0, i / count, 1);
+    }
+    for (let i = 0; i < count; i++) {
+      const next = (i + 1) % count;
+      const a0 = base + i * 2, b0 = a0 + 1, a1 = base + next * 2, b1 = a1 + 1;
+      if (reverse) indices.push(a0, b1, a1, a0, b0, b1);
+      else indices.push(a0, a1, b1, a0, b1, b0);
+    }
+  };
+  const outerFront = samples.map(s => [s.outer[0], s.outer[1], -depth / 2]);
+  const innerFront = samples.map(s => [s.inner[0], s.inner[1], -depth / 2]);
+  const outerBack = samples.map(s => [s.outer[0], s.outer[1], depth / 2]);
+  const innerBack = samples.map(s => [s.inner[0], s.inner[1], depth / 2]);
+  addStrip(outerFront, innerFront, false);
+  addStrip(outerBack, innerBack, true);
+  addStrip(outerFront, outerBack, true);
+  addStrip(innerFront, innerBack, false);
+
+  const loopGeometry = new THREE.BufferGeometry();
+  loopGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  loopGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  loopGeometry.setIndex(indices);
+  loopGeometry.computeVertexNormals();
+  loopGeometry.computeBoundingBox();
+  loopGeometry.computeBoundingSphere();
+  loopGeometry.userData.trackLoopProfile = 'ROUNDED_CONTINUOUS_TRACK_V1';
+  loopGeometry.userData.trackLoopSegments = count;
+  loopGeometry.userData.trackLoopWidth = depth;
+  loopGeometry.userData.trackLoopHeight = outerRadius * 2;
+
+  const result = {
+    loopGeometry,
+    shoeGeometry: beveledBoxGeometry(THREE, [0.18, 0.065, 0.18], 0.012),
+    grouserGeometry: beveledBoxGeometry(THREE, [0.12, 0.024, 0.12], 0.004),
+    samples,
+    profile: 'ROUNDED_CONTINUOUS_TRACK_V1',
+    segments: count,
+    width: depth,
+    height: outerRadius * 2
+  };
+  TANK_TRACK_GEOMETRY_CACHE.set(THREE, result);
+  return result;
+};
+const createTankTrackQaGeometrySet = (THREE) => {
+  let cached = TANK_TRACK_QA_GEOMETRY_CACHE.get(THREE);
+  if (!cached) {
+    cached = {
+      belt: new THREE.BoxGeometry(2.68, 0.48, 0.22),
+      shoe: new THREE.BoxGeometry(0.105, 0.29, 0.035)
+    };
+    TANK_TRACK_QA_GEOMETRY_CACHE.set(THREE, cached);
+  }
+  return cached;
+};
+
+
 
 const TANK_SURFACE_TEXTURE_CACHE = new WeakMap();
 const createTankSurfaceTextures = (THREE, isRed) => {
@@ -234,7 +328,7 @@ const createTankSurfaceTextures = (THREE, isRed) => {
 };
 
 export function createTank(THREE, options={}) {
-  const { team='blue', variant='main-battle-tank', scale=1 } = options;
+  const { team='blue', variant='main-battle-tank', scale=1, qaTrackCompare=false } = options;
   const isRed = team === 'red';
   const isHeavy = variant === 'heavy';
   const factionProfile = isRed ? 'RED_BASTION' : 'BLUE_SENTINEL';
@@ -329,11 +423,44 @@ export function createTank(THREE, options={}) {
   sphere(THREE,g,'gunner-optic',.075,[.36,1.18,.28],optics,[1,.55,.7]);
   cylinder(THREE,g,'radio-antenna',.018,.018,.72,[-.86,1.42,-.35],dark,6);
 
-  // Track belts, road wheels, hubs and tread shoes are batched by part type.
+  // Continuous rounded track loops wrap both idlers and the complete road-wheel run.
+  // Tread plates and raised grousers follow the same closed path. The old straight
+  // belt remains available only to the exact-head browser A/B probe.
+  const trackGeometrySet = createTankTrackGeometrySet(THREE);
+  const trackPathPoints = trackGeometrySet.samples.map(sample => sample.outer);
+  const trackPathLengths = trackPathPoints.map((point, index) => {
+    const next = trackPathPoints[(index + 1) % trackPathPoints.length];
+    return Math.hypot(next[0] - point[0], next[1] - point[1]);
+  });
+  const trackPathLength = trackPathLengths.reduce((sum, length) => sum + length, 0);
+  const buildTrackTransforms = (side, count, radialOffset) => {
+    const transforms = [];
+    for (let k = 0; k < count; k++) {
+      let remaining = trackPathLength * k / count;
+      let segment = 0;
+      while (segment < trackPathLengths.length - 1 && remaining > trackPathLengths[segment]) {
+        remaining -= trackPathLengths[segment];
+        segment++;
+      }
+      const next = (segment + 1) % trackPathPoints.length;
+      const length = trackPathLengths[segment] || 1;
+      const t = Math.max(0, Math.min(1, remaining / length));
+      const a = trackPathPoints[segment], b = trackPathPoints[next];
+      const x = a[0] + (b[0] - a[0]) * t;
+      const y = a[1] + (b[1] - a[1]) * t;
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const nx = -dy / length, ny = dx / length;
+      transforms.push({
+        position:[x + nx * radialOffset, .38 + y + ny * radialOffset, side * .80],
+        rotation:[0,0,Math.atan2(dy,dx)]
+      });
+    }
+    return transforms;
+  };
   const beltTransforms=[],wheelTransforms=[],hubTransforms=[],capTransforms=[];
-  const shoeTransforms=[],boltTransforms=[];
+  const trackShoeTransforms=[],trackGrouserTransforms=[],baselineTrackShoeTransforms=[],boltTransforms=[];
   for(const side of [-1,1]){
-    beltTransforms.push({position:[0,.39,side*.79]});
+    beltTransforms.push({position:[0,.38,side*.79]});
     for(let i=0;i<6;i++){
       const x=-.98+i*.39;
       wheelTransforms.push({position:[x,.38,side*.84],rotation:[Math.PI/2,0,0]});
@@ -347,17 +474,52 @@ export function createTank(THREE, options={}) {
         });
       }
     }
-    for(let i=0;i<18;i++) shoeTransforms.push({
+    trackShoeTransforms.push(...buildTrackTransforms(side,28,.02));
+    trackGrouserTransforms.push(...buildTrackTransforms(side,28,.058));
+    if(qaTrackCompare) for(let i=0;i<18;i++) baselineTrackShoeTransforms.push({
       position:[-1.18+i*.139,.39,side*.925],
       rotation:[0,0,(i%2===0?-.025:.025)]
     });
   }
-  addInstances(g,'track-belts-instanced',new THREE.BoxGeometry(2.68,.48,.22),rubber,beltTransforms);
+  const trackBeltMesh=addInstances(g,'track-belts-instanced',trackGeometrySet.loopGeometry,rubber,beltTransforms);
   addInstances(g,'road-wheels-instanced',new THREE.CylinderGeometry(.19,.19,.13,16),metal,wheelTransforms);
   addInstances(g,'wheel-hubs-instanced',new THREE.CylinderGeometry(.085,.085,.145,12),dark,hubTransforms);
   addInstances(g,'wheel-hub-caps-instanced',new THREE.CylinderGeometry(.045,.045,.155,10),edge,capTransforms);
-  addInstances(g,'track-shoe-instanced',new THREE.BoxGeometry(.105,.29,.035),mat(THREE,0x56605d,.88,.28),shoeTransforms);
+  const trackShoeMesh=addInstances(g,'track-shoe-instanced',trackGeometrySet.shoeGeometry,mat(THREE,0x56605d,.82,.34),trackShoeTransforms);
+  const trackGrouserMesh=addInstances(g,'track-grouser-instanced',trackGeometrySet.grouserGeometry,metal,trackGrouserTransforms);
   addInstances(g,'wheel-bolts-instanced',new THREE.CylinderGeometry(.018,.018,.026,6),mat(THREE,0xc1c6bd,.42,.72),boltTransforms);
+
+  const qaTrackGeometrySet=qaTrackCompare?createTankTrackQaGeometrySet(THREE):null;
+  const applyTrackTransforms=(mesh,transforms)=>{
+    mesh.count=transforms.length;
+    const dummy=new THREE.Object3D();
+    transforms.forEach((item,index)=>{
+      dummy.position.set(...(item.position||[0,0,0]));
+      dummy.rotation.set(...(item.rotation||[0,0,0]));
+      dummy.scale.set(...(item.scale||[1,1,1]));
+      dummy.updateMatrix();
+      mesh.setMatrixAt(index,dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate=true;
+    mesh.computeBoundingSphere();
+  };
+  const trackRig=qaTrackCompare?{
+    set(enabled){
+      const active=!!enabled;
+      trackBeltMesh.geometry=active?trackGeometrySet.loopGeometry:qaTrackGeometrySet.belt;
+      trackBeltMesh.computeBoundingSphere();
+      trackShoeMesh.geometry=active?trackGeometrySet.shoeGeometry:qaTrackGeometrySet.shoe;
+      applyTrackTransforms(trackShoeMesh,active?trackShoeTransforms:baselineTrackShoeTransforms);
+      trackGrouserMesh.visible=active;
+      trackGrouserMesh.count=active?trackGrouserTransforms.length:0;
+      if(active) applyTrackTransforms(trackGrouserMesh,trackGrouserTransforms);
+      else trackGrouserMesh.computeBoundingSphere();
+      g.userData.trackLoopEnabled=active;
+      g.userData.activeTrackShoeCount=trackShoeMesh.count;
+      g.userData.activeTrackGrouserCount=trackGrouserMesh.count;
+      return {enabled:active,trackShoeCount:trackShoeMesh.count,trackGrouserCount:trackGrouserMesh.count};
+    }
+  }:null;
 
   // The two factions have distinct turret silhouettes, not just different paint.
   const turret=new THREE.Group();
@@ -431,7 +593,16 @@ export function createTank(THREE, options={}) {
     surfaceMapsEnabled:!!surfaceMaps,
     surfaceTextureNames:Object.values(surfaceMaps||{}).filter(Boolean).map(texture=>texture.name),
     surfaceMaterialRefs:surfaceMaterials,
-    trackShoeInstances:shoeTransforms.length,
+    trackLoopProfile:trackGeometrySet.profile,
+    trackLoopSegments:trackGeometrySet.segments,
+    trackLoopWidth:trackGeometrySet.width,
+    trackLoopHeight:trackGeometrySet.height,
+    trackLoopEnabled:true,
+    trackShoeInstances:trackShoeTransforms.length,
+    trackGrouserInstances:trackGrouserTransforms.length,
+    activeTrackShoeCount:trackShoeTransforms.length,
+    activeTrackGrouserCount:trackGrouserTransforms.length,
+    trackRig,
     wheelBoltInstances:boltTransforms.length,
     detailInstances:{
       engineGrilles:grilleTransforms.length,
@@ -441,6 +612,7 @@ export function createTank(THREE, options={}) {
       wheelHubs:hubTransforms.length,
       wheelHubCaps:capTransforms.length,
       smokeDischargers:smokeTransforms.length,
+      trackGrousers:trackGrouserTransforms.length,
       faction: factionDetailCounts
     }
   };

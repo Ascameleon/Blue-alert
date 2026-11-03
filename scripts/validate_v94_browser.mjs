@@ -563,6 +563,14 @@ try {
     'desktop live V94 tank must bind the faction-seeded armor fieldwear finish');
   assert.ok(desktopTankFocus.surfaceTextureCount >= 6 && desktopTankFocus.surfaceMaterialCount >= 5,
     'desktop live V94 tank must bind cached albedo, roughness and micro-relief maps to its PBR materials');
+  assert.equal(desktopTankFocus.trackLoopProfile, 'ROUNDED_CONTINUOUS_TRACK_V1',
+    'desktop live V94 tank must use a continuous rounded track loop');
+  assert.equal(desktopTankFocus.trackLoopSegments, 42,
+    'desktop live V94 track loop must retain its authored closed profile');
+  assert.equal(desktopTankFocus.trackShoeInstances, 56,
+    'desktop live V94 tank must place tread shoes around both complete track loops');
+  assert.equal(desktopTankFocus.trackGrouserInstances, 56,
+    'desktop live V94 tank must place raised grousers around both complete track loops');
   const desktopTankBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankSurfaceMaps(false));
   assert.equal(desktopTankBaseline?.surfaceMapsEnabled, false, 'desktop tank A/B baseline must disable only the new surface maps');
   await desktop.waitForTimeout(300);
@@ -575,6 +583,22 @@ try {
   assert.equal(desktopTankDetail.pitch, desktopTankBaseline.pitch, 'desktop tank A/B must preserve camera pitch');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-tank-surface-detail.png', fullPage: false, timeout: 60000 });
+  const desktopTrackBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankTrackLoop(false));
+  assert.equal(desktopTrackBaseline?.trackLoopEnabled, false, 'desktop track A/B baseline must restore the previous straight belt');
+  assert.equal(desktopTrackBaseline?.trackShoeInstances, 36, 'desktop baseline must restore the previous 36 straight tread pieces');
+  assert.equal(desktopTrackBaseline?.trackGrouserInstances, 0, 'desktop baseline must hide the new grousers');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-tank-track-loop-baseline.png', fullPage: false, timeout: 60000 });
+  const desktopTrackDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankTrackLoop(true));
+  assert.equal(desktopTrackDetail?.trackLoopEnabled, true, 'desktop track detail must restore the rounded loop');
+  assert.equal(desktopTrackDetail?.trackShoeInstances, 56, 'desktop track detail must restore all 56 tread shoes');
+  assert.equal(desktopTrackDetail?.trackGrouserInstances, 56, 'desktop track detail must restore all 56 grousers');
+  assert.deepEqual(desktopTrackDetail.target, desktopTrackBaseline.target, 'desktop track A/B must preserve the same world target');
+  assert.equal(desktopTrackDetail.distance, desktopTrackBaseline.distance, 'desktop track A/B must preserve camera distance');
+  assert.equal(desktopTrackDetail.yaw, desktopTrackBaseline.yaw, 'desktop track A/B must preserve camera yaw');
+  assert.equal(desktopTrackDetail.pitch, desktopTrackBaseline.pitch, 'desktop track A/B must preserve camera pitch');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-tank-track-loop-detail.png', fullPage: false, timeout: 60000 });
 
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
@@ -1118,6 +1142,14 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     'mobile live V94 tank must bind the faction-seeded armor fieldwear finish');
   assert.ok(mobileTankFocus.surfaceTextureCount >= 6 && mobileTankFocus.surfaceMaterialCount >= 5,
     'mobile live V94 tank must bind the cached PBR surface maps');
+  assert.equal(mobileTankFocus.trackLoopProfile, 'ROUNDED_CONTINUOUS_TRACK_V1',
+    'mobile live V94 tank must use a continuous rounded track loop');
+  assert.equal(mobileTankFocus.trackLoopSegments, 42,
+    'mobile live V94 track loop must retain its authored closed profile');
+  assert.equal(mobileTankFocus.trackShoeInstances, 56,
+    'mobile live V94 tank must place tread shoes around both complete track loops');
+  assert.equal(mobileTankFocus.trackGrouserInstances, 56,
+    'mobile live V94 tank must place raised grousers around both complete track loops');
   const mobileTankBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankSurfaceMaps(false));
   assert.equal(mobileTankBaseline?.surfaceMapsEnabled, false, 'mobile tank A/B baseline must disable only the surface maps');
   await mobile.waitForTimeout(300);
@@ -1130,10 +1162,26 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.equal(mobileTankDetail.pitch, mobileTankBaseline.pitch, 'mobile tank A/B must preserve camera pitch');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-tank-surface-detail-390x844.png', fullPage: false });
+  const mobileTrackBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankTrackLoop(false));
+  assert.equal(mobileTrackBaseline?.trackLoopEnabled, false, 'mobile track A/B baseline must restore the previous straight belt');
+  assert.equal(mobileTrackBaseline?.trackShoeInstances, 36, 'mobile baseline must restore the previous 36 straight tread pieces');
+  assert.equal(mobileTrackBaseline?.trackGrouserInstances, 0, 'mobile baseline must hide the new grousers');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-tank-track-loop-baseline-390x844.png', fullPage: false, timeout: 60000 });
+  const mobileTrackDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankTrackLoop(true));
+  assert.equal(mobileTrackDetail?.trackLoopEnabled, true, 'mobile track detail must restore the rounded loop');
+  assert.equal(mobileTrackDetail?.trackShoeInstances, 56, 'mobile track detail must restore all 56 tread shoes');
+  assert.equal(mobileTrackDetail?.trackGrouserInstances, 56, 'mobile track detail must restore all 56 grousers');
+  assert.deepEqual(mobileTrackDetail.target, mobileTrackBaseline.target, 'mobile track A/B must preserve the same world target');
+  assert.equal(mobileTrackDetail.distance, mobileTrackBaseline.distance, 'mobile track A/B must preserve camera distance');
+  assert.equal(mobileTrackDetail.yaw, mobileTrackBaseline.yaw, 'mobile track A/B must preserve camera yaw');
+  assert.equal(mobileTrackDetail.pitch, mobileTrackBaseline.pitch, 'mobile track A/B must preserve camera pitch');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-tank-track-loop-detail-390x844.png', fullPage: false, timeout: 60000 });
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png', 'desktop-v94-tank-surface-baseline.png', 'desktop-v94-tank-surface-detail.png', 'mobile-v94-tank-surface-baseline-390x844.png', 'mobile-v94-tank-surface-detail-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png', 'desktop-v94-tank-surface-baseline.png', 'desktop-v94-tank-surface-detail.png', 'mobile-v94-tank-surface-baseline-390x844.png', 'mobile-v94-tank-surface-detail-390x844.png', 'desktop-v94-tank-track-loop-baseline.png', 'desktop-v94-tank-track-loop-detail.png', 'mobile-v94-tank-track-loop-baseline-390x844.png', 'mobile-v94-tank-track-loop-detail-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
@@ -1151,7 +1199,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       desktop: { baseline: desktopCameraBaseline, improved: desktopCameraCloser },
       mobile: { baseline: mobileCameraBaseline, improved: mobileCameraCloser }
     },
-    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-tank-surface-baseline.png', 'desktop-v94-tank-surface-detail.png', 'mobile-v94-tank-surface-baseline-390x844.png', 'mobile-v94-tank-surface-detail-390x844.png']
+    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-tank-surface-baseline.png', 'desktop-v94-tank-surface-detail.png', 'mobile-v94-tank-surface-baseline-390x844.png', 'mobile-v94-tank-surface-detail-390x844.png', 'desktop-v94-tank-track-loop-baseline.png', 'desktop-v94-tank-track-loop-detail.png', 'mobile-v94-tank-track-loop-baseline-390x844.png', 'mobile-v94-tank-track-loop-detail-390x844.png']
   }, null, 2));
 } catch (error) {
   console.error(error);

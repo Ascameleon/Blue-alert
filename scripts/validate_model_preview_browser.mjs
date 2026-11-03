@@ -100,16 +100,20 @@ try {
   assert.equal(initial.surfaceFinish,'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1','blue tank must bind the original faction-seeded armor fieldwear finish');
   assert.ok(initial.surfaceTextureCount>=6 && initial.surfaceMaterialCount>=5,
     'blue tank must bind cached armor, metal, roughness and micro-relief textures without adding meshes');
-  assert.equal(initial.trackShoeInstances,36,'both tracks must expose 36 instanced tread shoes');
+  assert.equal(initial.trackShoeInstances,56,'both rounded tracks must expose 56 instanced tread shoes');
+  assert.equal(initial.trackGrouserInstances,56,'both rounded tracks must expose 56 raised grousers');
+  assert.equal(initial.trackLoopProfile,'ROUNDED_CONTINUOUS_TRACK_V1','tank tracks must use a continuous rounded loop');
+  assert.equal(initial.trackLoopSegments,42,'rounded track loop must preserve its authored closed profile');
+  assert.equal(initial.trackLoopWidth,0.22,'rounded track loop must preserve the 0.22 world-unit belt width');
   assert.equal(initial.wheelBoltInstances,60,'twelve road wheels must expose 60 instanced wheel bolts');
-  assert.deepEqual(initial.detailInstances,{engineGrilles:7,reactiveArmorTiles:8,returnRollers:6,roadWheels:12,wheelHubs:12,wheelHubCaps:12,smokeDischargers:4,faction:{turretCheeks:2,turretSidePlates:0,smokeBanks:0}},'repeated chassis and faction details must be batched');
+  assert.deepEqual(initial.detailInstances,{engineGrilles:7,reactiveArmorTiles:8,returnRollers:6,roadWheels:12,wheelHubs:12,wheelHubCaps:12,smokeDischargers:4,trackGrousers:56,faction:{turretCheeks:2,turretSidePlates:0,smokeBanks:0}},'repeated chassis and faction details must be batched');
   assert.ok(initial.cameraDistance<9,'desktop tank preview must frame the softened armor at a useful scale');
   assert.ok(initial.beveledArmorPartCount>=12,'blue tank must use bevelled armor geometry for its major silhouette and repeated plates');
   for(const name of ['lower-hull','upper-hull','front-glacis','engine-deck','reactive-armor-tiles-instanced','side-skirt-armor-instanced','turret-body','blue-sentinel-crown','blue-turret-cheeks-instanced']) {
     assert.ok(initial.beveledArmorParts.includes(name),'blue tank must render bevelled armor part: '+name);
   }
   assert.ok(initial.triangleCount<5000,'bevelled tank geometry must remain within the preview triangle budget');
-  for(const name of ['front-glacis','engine-deck-grilles-instanced','reactive-armor-tiles-instanced','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheeks-instanced','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
+  for(const name of ['front-glacis','engine-deck-grilles-instanced','reactive-armor-tiles-instanced','track-shoe-instanced','track-grouser-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheeks-instanced','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
   await page.screenshot({path:output+'/desktop-blue-sentinel-tank.png',fullPage:true});
 
   // Both faction riflemen must render their own equipment silhouette and live gait rig.
@@ -188,7 +192,10 @@ try {
   assert.equal(redTank.surfaceFinish,'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1','red tank must use the same material pipeline with its own deterministic seed');
   assert.ok(redTank.surfaceTextureCount>=6 && redTank.surfaceMaterialCount>=5,
     'red tank must bind the cached faction-specific PBR surface maps');
-  assert.equal(redTank.trackShoeInstances,36);
+  assert.equal(redTank.trackShoeInstances,56);
+  assert.equal(redTank.trackGrouserInstances,56);
+  assert.equal(redTank.trackLoopProfile,'ROUNDED_CONTINUOUS_TRACK_V1');
+  assert.equal(redTank.trackLoopSegments,42);
   assert.equal(redTank.wheelBoltInstances,60);
   assert.ok(redTank.meshCount<=45 && redTank.drawCalls<=60,'red tank must share the same mobile-friendly draw-call budget');
   assert.ok(redTank.beveledArmorPartCount>=12,'red tank must use bevelled armor geometry');
@@ -197,7 +204,7 @@ try {
   }
   assert.ok(redTank.triangleCount<5000,'red bevelled tank geometry must remain within the preview triangle budget');
   assert.deepEqual(redTank.detailInstances.faction,{turretCheeks:2,turretSidePlates:2,smokeBanks:2},'red reinforced turret details must be instanced');
-  for(const name of ['front-glacis','engine-deck-grilles-instanced','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
+  for(const name of ['front-glacis','engine-deck-grilles-instanced','track-shoe-instanced','track-grouser-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
   assert.notEqual(redTank.factionProfile,initial.factionProfile,'factions must not share the same visual profile');
   await page.screenshot({path:output+'/desktop-red-bastion-tank.png',fullPage:true});
   await page.selectOption('#team','blue');

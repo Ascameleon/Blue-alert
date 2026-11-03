@@ -117,7 +117,7 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     const partNames=object.userData?.mergedPartNames || [object.name];
     for(const partName of partNames){
       if(object.isMesh && (partName.includes('gas-mask') || partName.includes('respirator-') || partName.includes('faceted-helmet') || partName.includes('angular-pauldron') || partName.includes('articulated-knee-guard'))) infantryArmorParts.push(partName);
-      if(object.isMesh && (partName==='front-glacis' || partName==='engine-deck-grilles-instanced' || partName==='reactive-armor-tiles-instanced' || partName==='track-shoe-instanced' || partName==='wheel-bolts-instanced' || partName.includes('blue-sentinel') || partName==='blue-turret-cheeks-instanced' || partName.includes('red-bastion') || partName==='red-turret-cheeks-instanced' || partName==='red-bastion-side-plates-instanced' || partName==='heavy-turret-reinforcements-instanced')) signatureParts.push(partName);
+      if(object.isMesh && (partName==='front-glacis' || partName==='engine-deck-grilles-instanced' || partName==='reactive-armor-tiles-instanced' || partName==='track-shoe-instanced' || partName==='track-grouser-instanced' || partName==='wheel-bolts-instanced' || partName.includes('blue-sentinel') || partName==='blue-turret-cheeks-instanced' || partName.includes('red-bastion') || partName==='red-turret-cheeks-instanced' || partName==='red-bastion-side-plates-instanced' || partName==='heavy-turret-reinforcements-instanced')) signatureParts.push(partName);
     }
   });
   return {
@@ -127,6 +127,10 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     team:document.querySelector('#team').value,
     factionProfile:current?.userData?.factionProfile||null,
     trackShoeInstances:current?.userData?.trackShoeInstances||0,
+    trackGrouserInstances:current?.userData?.trackGrouserInstances||0,
+    trackLoopProfile:current?.userData?.trackLoopProfile||null,
+    trackLoopSegments:current?.userData?.trackLoopSegments||0,
+    trackLoopWidth:current?.userData?.trackLoopWidth||0,
     wheelBoltInstances:current?.userData?.wheelBoltInstances||0,
     detailInstances:current?.userData?.detailInstances||null,
     signatureParts,
