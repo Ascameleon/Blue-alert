@@ -4341,17 +4341,22 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     yaw: Number(camYaw.toFixed(3)),
     pitch: Number(camPitch.toFixed(3))
   });
+  const tankQaModel = unit => unit?.g?.children?.find(child =>
+    child.userData?.factionProfile === 'BLUE_SENTINEL') || null;
   const tankQaUnit = () => units.find(candidate => !candidate.dead && candidate.team === 1 &&
-    candidate.g?.userData?.factionProfile === 'BLUE_SENTINEL');
-  const tankQaSnapshot = unit => ({
-    ...cameraQaSnapshot(),
-    unitKind: unit.kind,
-    factionProfile: unit.g.userData.factionProfile,
-    surfaceFinish: unit.g.userData.surfaceFinish || null,
-    surfaceTextureCount: unit.g.userData.surfaceTextureCount || 0,
-    surfaceMaterialCount: unit.g.userData.surfaceMaterialCount || 0,
-    surfaceMapsEnabled: unit.g.userData.surfaceMapsEnabled === true
-  });
+    (candidate.kind === 'light' || candidate.kind === 'heavy') && tankQaModel(candidate));
+  const tankQaSnapshot = unit => {
+    const model = tankQaModel(unit);
+    return {
+      ...cameraQaSnapshot(),
+      unitKind: unit.kind,
+      factionProfile: model?.userData?.factionProfile || null,
+      surfaceFinish: model?.userData?.surfaceFinish || null,
+      surfaceTextureCount: model?.userData?.surfaceTextureCount || 0,
+      surfaceMaterialCount: model?.userData?.surfaceMaterialCount || 0,
+      surfaceMapsEnabled: model?.userData?.surfaceMapsEnabled === true
+    };
+  };
   window.__BLUE_ALERTS_CAMERA_QA__ = Object.freeze({
     snapshot: cameraQaSnapshot,
     setDistance(distance) {
@@ -4378,7 +4383,9 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     setTankSurfaceMaps(enabled) {
       const unit = tankQaUnit();
       if (!unit) throw new Error('A live BLUE SENTINEL tank is required for runtime surface A/B.');
-      for (const material of unit.g.userData.surfaceMaterialRefs || []) {
+      const model = tankQaModel(unit);
+      if (!model) throw new Error('The live unit does not expose its BLUE SENTINEL model group.');
+      for (const material of model.userData.surfaceMaterialRefs || []) {
         const maps = material.userData?.tankSurfaceMaps;
         if (!maps) continue;
         material.map = enabled ? maps.map : null;
@@ -4387,7 +4394,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
         material.bumpScale = enabled ? maps.bumpScale : 0;
         material.needsUpdate = true;
       }
-      unit.g.userData.surfaceMapsEnabled = !!enabled;
+      model.userData.surfaceMapsEnabled = !!enabled;
       return { ...tankQaSnapshot(unit), enabled: !!enabled };
     }
   });

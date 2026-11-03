@@ -525,6 +525,10 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
 
   const desktopTankFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusTank());
+  assert.ok(['light', 'heavy'].includes(desktopTankFocus?.unitKind),
+    'desktop tank evidence must focus an actual live V94 combat unit');
+  assert.equal(desktopTankFocus?.factionProfile, 'BLUE_SENTINEL',
+    'desktop live V94 tank QA must resolve the nested BLUE SENTINEL model group');
   assert.equal(desktopTankFocus?.surfaceFinish, 'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1',
     'desktop live V94 tank must bind the faction-seeded armor fieldwear finish');
   assert.ok(desktopTankFocus.surfaceTextureCount >= 6 && desktopTankFocus.surfaceMaterialCount >= 5,
@@ -985,6 +989,10 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-detail-390x844.png', fullPage: true });
 
   const mobileTankFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusTank());
+  assert.ok(['light', 'heavy'].includes(mobileTankFocus?.unitKind),
+    'mobile tank evidence must focus an actual live V94 combat unit');
+  assert.equal(mobileTankFocus?.factionProfile, 'BLUE_SENTINEL',
+    'mobile live V94 tank QA must resolve the nested BLUE SENTINEL model group');
   assert.equal(mobileTankFocus?.surfaceFinish, 'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1',
     'mobile live V94 tank must bind the faction-seeded armor fieldwear finish');
   assert.ok(mobileTankFocus.surfaceTextureCount >= 6 && mobileTankFocus.surfaceMaterialCount >= 5,
