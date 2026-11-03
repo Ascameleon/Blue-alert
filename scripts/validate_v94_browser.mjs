@@ -492,12 +492,19 @@ try {
   const infantryReady = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(infantryReady?.profile === 'BLUE_SENTINEL_RIFLEMAN', 'V94 must attach the Blue Sentinel infantry rig to a live unit');
   const infantryWalkStart = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
-  await desktop.waitForFunction(start => {
+  const desktopInfantryGaitHandle = await desktop.waitForFunction(start => {
     const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
-    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 && Math.abs(state.leftLeg - state.rightLeg) > 0.1;
+    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 &&
+      Math.abs(state.leftLeg - state.rightLeg) > 0.1 &&
+      Math.abs(state.leftArm - state.rightArm) > 0.04 ? state : false;
   }, infantryWalkStart.position, { timeout: 5000, polling: 50 });
-  const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
-  assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 && desktopInfantryGait.walkAmount > 0.2 && Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04, 'desktop V94 infantry arms and legs must animate in response to real movement');
+  const desktopInfantryGait = await desktopInfantryGaitHandle.jsonValue();
+  console.log('DESKTOP_INFANTRY_GAIT ' + JSON.stringify({ start: infantryWalkStart, state: desktopInfantryGait }));
+  assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 &&
+    desktopInfantryGait.walkAmount > 0.2 &&
+    Math.abs(desktopInfantryGait.leftLeg - desktopInfantryGait.rightLeg) > 0.1 &&
+    Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04,
+    'desktop V94 infantry arms and legs must animate in response to real movement');
   await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: false, timeout: 60000 });
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
   assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
@@ -1090,12 +1097,19 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileInfantryReady = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(mobileInfantryReady?.profile === 'BLUE_SENTINEL_RIFLEMAN', 'mobile V94 must load the faction infantry rig');
   const mobileInfantryWalkStart = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
-  await mobile.waitForFunction(start => {
+  const mobileInfantryGaitHandle = await mobile.waitForFunction(start => {
     const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
-    return state && state.position[0] > start[0] + 0.25 && state.walkAmount > 0.15 && Math.abs(state.leftLeg - state.rightLeg) > 0.08;
+    return state && state.position[0] > start[0] + 0.25 && state.walkAmount > 0.15 &&
+      Math.abs(state.leftLeg - state.rightLeg) > 0.08 &&
+      Math.abs(state.leftArm - state.rightArm) > 0.04 ? state : false;
   }, mobileInfantryWalkStart.position, { timeout: 6000, polling: 50 });
-  const mobileInfantryGait = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
-  assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 && mobileInfantryGait.walkAmount > 0.15, 'mobile V94 infantry gait must follow actual unit displacement');
+  const mobileInfantryGait = await mobileInfantryGaitHandle.jsonValue();
+  console.log('MOBILE_INFANTRY_GAIT ' + JSON.stringify({ start: mobileInfantryWalkStart, state: mobileInfantryGait }));
+  assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 &&
+    mobileInfantryGait.walkAmount > 0.15 &&
+    Math.abs(mobileInfantryGait.leftLeg - mobileInfantryGait.rightLeg) > 0.08 &&
+    Math.abs(mobileInfantryGait.leftArm - mobileInfantryGait.rightArm) > 0.04,
+    'mobile V94 infantry arms and legs must animate in response to real movement');
   await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: false, timeout: 60000 });
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must be available');
