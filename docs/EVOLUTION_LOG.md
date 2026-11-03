@@ -646,3 +646,32 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Documentation commit: to be recorded in this same branch update. Exact final HEAD will be validated by a fresh workflow after all edits are present.
 - No new game version, release or merge. The V4 infantry visual quality is not accepted yet. Desktop/mobile model previews, live V94 gameplay and separate OpenRTS/native checks must complete on the final exact HEAD before any visual acceptance.
 - Evidence boundary: CI mobile is 390×844 browser emulation, not a physical Samsung test. OpenRTS remains a separate native engine and does not import the Three.js infantry meshes. Budget remains 0 €.
+
+
+### Exact-head validation #397 — infantry batching and live V94 evidence — 2026-11-03
+
+- Exact tested HEAD: `92223491501f878827779b0e3cc02a16ee7bbc95` on `art/v94-infantry-forward-grip-20261102`.
+- Workflow: [#397](https://github.com/Ascameleon/Blue-alert/actions/runs/41613659884) — **success** on that exact HEAD.
+- Runtime commit: `577bf438ace894f46b67206a38a1355370ca69e7`; log commit present on the tested HEAD: `92223491501f878827779b0e3cc02a16ee7bbc95`.
+- Changed files on the tested HEAD:
+  - `game-data/models/blue-alert-models.js`
+  - `docs/EVOLUTION_LOG.md`
+- Static prototype/V94/model-kit/V93-compatibility/skirmish-data checks: passed. Standalone single-file V94 build: passed. Desktop and 390×844 mobile model preview: passed. Live V94 desktop and mobile browser suite: passed. OpenRTS native build: passed. Native scenario movement: 12/12 units moved (6 red, 6 blue). Native XTest input: real left-click selection, right-click movement and right-click attack passed.
+- Infantry preview metrics on this exact head: BLUE SENTINEL `29` mesh objects, `13,016` triangles, `58` draw calls. The prior failed #396 preview reported 62 mesh objects, the same 13,016 triangles and 58 draw calls. Static sibling batching reduced scene mesh objects while preserving triangle detail and the draw-call count; this is an object-count optimization, not a claim of additional GPU draw-call savings.
+- Visual evidence artifact: `openrts-graphical-smoke-test`, artifact `13219854751`. Inspected exact-head captures:
+  - `model-preview/desktop-blue-sentinel-infantry.png`
+  - `model-preview/mobile-blue-sentinel-infantry-390x844.png`
+  - `model-preview/desktop-red-bastion-infantry.png`
+  - `model-preview/mobile-red-bastion-infantry-390x844.png`
+  - `v94-browser/desktop-v94-gameplay.png`
+  - `v94-browser/mobile-v94-gameplay-390x844.png`
+  - `v94-browser/desktop-v94-infantry-gait.png`
+  - `v94-browser/mobile-v94-infantry-gait-390x844.png`
+  - `v94-browser/desktop-v94-infantry-fire.png`
+  - `v94-browser/mobile-v94-infantry-fire-390x844.png`
+  - `openrts-interactive-screen.png` and `openrts-screen.png` (separate native engine evidence).
+- Playable artifact: `blue-alerts-v94-build-zone-playable`, artifact `13219999114`; extracted `BLUE_ALERTS_V94_BUILD_ZONE_JOUABLE.html`, 286,099 bytes, SHA-256 `de40d026fed24ac5dcafde8216504e3a71c7e6fecbdb870fd39f7616fdd5393b`. The model module is embedded; Three.js 0.160.0 still loads from a CDN, so the renderer requires internet access.
+- Visual comparison against the `main` baseline `462b6d448c810485b597effcf3e60c708dbbd48e` (reference artifact `13144400413`): the new V4 infantry has a lower-profile helmet, compact goggles/respirator, less bulky field armor, separated articulated legs/boots and a forward two-hand rifle pose. The improvement is visible in desktop/mobile model previews and live gait/fire captures. It is still a stylized, low-poly procedural character; at normal tactical zoom it remains small. The tank silhouettes, terrain and overall battlefield rendering are not materially transformed by this batching correction. The mobile HUD still stacks the selection/status and objective overlays; that remains a separate usability target.
+- No commercial-grade claim, no new game version, no release and no merge. PR #47 remains draft; `main` remains unchanged at `462b6d448c810485b597effcf3e60c708dbbd48e`.
+- Evidence boundaries: 390×844 is Chromium mobile emulation, not a physical Samsung test. OpenRTS is a separate native engine; its screenshots and input checks do not prove that the Three.js V94 assets are running inside OpenRTS. Budget remains 0 €.
+- Next non-duplicative priority: reduce the mobile HUD stack and reclaim battlefield visibility, then continue the infantry/tank silhouette work at normal tactical camera scale.
