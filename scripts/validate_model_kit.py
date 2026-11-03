@@ -90,7 +90,10 @@ def main():
         "factionProfile", "BLUE_SENTINEL", "RED_BASTION", "front-glacis",
         "engine-deck-grilles-instanced", "reactive-armor-tiles-instanced",
         "return-rollers-instanced", "road-wheels-instanced", "wheel-hubs-instanced",
-        "wheel-hub-caps-instanced", "track-shoe-instanced", "wheel-bolts-instanced",
+        "wheel-hub-caps-instanced", "track-shoe-instanced", "track-grouser-instanced", "wheel-bolts-instanced",
+        "createTankTrackGeometrySet", "ROUNDED_CONTINUOUS_TRACK_V1",
+        "trackLoopProfile", "trackLoopSegments", "trackGrouserInstances",
+        "new THREE.BufferGeometry", "computeVertexNormals", "qaTrackCompare", "set(enabled)",
         "blue-turret-cheeks-instanced", "red-turret-cheeks-instanced",
         "red-bastion-side-plates-instanced", "red-bastion-cupola",
         "heavy-turret-reinforcements-instanced",
@@ -100,6 +103,16 @@ def main():
     missing = [feature for feature in required_tank_features if feature not in model]
     if missing:
         raise SystemExit("FAIL: faction tank signatures missing: " + ", ".join(missing))
+    required_tank_surface = (
+        "TANK_SURFACE_TEXTURE_CACHE", "createTankSurfaceTextures",
+        "SENTINEL_BASTION_ARMOR_FIELDWEAR_V1", "armorMap", "metalMap",
+        "roughnessMap", "armorBump", "metalBump", "rubberBump",
+        "surfaceMaterialRefs", "surfaceTextureCount", "surfaceMaterialCount",
+        "tankSurfaceMaps", "new THREE.CanvasTexture",
+    )
+    missing = [feature for feature in required_tank_surface if feature not in model]
+    if missing:
+        raise SystemExit("FAIL: faction tank PBR fieldwear pipeline missing: " + ", ".join(missing))
 
     if "camera.position.set(a==='landscape'?22:a==='infantry'?2.75:8" not in preview or "infantryArmorParts" not in preview:
         raise SystemExit("FAIL: infantry preview must use close framing and expose actual armor mesh diagnostics")

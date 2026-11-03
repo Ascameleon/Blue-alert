@@ -67,3 +67,8 @@ Both retain the existing outer group and \`userData.turret\` contract used by V9
 The BLUE SENTINEL and RED BASTION hulls and turrets now use original chamfered, bevel-extruded armor geometry rather than relying on plain rectangular boxes for their main silhouette. The front glacis, upper/lower hull, engine deck, turret shell, faction cheek plates, side skirts and heavy reinforcements share the same lightweight procedural treatment. Repeated armor details remain instanced, and the preview exposes the exact bevelled part list so desktop/mobile browser tests can verify that the runtime model—not a detached illustration—contains the new geometry.
 
 The V94 runtime already loads this model module through its BLUE_MODELS.createTank path; collision footprints, health, movement speed, turret control and weapon behavior are unchanged. This is a geometry-quality pass, not a claim of photogrammetric/PBR sculpting or AAA asset quality.
+
+
+## Faction tank fieldwear surfaces (V94)
+
+BLUE SENTINEL and RED BASTION tanks now share a cached, deterministic 256×256 procedural surface pipeline, seeded separately by faction. The local browser code generates armor albedo with restrained dust, panel-seam cues and micro-scuffs, brushed-metal albedo, roughness variation, armor micro-relief, steel brushing and track-rubber grooves. These maps bind to the existing hull, armor, metal and track materials; they do not add meshes or draw calls. The V94 QA camera exposes same-pose surface-map A/B capture in the actual game runtime. No downloaded textures, external assets or paid services are used.
