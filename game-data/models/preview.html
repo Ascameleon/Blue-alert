@@ -78,7 +78,7 @@ else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
 scene.add(current);
 const profileTitle=a==='tank'?(t==='red'?'Char RED BASTION':'Char BLUE SENTINEL'):desc[a][0];
 document.querySelector('#title').textContent=profileTitle;
-const profileCopy=a==='tank'?(t==='red'?'RED BASTION — tourelle haute à plaques latérales, cupola de commandement et capteurs protégés.':'BLUE SENTINEL — tourelle basse profilée, joues inclinées et télémètre compact.'):desc[a][1];
+const profileCopy=a==='tank'?(t==='red'?'RED BASTION — coque à glacis moulé, tourelle haute à plaques latérales, mantelet blindé et cupola de commandement.':'BLUE SENTINEL — coque à glacis multi-pentes, tourelle basse moulée, mantelet compact et chenilles à maillons fermés.'):desc[a][1];
 document.querySelector('#desc').textContent=profileCopy;
 controls.target.set(0,a==='infantry'?.91:a==='tank'?.96:1,0);
 if(a==='tank'){

@@ -105,9 +105,9 @@ try {
   assert.ok(initial.canvasWidth>0 && initial.canvasHeight>0,'WebGL canvas must have a backing resolution');
   assert.equal(initial.team,'blue');
   assert.equal(initial.factionProfile,'BLUE_SENTINEL','blue faction must use its own low-profile turret signature');
-  assert.equal(initial.trackShoeInstances,36,'both tracks must expose 36 instanced tread shoes');
+  assert.equal(initial.trackShoeInstances,64,'both closed track loops must expose 64 instanced tread shoes');
   assert.equal(initial.wheelBoltInstances,60,'twelve road wheels must expose 60 instanced wheel bolts');
-  assert.deepEqual(initial.detailInstances,{engineGrilles:7,reactiveArmorTiles:8,returnRollers:6,roadWheels:12,wheelHubs:12,wheelHubCaps:12,smokeDischargers:4,faction:{turretCheeks:2,turretSidePlates:0,smokeBanks:0}},'repeated chassis and faction details must be batched');
+  assert.deepEqual(initial.detailInstances,{engineGrilles:7,reactiveArmorTiles:8,returnRollers:6,roadWheels:12,wheelHubs:12,wheelHubCaps:12,smokeDischargers:4,trackLinks:64,closedTrackBelts:2,faction:{turretCheeks:2,turretSidePlates:0,smokeBanks:0}},'repeated chassis and closed track details must be batched');
   assert.ok(initial.cameraDistance<9,'desktop tank preview must frame the softened armor at a useful scale');
   assert.ok(initial.beveledArmorPartCount>=12,'blue tank must use bevelled armor geometry for its major silhouette and repeated plates');
   assert.equal(initial.hullGeometryProfile,'SLOPED_CAST_HULL_PROFILE_V1','tank hull must use a cast multi-slope armor shell');
@@ -205,7 +205,11 @@ try {
   const redTank=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(redTank.team,'red');
   assert.equal(redTank.factionProfile,'RED_BASTION','red faction must use its reinforced high turret signature');
-  assert.equal(redTank.trackShoeInstances,36);
+  assert.equal(redTank.hullGeometryProfile,'SLOPED_CAST_HULL_PROFILE_V1');
+  assert.equal(redTank.trackGeometryProfile,'CLOSED_STADIUM_TREAD_LOOP_V1');
+  assert.equal(redTank.turretGeometryProfile,'LOW_PROFILE_CAST_TURRET_V1');
+  assert.equal(redTank.trackLinkCount,64);
+  assert.equal(redTank.trackShoeInstances,64,'red Bastion must expose the same complete closed track loops');
   assert.equal(redTank.wheelBoltInstances,60);
   assert.ok(redTank.meshCount<=45 && redTank.drawCalls<=60,'red tank must share the same mobile-friendly draw-call budget');
   assert.ok(redTank.beveledArmorPartCount>=12,'red tank must use bevelled armor geometry');
@@ -214,7 +218,7 @@ try {
   }
   assert.ok(redTank.triangleCount<5000,'red bevelled tank geometry must remain within the preview triangle budget');
   assert.deepEqual(redTank.detailInstances.faction,{turretCheeks:2,turretSidePlates:2,smokeBanks:2},'red reinforced turret details must be instanced');
-  for(const name of ['front-glacis','engine-deck-grilles-instanced','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
+  for(const name of ['lower-hull','upper-hull','front-glacis','track-belt-loop-left','track-belt-loop-right','cannon-mantlet','engine-deck-grilles-instanced','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
   assert.notEqual(redTank.factionProfile,initial.factionProfile,'factions must not share the same visual profile');
   await page.screenshot({path:output+'/desktop-red-bastion-tank.png',fullPage:true});
   await page.selectOption('#team','blue');
