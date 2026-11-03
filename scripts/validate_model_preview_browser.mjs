@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 
 const root=process.cwd();
 const baselineSnapshot=JSON.parse(await readFile(resolve(root,'qa/baseline/base_snapshot.json'),'utf8'));
-assert.equal(baselineSnapshot.base_commit,'b179e8088c348c0709589bfd5fa19fb024d42c82','baseline snapshot must match the PR base');
+assert.equal(baselineSnapshot.base_commit,'462b6d448c810485b597effcf3e60c708dbbd48e','baseline snapshot must match the exact PR base');
 const baselinePreviewRaw=baselineSnapshot.preview_html;
 const baselineImportMap='<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>';
 const baselinePreview=baselinePreviewRaw.includes('type="importmap"')?baselinePreviewRaw:baselinePreviewRaw.replace('</head>',baselineImportMap+'</head>');
@@ -78,9 +78,12 @@ try {
   await baselinePage.waitForTimeout(650);
   await baselinePage.screenshot({path:output+'/baseline-infantry-desktop.png',fullPage:true});
   await baselinePage.setViewportSize({width:390,height:844});
+  await baselinePage.selectOption('#asset','turret');
   await baselinePage.click('#reset');
   await baselinePage.waitForTimeout(350);
   await baselinePage.screenshot({path:output+'/baseline-turret-mobile-390x844.png',fullPage:true});
+  await baselinePage.selectOption('#asset','infantry');
+  await baselinePage.waitForTimeout(350);
   await baselinePage.screenshot({path:output+'/baseline-infantry-mobile-390x844.png',fullPage:true});
   await baselinePage.close();
 
@@ -121,6 +124,7 @@ try {
   await page.waitForTimeout(450);
   const blueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(blueInfantry.factionProfile,'BLUE_SENTINEL_RIFLEMAN','blue infantry must use the Sentinel faction profile');
+  assert.equal(blueInfantry.geometryBudgetProfile,'MOBILE_RTS_SOLDIER_GEOMETRY_V2','infantry must use the compact smooth-shaded RTS geometry profile');
   assert.equal(blueInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V2','blue infantry must render original fabric/ceramic surface maps');
   assert.ok(blueInfantry.surfaceTextureCount>=7 && blueInfantry.surfaceMaterialCount>=5,
     'blue infantry must bind cached color, roughness and micro-relief maps to its PBR materials');

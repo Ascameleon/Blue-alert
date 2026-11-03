@@ -558,14 +558,20 @@ export function createInfantry(THREE, options={}) {
   const rubber = mat(THREE, 0x171d20, .98, .01);
   // Hero-scale forms use a smoother surface; tiny fingers retain the lighter helper.
   const heroSphere = (parent, name, radius, position, material, scale=[1,1,1]) => {
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 18, 12), material);
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), material);
+    mesh.name = name; mesh.position.set(...position); mesh.scale.set(...scale);
+    mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+  };
+  // Compact smooth-shaded geometry for optics, palms and individual glove digits.
+  const detailSphere = (parent, name, radius, position, material, scale=[1,1,1]) => {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 8, 6), material);
     mesh.name = name; mesh.position.set(...position); mesh.scale.set(...scale);
     mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
   };
   let curvedArmorPlateCount = 0;
   const curvedPlate = (parent, name, size, position, material, rotation=[0,0,0]) => {
     curvedArmorPlateCount++;
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), material);
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), material);
     mesh.name = name; mesh.position.set(...position);
     mesh.scale.set(size[0] * .5, size[1] * .5, size[2] * .5);
     mesh.rotation.set(...rotation); mesh.castShadow = true; mesh.receiveShadow = true;
@@ -615,7 +621,7 @@ export function createInfantry(THREE, options={}) {
   const anatomicalTorso = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
     [-.25,.13,.10],[-.20,.155,.112],[-.14,.17,.12],[-.07,.178,.126],
     [0,.188,.132],[.08,.202,.134],[.15,.207,.126],[.21,.19,.115],[.25,.165,.105]
-  ], 24), uniform);
+  ], 16), uniform);
   anatomicalTorso.name = 'anatomical-torso-loft';
   anatomicalTorso.castShadow = true; anatomicalTorso.receiveShadow = true; torso.add(anatomicalTorso);
   cylinder(THREE, torso, 'armored-neck-collar', .078,.088,.13,[0,.255,0],dark,12);
@@ -650,7 +656,7 @@ export function createInfantry(THREE, options={}) {
   g.add(head);
   heroSphere(head, 'head', .13, [0, 0, 0], dark, [.86, 1.02, .88]);
   // Sculpted helmet shell: faceted crown, raised brow and side protection.
-  const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 28, 18), cloth);
+  const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 24, 16), cloth);
   helmetShell.name = 'faceted-helmet-shell'; helmetShell.position.set(0,.105,-.015); helmetShell.scale.set(1.04,.76,1.0); helmetShell.castShadow=true; head.add(helmetShell);
   beveledBox(THREE, head, 'helmet-front-brow-armor', [.30,.085,.075], [0,.018,.132], armor, [-.08,0,0], .014);
   for (const side of [-1,1]) beveledBox(THREE, head, 'helmet-temple-armor', [.105,.17,.18], [side*.155,-.025,.005], armor, [0,0,side*.08], .016);
@@ -672,7 +678,7 @@ export function createInfantry(THREE, options={}) {
   beveledBox(THREE, head, 'gas-mask-faceplate', [.22,.18,.075], [0,-.07,.155], dark, [0,0,0], .018);
   beveledBox(THREE, head, 'gas-mask-brow-bridge', [.085,.075,.065], [0,.005,.18], armor, [0,0,0], .012);
   for (const side of [-1,1]) {
-    sphere(THREE, head, 'gas-mask-optic-lens', .034, [side*.063,.018,.195], optic, [1,.9,.34]);
+    detailSphere(head, 'gas-mask-optic-lens', .034, [side*.063,.018,.195], optic, [1,.9,.34]);
     cylinder(THREE, head, 'respirator-filter-housing', .05,.058,.06, [side*.09,-.09,.19], metal, 12).rotation.x=Math.PI/2;
     cylinder(THREE, head, 'respirator-filter-cap', .036,.036,.014, [side*.09,-.09,.228], dark, 12).rotation.x=Math.PI/2;
     for(let vent=0;vent<3;vent++) box(THREE,head,'respirator-filter-vent',[.009,.032,.007],[side*.09+(vent-1)*.017,-.09,.241],accent);
@@ -704,7 +710,7 @@ export function createInfantry(THREE, options={}) {
     beveledBox(THREE,pivot,label+'-angular-pauldron',[.17,.12,.17],[side*.01,-.045,.025],armor,[0,0,side*-.08],.018);
     const upperArm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
       [-.01,.066,.064],[-.045,.071,.068],[-.09,.069,.064],[-.135,.058,.056],[-.18,.05,.048]
-    ],18), uniform);
+    ],14), uniform);
     upperArm.name = label + '-upper-arm-loft';
     upperArm.position.set(side*.01,0,.015); upperArm.castShadow=true; upperArm.receiveShadow=true; pivot.add(upperArm);
     const elbow = new THREE.Group();
@@ -714,17 +720,17 @@ export function createInfantry(THREE, options={}) {
     heroSphere(elbow, label + '-elbow-joint', .052, [0,0,0], armor, [.92,.9,1]);
     const forearm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
       [-.01,.052,.052],[-.045,.06,.058],[-.09,.058,.054],[-.14,.049,.047],[-.18,.043,.043]
-    ],18), cloth);
+    ],14), cloth);
     forearm.name = label + '-forearm-loft';
     forearm.position.set(0,0,.065); forearm.rotation.x=-.86;
     forearm.castShadow=true; forearm.receiveShadow=true; elbow.add(forearm);
     beveledBox(THREE, elbow, label + '-wrist-guard', [.125,.065,.13], [0,-.13,.16], armor, [0,0,0], .012);
-    sphere(THREE, elbow, label + '-glove-palm', .057, [0,-.16,.19], rubber, [.92,.72,1.18]);
+    detailSphere(elbow, label + '-glove-palm', .057, [0,-.16,.19], rubber, [.92,.72,1.18]);
     for(let finger=0;finger<4;finger++) {
-      sphere(THREE, elbow, label + '-glove-finger', .021,
+      detailSphere(elbow, label + '-glove-finger', .021,
         [(finger-1.5)*.025,-.198,.235], rubber, [.82,1.25,.78]);
     }
-    sphere(THREE, elbow, label + '-glove-thumb', .026, [side*-.06,-.165,.19], rubber, [.9,1.1,.85]);
+    detailSphere(elbow, label + '-glove-thumb', .026, [side*-.06,-.165,.19], rubber, [.9,1.1,.85]);
     if (isRed) {
       beveledBox(THREE, pivot, label + '-bastion-pauldron', [.17,.095,.15],
         [side*.012,-.035,.025], accent, [0,0,side*-.08], .012);
@@ -744,7 +750,7 @@ export function createInfantry(THREE, options={}) {
     g.add(pivot);
     const thigh = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
       [-.01,.078,.076],[-.055,.085,.083],[-.11,.084,.08],[-.17,.075,.073],[-.23,.067,.066],[-.28,.06,.06]
-    ],18), cloth);
+    ],14), cloth);
     thigh.name = label + '-thigh-loft';
     thigh.castShadow=true; thigh.receiveShadow=true; pivot.add(thigh);
     const knee = new THREE.Group();
@@ -755,7 +761,7 @@ export function createInfantry(THREE, options={}) {
     curvedPlate(knee,label+'-articulated-knee-guard',[.18,.14,.095],[0,-.005,.072],armor);
     const calf = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
       [-.01,.061,.064],[-.055,.068,.069],[-.11,.065,.066],[-.17,.058,.06],[-.23,.052,.055],[-.28,.047,.05]
-    ],18), uniform);
+    ],14), uniform);
     calf.name = label + '-calf-loft';
     calf.position.z=.005; calf.castShadow=true; calf.receiveShadow=true; knee.add(calf);
     beveledBox(THREE,knee,label+'-shin-armor',[.13,.19,.065],[0,-.15,.078],armor,[0,0,0],.012);
@@ -820,6 +826,7 @@ export function createInfantry(THREE, options={}) {
     bodyGeometryProfile:'ANATOMICAL_HARDSHELL_FIELDWEAVE_V2',
     armorGeometryProfile:'CONVEX_COMPOSITE_CERAMIC_V2',
     bootGeometryProfile:'REINFORCED_TREAD_AND_TOE_CAP_V2',
+    geometryBudgetProfile:'MOBILE_RTS_SOLDIER_GEOMETRY_V2',
     animationJointProfile:'SHOULDER_ELBOW_HIP_KNEE_V1',
     weaponGripProfile:'TWO_HAND_FORWARD_READY_V1',
     armorDetailParts: renderOptimization.sourceMeshCount,
