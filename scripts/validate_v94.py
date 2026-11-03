@@ -211,6 +211,8 @@ def main():
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
     if "terrainMaterial.normalMap = terrainSurfaceTextures.normal" not in terrain_section or "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
+    if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
+        raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
     if "terrainMaterial.normalScale.set(0.55, 0.55)" not in terrain_section or "setMicroRelief(enabled)" not in terrain_section:
         raise SystemExit("FAIL: terrain micro-relief must be measurable and A/B switchable")
 
