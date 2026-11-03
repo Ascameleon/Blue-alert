@@ -591,7 +591,7 @@ try {
     mobileMetrics.terrain.surfaceTextureCount === 3 &&
     mobileMetrics.terrain.surfaceMode === 'procedural-albedo-roughness-relief-v2' &&
     mobileMetrics.terrain.bumpScale === 0.11 && mobileMetrics.terrain.textureResolution === 256 &&
-    mobileMetrics.terrain.textureChecksum > 0 && mobileMetrics.terrain.anisotropy >= 1,
+    mobileMetrics.terrain.textureChecksum > 0 && mobileMetrics.terrain.anisotropy >= 1 && mobileMetrics.terrain.anisotropy <= 2,
     'mobile terrain must use deterministic 256px albedo, roughness and micro-relief maps');
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
@@ -662,7 +662,6 @@ try {
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-tactical-camera-framing-390x844.png', fullPage: false });
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
-  assert.ok(mobileMetrics.terrain?.albedoMap && mobileMetrics.terrain.surfaceMode === 'procedural-albedo-grain' && mobileMetrics.terrain.textureResolution === 256 && mobileMetrics.terrain.textureChecksum > 0 && mobileMetrics.terrain.anisotropy <= 2, 'mobile terrain must use a deterministic 256px procedural albedo surface with capped anisotropy');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&
