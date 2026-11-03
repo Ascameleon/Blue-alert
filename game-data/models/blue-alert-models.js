@@ -646,8 +646,8 @@ export function createInfantry(THREE, options={}) {
   // Helmet and face have faction-specific silhouettes, not just recoloured cloth.
   const head = new THREE.Group();
   head.name = 'infantry-head-rig';
-  head.position.set(0, .42, 0);
-  pelvis.add(head);
+  head.position.set(0, .37, 0);
+  torso.add(head);
   sphere(THREE, head, 'head', .13, [0, 0, 0], dark, [.86, 1.02, .88]);
   // Sculpted helmet shell: faceted crown, raised brow and side protection.
   const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 16, 10), cloth);
@@ -698,8 +698,8 @@ export function createInfantry(THREE, options={}) {
   const makeArm = (side, label) => {
     const pivot = new THREE.Group();
     pivot.name = label + '-arm-pivot';
-    pivot.position.set(side * .215, .24, .015);
-    pelvis.add(pivot);
+    pivot.position.set(side * .215, .19, .015);
+    torso.add(pivot);
     sphere(THREE, pivot, label + '-shoulder-pad', .105, [0, -.045, .015], armor, [.95, .78, 1.02]);
     beveledBox(THREE,pivot,label+'-angular-pauldron',[.17,.12,.17],[side*.01,-.045,.025],armor,[0,0,side*-.08],.018);
     const upperArm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
@@ -851,10 +851,10 @@ export function createInfantry(THREE, options={}) {
   // Two explicit sockets keep the right hand on the pistol grip and the left on the fore-end.
   const rifleGroup = new THREE.Group();
   rifleGroup.name = 'infantry-assault-rifle';
-  rifleGroup.position.set(0, -.02, .24);
+  rifleGroup.position.set(0, -.07, .24);
   rifleGroup.rotation.y = -Math.PI / 2;
   rifleGroup.userData.weaponForwardAxis = '+Z';
-  pelvis.add(rifleGroup);
+  torso.add(rifleGroup);
   const rifle = beveledBox(THREE, rifleGroup, 'rifle-receiver', [.48,.06,.075], [0,0,0], rifleMat, [0,0,0], .012);
   rifle.userData.keepSeparateForCombat = true;
   beveledBox(THREE, rifleGroup, 'rifle-stock', [.18,.085,.095], [-.3,-.005,-.005], dark, [0,0,0], .012);
@@ -943,6 +943,7 @@ export function createInfantry(THREE, options={}) {
     animationJointProfile:'PELVIS_SHOULDER_ELBOW_HIP_KNEE_ANKLE_V2',
     locomotionProfile:'PLANTED_FOOT_WEIGHT_SHIFT_V1',
     weaponGripProfile:'TWO_HAND_FORWARD_READY_V1',
+    weaponHoldProfile:'TORSO_LOCKED_TWO_HAND_READY_V1',
     handGeometryProfile:'ANATOMICAL_GLOVE_WRAP_V1',
     bootGeometryProfile:'SCULPTED_FIELD_BOOT_V1',
     armorDetailParts: renderOptimization.sourceMeshCount,
@@ -975,10 +976,14 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
   rig.rightLeg.rotation.x = -swing + idle;
   rig.leftKnee.rotation.x = Math.max(0, Math.sin(rig.phase + .35)) * .46 * intensity;
   rig.rightKnee.rotation.x = Math.max(0, Math.sin(rig.phase + Math.PI + .35)) * .46 * intensity;
-  rig.leftArm.rotation.x = -swing * .14 - .04 + idle;
-  rig.rightArm.rotation.x = swing * .14 - .04 - idle;
-  rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.045*intensity;
-  rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.045*intensity;
+  // Keep weapon-ready shoulders and elbows locked to the rifle while the
+  // pelvis/torso carry the upper-body gait. A sub-degree shared hold sway keeps
+  // the pose alive without pulling either glove off its explicit grip socket.
+  const weaponHoldSway = Math.sin(rig.phase * .5) * .003 * intensity;
+  rig.leftArm.rotation.x = -.04 + weaponHoldSway;
+  rig.rightArm.rotation.x = -.04 - weaponHoldSway;
+  rig.leftElbow.rotation.x = -.025;
+  rig.rightElbow.rotation.x = -.025;
   if (rig.leftAnkle) {
     rig.leftAnkle.position.y = -.28 + leftLift;
     rig.leftAnkle.rotation.x = -rig.leftLeg.rotation.x * .42 + leftLift * 1.8;
@@ -992,8 +997,8 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
     rig.torso.rotation.x = (rig.pelvis?.rotation.x || 0) * .22;
   }
   if (rig.head) {
-    rig.head.rotation.z = -(rig.pelvis?.rotation.z || 0) * .55;
-    rig.head.rotation.x = -(rig.pelvis?.rotation.x || 0) * .35 + idle * .25;
+    rig.head.rotation.z = -(rig.torso?.rotation.z || 0) * .55;
+    rig.head.rotation.x = -(rig.torso?.rotation.x || 0) * .35 + idle * .25;
   }
   rig.walkAmount = intensity;
   return true;

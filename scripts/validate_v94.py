@@ -286,7 +286,7 @@ def main():
     infantry_qa_start = source.index("const infantryProbe")
     infantry_qa_end = source.index("const visibleModelMuzzleFlashCount", infantry_qa_start)
     infantry_qa_section = source[infantry_qa_start:infantry_qa_end]
-    required_infantry_qa = ("weaponGripProfile", "leftGripError", "rightGripError",
+    required_infantry_qa = ("weaponGripProfile", "weaponHoldProfile", "leftGripError", "rightGripError",
                             "muzzleAxisDot", "pelvisBob", "pelvisSway", "leftAnklePitch",
                             "rightAnklePitch", "leftAnkleLift", "rightAnkleLift", "camDist = 9.5")
     missing = [token for token in required_infantry_qa if token not in infantry_qa_section]

@@ -4377,6 +4377,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     return {
       profile: unit.g.userData.infantryProfile,
       weaponGripProfile: model?.userData?.weaponGripProfile || null,
+      weaponHoldProfile: model?.userData?.weaponHoldProfile || null,
       leftGripError: gripError(rig.leftHand, model?.userData?.weaponGripSockets?.left),
       rightGripError: gripError(rig.rightHand, model?.userData?.weaponGripSockets?.right),
       muzzleAxisDot,
@@ -4394,7 +4395,9 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       leftLeg: rig.leftLeg.rotation.x,
       rightLeg: rig.rightLeg.rotation.x,
       leftArm: rig.leftArm.rotation.x,
-      rightArm: rig.rightArm.rotation.x
+      rightArm: rig.rightArm.rotation.x,
+      leftElbow: rig.leftElbow.rotation.x,
+      rightElbow: rig.rightElbow.rotation.x
     };
   };
   window.__BLUE_ALERTS_INFANTRY_QA__ = Object.freeze({

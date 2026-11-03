@@ -491,13 +491,18 @@ try {
   }, infantryWalkStart.position, { timeout: 5000, polling: 50 });
   assert.equal(infantryReady.weaponGripProfile, 'TWO_HAND_FORWARD_READY_V1',
     'desktop V94 rifleman must use the existing two-hand forward weapon rig');
+  assert.equal(infantryReady.weaponHoldProfile, 'TORSO_LOCKED_TWO_HAND_READY_V1',
+    'desktop V94 rifleman must use the torso-locked two-hand hold profile');
   assert.ok(infantryReady.leftGripError < .07 && infantryReady.rightGripError < .07 &&
     infantryReady.muzzleAxisDot > .99 && infantryReady.muzzleAttached,
     'desktop live rifleman must hold the forward-facing weapon at both sockets');
   const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  console.log('DESKTOP_INFANTRY_GAIT ' + JSON.stringify(desktopInfantryGait));
   assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 &&
     desktopInfantryGait.walkAmount > 0.2 &&
-    Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.025 &&
+    desktopInfantryGait.weaponHoldProfile === 'TORSO_LOCKED_TWO_HAND_READY_V1' &&
+    Math.abs(desktopInfantryGait.leftArm + .04) < .01 && Math.abs(desktopInfantryGait.rightArm + .04) < .01 &&
+    Math.abs(desktopInfantryGait.leftElbow + .025) < .002 && Math.abs(desktopInfantryGait.rightElbow + .025) < .002 &&
     desktopInfantryGait.leftGripError < .09 && desktopInfantryGait.rightGripError < .09 &&
     desktopInfantryGait.muzzleAxisDot > .99,
     'desktop V94 infantry gait must preserve both rifle grips and the forward muzzle axis while moving');
@@ -957,12 +962,18 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   }, mobileInfantryWalkStart.position, { timeout: 6000, polling: 50 });
   assert.equal(mobileInfantryReady.weaponGripProfile, 'TWO_HAND_FORWARD_READY_V1',
     'mobile V94 rifleman must use the existing two-hand forward weapon rig');
+  assert.equal(mobileInfantryReady.weaponHoldProfile, 'TORSO_LOCKED_TWO_HAND_READY_V1',
+    'mobile V94 rifleman must use the torso-locked two-hand hold profile');
   assert.ok(mobileInfantryReady.leftGripError < .07 && mobileInfantryReady.rightGripError < .07 &&
     mobileInfantryReady.muzzleAxisDot > .99 && mobileInfantryReady.muzzleAttached,
     'mobile live rifleman must hold the forward-facing weapon at both sockets');
   const mobileInfantryGait = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
+  console.log('MOBILE_INFANTRY_GAIT ' + JSON.stringify(mobileInfantryGait));
   assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 &&
     mobileInfantryGait.walkAmount > 0.15 &&
+    mobileInfantryGait.weaponHoldProfile === 'TORSO_LOCKED_TWO_HAND_READY_V1' &&
+    Math.abs(mobileInfantryGait.leftArm + .04) < .01 && Math.abs(mobileInfantryGait.rightArm + .04) < .01 &&
+    Math.abs(mobileInfantryGait.leftElbow + .025) < .002 && Math.abs(mobileInfantryGait.rightElbow + .025) < .002 &&
     mobileInfantryGait.leftGripError < .09 && mobileInfantryGait.rightGripError < .09 &&
     mobileInfantryGait.muzzleAxisDot > .99,
     'mobile V94 infantry gait must preserve the rifle grip and forward muzzle axis while moving');
