@@ -606,6 +606,37 @@ try {
     mobileMissionHud.left >= 0 && mobileMissionHud.right <= mobileMissionHud.viewportWidth + 1 &&
     mobileMissionHud.text.includes('Livrer 600 minerais'),
     'mobile HUD must expose the active mission objective without horizontal overflow');
+
+  const mobileHudLayout = await mobile.evaluate(() => {
+    const rect = id => {
+      const r = document.getElementById(id).getBoundingClientRect();
+      return { left:r.left, right:r.right, top:r.top, bottom:r.bottom, width:r.width, height:r.height };
+    };
+    const pills = [...document.querySelectorAll('#topbar .pill')];
+    const objective = document.getElementById('mobileMissionObjective');
+    return {
+      topbar: rect('topbar'),
+      visibleTopbarPills: pills.filter(el => getComputedStyle(el).display !== 'none').length,
+      commandModeDisplay: getComputedStyle(pills[1]).display,
+      commands: rect('mobileCommands'),
+      mission: rect('mobileMission'),
+      hqBadgeDisplay: getComputedStyle(document.getElementById('mobileHQBadge')).display,
+      objectiveWhiteSpace: getComputedStyle(objective).whiteSpace,
+      objectiveOverflowX: getComputedStyle(objective).overflowX
+    };
+  });
+  assert.ok(mobileHudLayout.topbar.height <= 36.5 && mobileHudLayout.visibleTopbarPills === 2 &&
+    mobileHudLayout.commandModeDisplay === 'none',
+    'mobile top bar must stay on one compact row without redundant command-mode pill');
+  assert.equal(mobileHudLayout.hqBadgeDisplay, 'none',
+    'mobile HUD must not spend a separate row on the redundant HQ badge');
+  assert.ok(mobileHudLayout.mission.top >= mobileHudLayout.commands.bottom + 4 &&
+    mobileHudLayout.mission.bottom <= 136 && mobileHudLayout.mission.height <= 50,
+    'mobile mission objective must sit below touch commands in a compact card');
+  assert.ok(mobileHudLayout.objectiveWhiteSpace === 'nowrap' && mobileHudLayout.objectiveOverflowX === 'hidden',
+    'mobile mission detail must remain a single clipped line instead of expanding the HUD stack');
+  console.log('MOBILE_HUD_COMPACT ' + JSON.stringify(mobileHudLayout));
+  await mobile.screenshot({ path: output + '/mobile-v94-hud-compact-390x844.png', fullPage: false });
   const mobileToastClearance = await mobile.evaluate(() => {
     const toast = document.getElementById('toast');
     const commands = document.getElementById('mobileCommands');

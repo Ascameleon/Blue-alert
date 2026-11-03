@@ -386,3 +386,14 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Files changed against the accepted main base: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, and this log. No external assets, paid APIs, credits or services were used; budget remains 0 €.
 - Evidence boundaries: 390×844 is browser emulation, not a physical Samsung test; Three.js remains CDN-loaded; the CI log includes non-blocking Node deprecation notices and OpenRTS material-parser warnings, with no failed step or uncaught exception. No game version/release was created.
 - The PR was merged with its branch history preserved in main merge commit `c261a3d75126ac01248b8066165bd20009449818`. The only commit after tested code/test head `c7fcc69eefd818644f5233e3f9043e3625208869` and before merge was `a1d9a8280f02fcf068110c7b1231d5c03c8eb338`, which changed only this log; the compare confirms no runtime or test file changed after the passing workflow. The available GitHub commit-status and workflow-run queries returned no post-merge main-run record, so a post-merge exact-main workflow pass is not claimed. No game version or release was created.
+
+
+## Cycle — compact mobile battlefield HUD (2026-11-03)
+
+- Base: accepted `main` at `462b6d448c810485b597effcf3e60c708dbbd48e`; new focused branch: `fix/v94-mobile-hud-compact-20261103`.
+- The supplied Samsung gameplay capture showed the mobile top bar wrapping its title, a separate selection-mode pill, a five-button command row, a redundant HQ badge, and a tall mission card stacked over the battlefield. This consumed too much vertical play space before the bottom build dock.
+- Reworked only the mobile HUD layout in `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`: one-line brand/status header, hidden redundant mode pill and HQ badge, retained all five command buttons at the existing 44px minimum touch height, moved the mission card directly below the command row, and reduced its objective detail to one readable clipped line. Mission feedback toast now starts below the compact objective card. Desktop layout and game simulation contracts are unchanged.
+- Added browser assertions for the exact mobile HUD geometry, visible header pills, command touch targets, HQ badge suppression, mission clearance and objective text overflow. Added fresh 390×844 current-engine capture `mobile-v94-hud-compact-390x844.png`.
+- Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94_browser.mjs`, and `docs/EVOLUTION_LOG.md`.
+- Exact-head workflow, standalone build, desktop/mobile rendering and OpenRTS checks are pending. No visual acceptance or release is claimed until the new mobile gameplay screenshot is inspected against the supplied baseline. Browser emulation is not a physical Samsung test.
+- No new assets, paid APIs, credits or services; budget remains 0 €. No existing branch or accepted runtime was replaced.

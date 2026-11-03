@@ -176,17 +176,29 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
   .tabs{flex-direction:column;width:52px;border-bottom:none;border-right:1px solid #1a3048}
   .tab{min-height:44px;display:flex;align-items:center;justify-content:center}
   #cards{grid-template-columns:repeat(4,1fr);flex:1}
-  #topbar{right:0}
-  #mobileCommands{display:flex}
-  #mobileHQBadge{display:block}
-  #mobileMission{display:block}
-  /* Keep mission notifications below the mobile command row and objective HUD. */
-  #toast{top:210px;max-width:calc(100vw - 32px);font-size:11px;padding:7px 12px}
+  #topbar{
+    right:0;height:36px;padding:0 8px;gap:6px;
+    justify-content:space-between;flex-wrap:nowrap
+  }
+  #topbar .pill{padding:3px 8px;font-size:10px;line-height:1.2;white-space:nowrap}
+  #topbar .pill:first-child{min-width:0;flex:0 1 auto}
+  #topbar .pill:first-child span{display:none}
+  #topbar .pill:nth-child(2){display:none}
+  #topbar .pill:last-child{flex:0 0 auto}
+  #mobileCommands{display:flex;top:38px;left:8px;right:8px;gap:4px}
+  #mobileCommands button{min-height:44px;padding:6px 3px;font-size:9px;line-height:1.05;white-space:nowrap}
+  #mobileCommands #mobileAttack{font-size:8px;letter-spacing:-.15px}
+  #mobileHQBadge{display:none}
+  #mobileMission{display:block;top:88px;left:8px;width:min(272px,calc(100vw - 16px));padding:6px 8px}
+  #mobileMission .mobileMissionHead{font-size:8px;letter-spacing:.05em}
+  #mobileMissionObjective{margin-top:3px;font-size:9px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #mobileMission .mobileMissionBar{height:2px;margin-top:4px}
+  /* Compact top HUD ends before mission feedback begins. */
+  #toast{top:138px;max-width:calc(100vw - 16px);font-size:10px;padding:6px 10px}
   #minimap{right:8px;bottom:140px;width:110px;height:82px}
   #selinfo{bottom:140px}
   #dmglayer,#hbarlayer{right:0;bottom:130px}
-}
-</style>
+}</style>
 </head>
 <body>
 
