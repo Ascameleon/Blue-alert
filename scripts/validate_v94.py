@@ -217,8 +217,8 @@ def main():
     terrain_section = source[terrain_start:terrain_end]
     if "Math.random()" in terrain_section:
         raise SystemExit("FAIL: terrain prop placement must be deterministic")
-    if "vertexColors: true" not in terrain_section:
-        raise SystemExit("FAIL: terrain must use deterministic vertex color variation")
+    if "vertexColors: true" not in terrain_section or "terrainColors.fill(1);" not in terrain_section:
+        raise SystemExit("FAIL: terrain must use an explicit neutral-white vertex tint so the albedo owns the field palette")
     if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
     if "terrainMaterial.normalMap = terrainSurfaceTextures.normal" not in terrain_section or "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness" not in terrain_section:
@@ -226,28 +226,34 @@ def main():
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
     required_field_surface = (
-        "terrainMaterial.normalScale.set(0.7, 0.7)",
+        "terrainColors.fill(1);",
+        "terrainMaterial.normalScale.set(0.85, 0.85)",
         "setMicroRelief(enabled)",
-        "* 1.8;",
+        "* 2.2;",
         "const warpX = (terrainNoise(",
         "const warpZ = (terrainNoise(",
         "const fieldMix = broad * 0.68 + medium * 0.32;",
+        "const dry = terrainSmoothstep(0.53, 0.72, fieldMix);",
+        "const soil = terrainSmoothstep(0.58, 0.76,",
         "const micro = terrainNoise(",
         "const grainNoise = terrainNoise(",
         "const fiberPatch = terrainSmoothstep(0.22, 0.68, micro);",
         "const grassFiber = Math.pow(Math.max(0, fiberWave), 3.2) * fiberPatch *",
         "const soilGrain = terrainSmoothstep(",
         "const stoneGrain = terrainSmoothstep(",
-        "heightField[py * size + px] = micro * 0.10 + grainNoise * 0.05 +",
-        "const dryMix = dry * 0.52;",
-        "const soilMix = soil * 0.62;",
+        "heightField[py * size + px] = micro * 0.12 + grainNoise * 0.06 +",
+        "const dryMix = dry * 0.50;",
+        "const soilMix = soil * 0.64;",
+        "let red = 110, green = 132, blue = 72;",
+        "let redSum = 0, greenSum = 0, blueSum = 0;",
         "grassFiber: grassFiberSamples / (size * size)",
         "soilGrain: soilGrainSamples / (size * size)",
         "stoneGrain: stoneGrainSamples / (size * size)",
-        "createTerrainSurfaceTextures(isMobile ? 512 : 1024)",
-        "coverage: {",
+        "createTerrainSurfaceTextures(isMobile ? 256 : 512)",
+        "meanAlbedo: {",
         "surfaceCoverage: terrainSurfaceTextures.coverage",
-        "0xe0dfc9", "0xe6d8b8", "0xd2d9c6", "0xd8c5ac",
+        "surfaceAlbedo: terrainSurfaceTextures.meanAlbedo",
+        "vertexTint: 'neutral-white'",
         "normalField: 'microstructure-only',"
     )
     missing_field_surface = [token for token in required_field_surface if token not in terrain_section]
@@ -388,12 +394,16 @@ def main():
         "surfaceCoverage?.grassFiber >= 0.08",
         "surfaceCoverage?.soilGrain >= 0.004",
         "surfaceCoverage?.stoneGrain >= 0.0005",
-        "textureResolution === 1024",
         "textureResolution === 512",
+        "textureResolution === 256",
+        "vertexTint === 'neutral-white'",
+        "surfaceAlbedo?.r >= 95",
+        "surfaceAlbedo?.g >= 110",
+        "surfaceAlbedo?.b >= 55",
         "procedural-albedo-normal-roughness",
         "normalField === 'microstructure-only'",
-        "normalStrength >= 0.65",
-        "normalStrength <= 0.75",
+        "normalStrength >= 0.80",
+        "normalStrength <= 0.90",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:

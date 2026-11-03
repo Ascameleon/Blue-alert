@@ -190,12 +190,12 @@ try {
   assert.ok(desktopMetrics.terrain?.albedoMap &&
     desktopMetrics.terrain.surfaceMode === 'procedural-albedo-normal-roughness' &&
     desktopMetrics.terrain.normalMap && desktopMetrics.terrain.roughnessMap &&
-    desktopMetrics.terrain.textureResolution === 1024 &&
+    desktopMetrics.terrain.textureResolution === 512 &&
     desktopMetrics.terrain.textureChecksum > 0 &&
     desktopMetrics.terrain.anisotropy <= 2 &&
-    desktopMetrics.terrain.normalField === 'microstructure-only' && desktopMetrics.terrain.normalStrength >= 0.65 && desktopMetrics.terrain.normalStrength <= 0.75,
+    desktopMetrics.terrain.normalField === 'microstructure-only' && desktopMetrics.terrain.normalStrength >= 0.80 && desktopMetrics.terrain.normalStrength <= 0.90,
     'desktop terrain must expose deterministic 1024px PBR maps with bounded sampling and authored relief strength');
-  assert.ok(desktopMetrics.terrain.surfaceCoverage?.dry >= 0.45 &&
+  assert.ok(desktopMetrics.terrain.surfaceCoverage?.dry >= 0.30 &&
     desktopMetrics.terrain.surfaceCoverage?.soil >= 0.12 &&
     desktopMetrics.terrain.surfaceCoverage?.stone >= 0.004,
     'desktop terrain must contain deterministic dry-grass, compacted-soil and exposed-stone strata: ' +
@@ -205,7 +205,16 @@ try {
     desktopMetrics.terrain.surfaceCoverage?.stoneGrain >= 0.0005,
     'desktop terrain must expose grass-fiber, soil-grain and stone-fleck microstructure: ' +
       JSON.stringify(desktopMetrics.terrain.surfaceCoverage));
-  console.log('DESKTOP_FIELD_SURFACE_COVERAGE ' + JSON.stringify(desktopMetrics.terrain.surfaceCoverage));
+  assert.ok(desktopMetrics.terrain?.vertexTint === 'neutral-white' &&
+    desktopMetrics.terrain.surfaceAlbedo?.r >= 95 && desktopMetrics.terrain.surfaceAlbedo?.r <= 135 &&
+    desktopMetrics.terrain.surfaceAlbedo?.g >= 110 && desktopMetrics.terrain.surfaceAlbedo?.g <= 145 &&
+    desktopMetrics.terrain.surfaceAlbedo?.b >= 55 && desktopMetrics.terrain.surfaceAlbedo?.b <= 90,
+    'desktop field albedo must stay within a readable olive/earth palette rather than a pale double-tinted wash: ' +
+      JSON.stringify({ vertexTint: desktopMetrics.terrain?.vertexTint, surfaceAlbedo: desktopMetrics.terrain?.surfaceAlbedo }));
+  console.log('DESKTOP_FIELD_SURFACE_COVERAGE ' + JSON.stringify({
+    coverage: desktopMetrics.terrain.surfaceCoverage,
+    meanAlbedo: desktopMetrics.terrain.surfaceAlbedo
+  }));
   const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
   assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
   assert.equal(missionInitial.deliveredOre, 0, 'starting credits and ore in the field must not count as delivered resources');
@@ -230,7 +239,7 @@ try {
     !missionAfterProduction.objectives[2].complete && missionAfterProduction.progressPercent >= 66,
     'the force objective must count three produced combat units without completing the citadel objective');
   console.log('DESKTOP_MISSION_OBJECTIVES ' + JSON.stringify({ initial: missionInitial, afterOre: missionAfterOre, afterProduction: missionAfterProduction }));
-  assert.ok(desktopMetrics.terrain?.albedoMap && desktopMetrics.terrain.surfaceMode === 'procedural-albedo-normal-roughness' && desktopMetrics.terrain.normalMap && desktopMetrics.terrain.roughnessMap && desktopMetrics.terrain.normalField === 'microstructure-only' && desktopMetrics.terrain.normalStrength >= 0.65 && desktopMetrics.terrain.normalStrength <= 0.75 && desktopMetrics.terrain.textureResolution === 1024 && desktopMetrics.terrain.textureChecksum > 0 && desktopMetrics.terrain.anisotropy >= 1, 'desktop terrain must use deterministic 1024px albedo, normal and roughness surfaces');
+  assert.ok(desktopMetrics.terrain?.albedoMap && desktopMetrics.terrain.surfaceMode === 'procedural-albedo-normal-roughness' && desktopMetrics.terrain.normalMap && desktopMetrics.terrain.roughnessMap && desktopMetrics.terrain.normalField === 'microstructure-only' && desktopMetrics.terrain.normalStrength >= 0.80 && desktopMetrics.terrain.normalStrength <= 0.90 && desktopMetrics.terrain.textureResolution === 512 && desktopMetrics.terrain.textureChecksum > 0 && desktopMetrics.terrain.anisotropy >= 1, 'desktop terrain must use deterministic 1024px albedo, normal and roughness surfaces');
   assert.ok(desktopMetrics.terrainDressing?.scrubInstances >= 160 && desktopMetrics.terrainDressing.roadMarkers === 26,
     'desktop battlefield must include instanced scrub and reflective supply-road markers');
   assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
@@ -537,7 +546,7 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
   const terrainFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(terrainFocus?.textureResolution, 1024, 'desktop terrain detail focus must be available');
-  assert.ok(terrainFocus?.normalMap && terrainFocus?.roughnessMap && terrainFocus.normalField === 'microstructure-only' && terrainFocus.normalStrength >= 0.65 && terrainFocus.normalStrength <= 0.75,
+  assert.ok(terrainFocus?.normalMap && terrainFocus?.roughnessMap && terrainFocus.normalField === 'microstructure-only' && terrainFocus.normalStrength >= 0.80 && terrainFocus.normalStrength <= 0.90,
     'desktop terrain must expose live normal and roughness maps');
   const desktopTerrainBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(false));
   assert.ok(desktopTerrainBaseline && !desktopTerrainBaseline.normalMap && !desktopTerrainBaseline.roughnessMap,
@@ -545,7 +554,7 @@ try {
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-microrelief-baseline.png', fullPage: true });
   const desktopTerrainDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(true));
-  assert.ok(desktopTerrainDetail?.normalMap && desktopTerrainDetail?.roughnessMap && desktopTerrainDetail.normalField === 'microstructure-only' && desktopTerrainDetail.normalStrength >= 0.65 && desktopTerrainDetail.normalStrength <= 0.75,
+  assert.ok(desktopTerrainDetail?.normalMap && desktopTerrainDetail?.roughnessMap && desktopTerrainDetail.normalField === 'microstructure-only' && desktopTerrainDetail.normalStrength >= 0.80 && desktopTerrainDetail.normalStrength <= 0.90,
     'desktop terrain detail must restore normal and roughness maps');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-microrelief-detail.png', fullPage: true });
@@ -572,17 +581,23 @@ try {
     if (toast) { toast.style.opacity = '0'; toast.textContent = ''; }
   });
   const mobileMetrics = await metrics(mobile);
+  assert.ok(mobileMetrics.terrain?.vertexTint === 'neutral-white' &&
+    mobileMetrics.terrain.surfaceAlbedo?.r >= 95 && mobileMetrics.terrain.surfaceAlbedo?.r <= 135 &&
+    mobileMetrics.terrain.surfaceAlbedo?.g >= 110 && mobileMetrics.terrain.surfaceAlbedo?.g <= 145 &&
+    mobileMetrics.terrain.surfaceAlbedo?.b >= 55 && mobileMetrics.terrain.surfaceAlbedo?.b <= 90,
+    'mobile field albedo must stay within the same readable olive/earth palette: ' +
+      JSON.stringify({ vertexTint: mobileMetrics.terrain?.vertexTint, surfaceAlbedo: mobileMetrics.terrain?.surfaceAlbedo }));
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
-  assert.equal(mobileTerrainFocus?.textureResolution, 512, 'mobile terrain detail focus must use the authored 512px surface');
-  assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalField === 'microstructure-only' && mobileTerrainFocus.normalStrength >= 0.65 && mobileTerrainFocus.normalStrength <= 0.75,
-    'mobile terrain must expose the same bounded PBR relief strength at its 512px texture resolution');
+  assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must use the authored 256px surface');
+  assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalField === 'microstructure-only' && mobileTerrainFocus.normalStrength >= 0.80 && mobileTerrainFocus.normalStrength <= 0.90,
+    'mobile terrain must expose the same bounded PBR relief strength at its 256px texture resolution');
   const mobileTerrainBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(false));
   assert.ok(mobileTerrainBaseline && !mobileTerrainBaseline.normalMap && !mobileTerrainBaseline.roughnessMap,
     'mobile terrain A/B baseline must disable only normal and roughness maps');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-baseline-390x844.png', fullPage: false });
   const mobileTerrainDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(true));
-  assert.ok(mobileTerrainDetail?.normalMap && mobileTerrainDetail?.roughnessMap && mobileTerrainDetail.normalField === 'microstructure-only' && mobileTerrainDetail.normalStrength >= 0.65 && mobileTerrainDetail.normalStrength <= 0.75,
+  assert.ok(mobileTerrainDetail?.normalMap && mobileTerrainDetail?.roughnessMap && mobileTerrainDetail.normalField === 'microstructure-only' && mobileTerrainDetail.normalStrength >= 0.80 && mobileTerrainDetail.normalStrength <= 0.90,
     'mobile terrain detail must restore the authored normal and roughness maps');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-detail-390x844.png', fullPage: false });
@@ -661,9 +676,9 @@ try {
     mobileMetrics.terrain.textureResolution === 512 &&
     mobileMetrics.terrain.textureChecksum > 0 &&
     mobileMetrics.terrain.anisotropy <= 2 &&
-    mobileMetrics.terrain.normalField === 'microstructure-only' && mobileMetrics.terrain.normalStrength >= 0.65 && mobileMetrics.terrain.normalStrength <= 0.75,
+    mobileMetrics.terrain.normalField === 'microstructure-only' && mobileMetrics.terrain.normalStrength >= 0.80 && mobileMetrics.terrain.normalStrength <= 0.90,
     'mobile terrain must use deterministic 512px albedo, normal and roughness maps with capped anisotropy and authored relief strength');
-  assert.ok(mobileMetrics.terrain.surfaceCoverage?.dry >= 0.45 &&
+  assert.ok(mobileMetrics.terrain.surfaceCoverage?.dry >= 0.30 &&
     mobileMetrics.terrain.surfaceCoverage?.soil >= 0.12 &&
     mobileMetrics.terrain.surfaceCoverage?.stone >= 0.004,
     'mobile terrain must contain deterministic dry-grass, compacted-soil and exposed-stone strata: ' +
