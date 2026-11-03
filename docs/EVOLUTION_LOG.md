@@ -609,3 +609,11 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Result: failed at `scripts/validate_model_kit.py` before browser rendering. Prototype and V94 static/syntax checks passed. Model-kit validation rejected one comment-token assertion: the source comment correctly says `smooth ballistic helmet shell above is the sole crown surface`, while the test expected the shorter phrase without `above`. This was a test-string mismatch, not a model/runtime failure. Browser preview, desktop/mobile gameplay and OpenRTS stages were skipped; this run produced no new visual evidence.
 - Test-only correction commit: `2ee6c0d637b66413bf42363b358326b83533b817`, aligning the required token with the exact model comment. No production model or gameplay code changed in this correction.
 - The branch remains unmerged and no release is authorized. The next workflow must validate the complete updated HEAD before any further write.
+
+
+### Exact-head validation attempt #393 — 2026-11-03
+
+- Workflow: [#393](https://github.com/Ascameleon/Blue-alert/actions/runs/41611221048), exact HEAD `7cfc1974bec3ca46ddca55fc641263ebd64cc7cf`.
+- Result: the model-kit validator, V93 compatibility, skirmish-data checks, OpenRTS scenario preparation and Chromium setup all passed. The standalone HTML build then failed because `scripts/build_single_html.mjs` still asserted the old model import query `?v=10`, while the runtime and model preview had correctly moved to `?v=11`. No browser rendering or native OpenRTS build was reached. Artifact `13219635294` contains only the small early-stage smoke-test output and no screenshots.
+- Builder correction commit: `080941dfe9ff1fe20ed35f60efe77aa9165b9706`; both stale `?v=10` references in the standalone builder now match `?v=11`. No production gameplay/model code changed in this correction.
+- The next exact-head workflow must complete the standalone bundle, desktop/mobile model previews, desktop/mobile gameplay captures and separate OpenRTS build/interaction checks before any further branch write.
