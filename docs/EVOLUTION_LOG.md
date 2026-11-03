@@ -511,3 +511,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Code commit: `8910a2b9444b6c740bf08bda9fa0a0c02729ed14`. Code/test files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94_browser.mjs`, `scripts/validate_v94.py`. This entry is committed as its documentation child; the final exact HEAD is the child commit reported by the new workflow run.
 - Validation status: pending exact-head workflow on the final documentation child commit. No screenshot-based visual acceptance is claimed until the four new runtime captures are generated and inspected against their same-camera baselines on desktop and mobile. Browser mobile is 390×844 emulation, not physical Samsung testing. OpenRTS remains a separate native-engine validation.
 - No version/release, merge or paid dependency. Budget remains 0 €.
+
+
+## Follow-up — viewport-scoped runtime evidence capture (2026-11-03)
+
+- Exact tested HEAD: `1585cf6e5d1eda2ca25df3b04e2e602081156f2b`; workflow [41574084082](https://github.com/Ascameleon/Blue-alert/actions/runs/41574084082) (#378) completed with failure during the desktop building-damage screenshot, after the controlled combat and building-stage setup had progressed through the browser QA sequence.
+- Failure evidence: the job log reached the call for `desktop-v94-building-damaged.png` at line 470. Playwright reported a 30-second `page.screenshot` timeout after fonts had loaded; the job stopped before mobile gameplay screenshots, terrain-relief A/B captures, tank-surface A/B captures and native OpenRTS checks. This was a screenshot-capture failure, not proof that the damage effect or game logic failed.
+- Correction: all browser evidence captures now use the exact viewport rather than full-page expansion (`fullPage: false`) with a 60-second screenshot timeout. Desktop captures therefore represent the 1440×900 game viewport; mobile captures represent the 390×844 emulated viewport. This keeps the evidence dimensions controlled and avoids the full-page capture path that stalled on the building-damage scene.
+- Only the browser validation script and this log are changed. No production HTML, combat, movement, animation, terrain material, camera, UI or performance behavior is modified.
+- The terrain roughness/micro-relief implementation from `8910a2b9444b6c740bf08bda9fa0a0c02729ed14` remains unaccepted until fresh same-camera baseline/detail screenshots are generated and inspected on desktop and mobile. Model-preview screenshots are not treated as live-game evidence. OpenRTS remains a separate native-engine gate.
+- No merge, game version or release. Budget remains 0 €.
