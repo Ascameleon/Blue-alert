@@ -66,7 +66,7 @@ def main():
     if missing:
         raise SystemExit("FAIL: hero infantry sculpt is missing: " + ", ".join(missing))
     REQUIRED_ANATOMY = (
-        "createInfantryLoftGeometry", "ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1",
+        "createInfantryLoftGeometry", "infEntryProfile = true",
         "anatomical-torso-loft", "ANATOMICAL_HARDSHELL_FIELDWEAVE_V2",
         "CONVEX_COMPOSITE_CERAMIC_V2", "REINFORCED_TREAD_AND_TOE_CAP_V2",
         "curvedPlate", "curvedArmorPlateCount", "-boot-tread-sole", "-boot-toe-cap",
