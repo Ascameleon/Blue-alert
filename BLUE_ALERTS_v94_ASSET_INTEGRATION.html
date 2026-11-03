@@ -597,6 +597,7 @@ function createTerrainSurfaceTextures(size) {
   const heightField = new Float32Array(size * size);
   let checksum = 2166136261;
   let drySamples = 0, soilSamples = 0, stoneSamples = 0;
+  let grassFiberSamples = 0, soilGrainSamples = 0, stoneGrainSamples = 0;
   const channel = value => Math.max(0, Math.min(255, Math.round(value)));
   for (let py = 0; py < size; py++) {
     const worldZ = ((py + 0.5) / size - 0.5) * 160;
@@ -609,20 +610,36 @@ function createTerrainSurfaceTextures(size) {
       const broad = terrainNoise(worldX + warpX + 29, worldZ + warpZ - 17, 0.055);
       const medium = terrainNoise(worldX - 11, worldZ + 23, 0.14);
       const fine = terrainNoise(worldX + 7, worldZ - 5, 0.82);
+      const micro = terrainNoise(worldX + 17, worldZ - 29, 1.7);
+      const grainNoise = terrainNoise(worldX - 31, worldZ + 23, 3.4);
       const fleck = terrainHash(px + 701, py - 307);
       const fieldMix = broad * 0.68 + medium * 0.32;
       const dry = terrainSmoothstep(0.43, 0.65, fieldMix);
       const soil = terrainSmoothstep(0.55, 0.73, medium * 0.58 + broad * 0.42) * (1 - dry * 0.58);
       const exposedStone = terrainSmoothstep(0.76, 0.90, medium * 0.52 + fine * 0.20 + fleck * 0.28) *
         (1 - soil * 0.72) * (1 - dry * 0.25);
+
+      // Fine grass fibers follow a gently changing wind direction. Soil grains
+      // and stone flecks use separate deterministic high-frequency fields.
+      const fiberAngle = (broad * 0.7 + medium * 0.3 - 0.5) * 1.5;
+      const fiberWave = Math.sin((worldX * Math.cos(fiberAngle) +
+        worldZ * Math.sin(fiberAngle)) * 2.4 + (micro - 0.5) * 2.8);
+      const grassFiber = Math.pow(Math.max(0, fiberWave), 8) *
+        (1 - soil * 0.9) * (1 - exposedStone * 0.9);
+      const soilGrain = terrainSmoothstep(0.68, 0.86, micro * 0.55 + grainNoise * 0.45) * soil;
+      const stoneGrain = terrainSmoothstep(0.70, 0.90, grainNoise * 0.65 + fleck * 0.35) * exposedStone;
       if (dry > 0.32) drySamples++;
       if (soil > 0.32) soilSamples++;
       if (exposedStone > 0.28) stoneSamples++;
-      const grain = (fine - 0.5) * 18 + (fleck - 0.5) * 9;
+      if (grassFiber > 0.22) grassFiberSamples++;
+      if (soilGrain > 0.18) soilGrainSamples++;
+      if (stoneGrain > 0.15) stoneGrainSamples++;
+      const grain = (fine - 0.5) * 12 + (micro - 0.5) * 20 +
+        (grainNoise - 0.5) * 16 + (fleck - 0.5) * 8;
       const offset = (py * size + px) * 4;
 
-      // Three distinct field materials: muted grass, sun-dried cover and
-      // compacted earth, with sparse limestone/gravel exposed at the surface.
+      // Layered field materials retain their broad strata while adding readable
+      // grass fibers, compacted-soil grain and sparse limestone micro-flecks.
       let red = 222, green = 228, blue = 204;
       const dryMix = dry * 0.52;
       red = red * (1 - dryMix) + 207 * dryMix;
@@ -636,19 +653,28 @@ function createTerrainSurfaceTextures(size) {
       red = red * (1 - stoneMix) + 190 * stoneMix;
       green = green * (1 - stoneMix) + 186 * stoneMix;
       blue = blue * (1 - stoneMix) + 168 * stoneMix;
+      red += grassFiber * (dry * 10 - (1 - dry) * 5) - soilGrain * 18;
+      green += grassFiber * (dry * 2 + (1 - dry) * 13) - soilGrain * 15;
+      blue += grassFiber * (dry * -5 + 2) - soilGrain * 10;
+      const stoneGrainMix = stoneGrain * 0.42;
+      red = red * (1 - stoneGrainMix) + 198 * stoneGrainMix;
+      green = green * (1 - stoneGrainMix) + 194 * stoneGrainMix;
+      blue = blue * (1 - stoneGrainMix) + 178 * stoneGrainMix;
       albedoPixels[offset] = channel(red + grain);
       albedoPixels[offset + 1] = channel(green + grain * 0.72);
       albedoPixels[offset + 2] = channel(blue + grain * 0.45);
       albedoPixels[offset + 3] = 255;
 
       const roughness = channel(190 + soil * 36 + dry * 24 - exposedStone * 18 +
-        (fine - 0.5) * 18 + (fleck - 0.5) * 10);
+        (micro - 0.5) * 22 + (grainNoise - 0.5) * 18 +
+        grassFiber * 18 + soilGrain * 14 + stoneGrain * 10);
       roughnessPixels[offset] = roughness;
       roughnessPixels[offset + 1] = roughness;
       roughnessPixels[offset + 2] = roughness;
       roughnessPixels[offset + 3] = 255;
-      heightField[py * size + px] = broad * 0.30 + medium * 0.24 + fine * 0.10 +
-        dry * 0.12 + soil * 0.18 + exposedStone * 0.06;
+      heightField[py * size + px] = broad * 0.20 + medium * 0.18 + fine * 0.06 +
+        micro * 0.18 + grainNoise * 0.12 + dry * 0.08 + soil * 0.10 +
+        exposedStone * 0.06 + grassFiber * 0.06 + soilGrain * 0.05 + stoneGrain * 0.04;
 
       if ((px & 15) === 0 && (py & 3) === 0) {
         checksum = Math.imul(checksum ^ albedoPixels[offset] ^
@@ -657,14 +683,13 @@ function createTerrainSurfaceTextures(size) {
     }
   }
 
-  // Tangent-space relief follows the authored soil/grass/stone field rather than
-  // a uniform high-frequency bump, keeping the terrain readable at RTS zoom.
+  // Tangent-space relief follows the authored strata and high-frequency material grain.
   for (let py = 0; py < size; py++) {
     const up = Math.max(0, py - 1), down = Math.min(size - 1, py + 1);
     for (let px = 0; px < size; px++) {
       const left = Math.max(0, px - 1), right = Math.min(size - 1, px + 1);
-      const dx = (heightField[py * size + right] - heightField[py * size + left]) * 3.4;
-      const dy = (heightField[down * size + px] - heightField[up * size + px]) * 3.4;
+      const dx = (heightField[py * size + right] - heightField[py * size + left]) * 4.0;
+      const dy = (heightField[down * size + px] - heightField[up * size + px]) * 4.0;
       let nx = -dx, ny = -dy, nz = 1;
       const length = Math.hypot(nx, ny, nz) || 1;
       nx /= length; ny /= length; nz /= length;
@@ -697,17 +722,20 @@ function createTerrainSurfaceTextures(size) {
     coverage: {
       dry: drySamples / (size * size),
       soil: soilSamples / (size * size),
-      stone: stoneSamples / (size * size)
+      stone: stoneSamples / (size * size),
+      grassFiber: grassFiberSamples / (size * size),
+      soilGrain: soilGrainSamples / (size * size),
+      stoneGrain: stoneGrainSamples / (size * size)
     }
   };
 }
-const terrainSurfaceTextures = createTerrainSurfaceTextures(isMobile ? 256 : 512);
+const terrainSurfaceTextures = createTerrainSurfaceTextures(isMobile ? 512 : 1024);
 const terrainMaterial = new THREE.MeshStandardMaterial({
   color: 0xffffff, vertexColors: true, roughness: 0.92, metalness: 0
 });
 terrainMaterial.map = terrainSurfaceTextures.albedo;
 terrainMaterial.normalMap = terrainSurfaceTextures.normal;
-terrainMaterial.normalScale.set(1.15, 1.15);
+terrainMaterial.normalScale.set(1.3, 1.3);
 terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness;
 terrainMaterial.needsUpdate = true;
 const ground = new THREE.Mesh(terrainGeometry, terrainMaterial);
@@ -746,7 +774,7 @@ window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
     const active = !!enabled;
     terrainMaterial.normalMap = active ? terrainSurfaceTextures.normal : null;
     terrainMaterial.roughnessMap = active ? terrainSurfaceTextures.roughness : null;
-    terrainMaterial.normalScale.setScalar(active ? 1.15 : 0);
+    terrainMaterial.normalScale.setScalar(active ? 1.3 : 0);
     terrainMaterial.needsUpdate = true;
     return {
       enabled: active,

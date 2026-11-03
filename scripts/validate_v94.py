@@ -214,14 +214,23 @@ def main():
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
     required_field_surface = (
-        "terrainMaterial.normalScale.set(1.15, 1.15)",
+        "terrainMaterial.normalScale.set(1.3, 1.3)",
         "setMicroRelief(enabled)",
-        "* 3.4;",
+        "* 4.0;",
         "const warpX = (terrainNoise(",
         "const warpZ = (terrainNoise(",
         "const fieldMix = broad * 0.68 + medium * 0.32;",
+        "const micro = terrainNoise(",
+        "const grainNoise = terrainNoise(",
+        "const grassFiber = Math.pow(",
+        "const soilGrain = terrainSmoothstep(",
+        "const stoneGrain = terrainSmoothstep(",
         "const dryMix = dry * 0.52;",
         "const soilMix = soil * 0.62;",
+        "grassFiber: grassFiberSamples / (size * size)",
+        "soilGrain: soilGrainSamples / (size * size)",
+        "stoneGrain: stoneGrainSamples / (size * size)",
+        "createTerrainSurfaceTextures(isMobile ? 512 : 1024)",
         "coverage: {",
         "surfaceCoverage: terrainSurfaceTextures.coverage",
         "0x65734f", "0x88764e", "0x405540", "0x705239",
@@ -361,8 +370,13 @@ def main():
         "toast.style.opacity = '0'",
         "mobile-v94-terrain-microrelief-baseline-390x844.png",
         "mobile-v94-terrain-microrelief-detail-390x844.png",
+        "surfaceCoverage?.grassFiber >= 0.08",
+        "surfaceCoverage?.soilGrain >= 0.004",
+        "surfaceCoverage?.stoneGrain >= 0.0005",
+        "textureResolution === 1024",
+        "textureResolution === 512",
         "procedural-albedo-normal-roughness",
-        "normalStrength >= 1.15",
+        "normalStrength >= 1.3",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
