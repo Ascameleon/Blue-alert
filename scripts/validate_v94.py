@@ -213,8 +213,8 @@ def main():
         raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
-    if "terrainMaterial.normalScale.set(0.95, 0.95)" not in terrain_section or "setMicroRelief(enabled)" not in terrain_section or "* 2.4;" not in terrain_section or "const roughness = channel(232 - soil * 34 - exposedStone * 46 + (fine - 0.5) * 18);" not in terrain_section:
-        raise SystemExit("FAIL: terrain micro-relief must be measurable and A/B switchable")
+    if "terrainMaterial.normalScale.set(1.15, 1.15)" not in terrain_section or "setMicroRelief(enabled)" not in terrain_section or "* 3.4;" not in terrain_section or "const soil = terrainSmoothstep(0.41, 0.63, broad * 0.64 + medium * 0.36);" not in terrain_section or "const roughness = channel(202 + soil * 24 + exposedStone * 26 -" not in terrain_section:
+        raise SystemExit("FAIL: terrain field albedo, roughness and tangent-space relief must remain deterministic and A/B switchable")
 
     tree_start = source.index("function createLayeredTreeFoliageGeometry()")
     tree_end = source.index("const treeCapacity", tree_start)
@@ -341,10 +341,14 @@ def main():
         "mobileTerrainFocus",
         "mobileTerrainBaseline",
         "mobileTerrainDetail",
+        "const mobileCombatStart = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());",
+        "MOBILE_COMBAT_START ",
+        "mobileCombatBefore?.combatSuppressed",
+        "toast.style.opacity = '0'",
         "mobile-v94-terrain-microrelief-baseline-390x844.png",
         "mobile-v94-terrain-microrelief-detail-390x844.png",
         "procedural-albedo-normal-roughness",
-        "normalStrength >= 0.95",
+        "normalStrength >= 1.15",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:

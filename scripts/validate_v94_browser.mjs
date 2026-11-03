@@ -193,7 +193,7 @@ try {
     desktopMetrics.terrain.textureResolution === 512 &&
     desktopMetrics.terrain.textureChecksum > 0 &&
     desktopMetrics.terrain.anisotropy <= 2 &&
-    desktopMetrics.terrain.normalStrength >= 0.95,
+    desktopMetrics.terrain.normalStrength >= 1.15,
     'desktop terrain must expose deterministic 512px PBR maps with bounded sampling and authored relief strength');
   const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
   assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
@@ -526,7 +526,7 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
   const terrainFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must be available');
-  assert.ok(terrainFocus?.normalMap && terrainFocus?.roughnessMap && terrainFocus.normalStrength >= 0.95,
+  assert.ok(terrainFocus?.normalMap && terrainFocus?.roughnessMap && terrainFocus.normalStrength >= 1.15,
     'desktop terrain must expose live normal and roughness maps');
   const desktopTerrainBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(false));
   assert.ok(desktopTerrainBaseline && !desktopTerrainBaseline.normalMap && !desktopTerrainBaseline.roughnessMap,
@@ -534,7 +534,7 @@ try {
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-microrelief-baseline.png', fullPage: true });
   const desktopTerrainDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(true));
-  assert.ok(desktopTerrainDetail?.normalMap && desktopTerrainDetail?.roughnessMap && desktopTerrainDetail.normalStrength >= 0.95,
+  assert.ok(desktopTerrainDetail?.normalMap && desktopTerrainDetail?.roughnessMap && desktopTerrainDetail.normalStrength >= 1.15,
     'desktop terrain detail must restore normal and roughness maps');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-microrelief-detail.png', fullPage: true });
@@ -551,10 +551,19 @@ try {
     hasTouch: true
   });
   await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true });
+  const mobileCombatStart = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  console.log('MOBILE_COMBAT_START ' + JSON.stringify(mobileCombatStart));
+  assert.ok(mobileCombatStart?.started && !mobileCombatStart.gameOver &&
+    mobileCombatStart.livingBlueCombatUnits > 0 && mobileCombatStart.livingRedCombatUnits > 0,
+    'mobile QA must freeze an active two-faction battlefield before extended visual and touch assertions');
+  await mobile.evaluate(() => {
+    const toast = document.getElementById('toast');
+    if (toast) { toast.style.opacity = '0'; toast.textContent = ''; }
+  });
   const mobileMetrics = await metrics(mobile);
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must use the authored 256px surface');
-  assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalStrength >= 0.95,
+  assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalStrength >= 1.15,
     'mobile terrain must expose the same bounded PBR relief strength at its 256px texture resolution');
   const mobileTerrainBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(false));
   assert.ok(mobileTerrainBaseline && !mobileTerrainBaseline.normalMap && !mobileTerrainBaseline.roughnessMap,
@@ -562,7 +571,7 @@ try {
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-baseline-390x844.png', fullPage: false });
   const mobileTerrainDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(true));
-  assert.ok(mobileTerrainDetail?.normalMap && mobileTerrainDetail?.roughnessMap && mobileTerrainDetail.normalStrength >= 0.95,
+  assert.ok(mobileTerrainDetail?.normalMap && mobileTerrainDetail?.roughnessMap && mobileTerrainDetail.normalStrength >= 1.15,
     'mobile terrain detail must restore the authored normal and roughness maps');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-detail-390x844.png', fullPage: false });
@@ -641,7 +650,7 @@ try {
     mobileMetrics.terrain.textureResolution === 256 &&
     mobileMetrics.terrain.textureChecksum > 0 &&
     mobileMetrics.terrain.anisotropy <= 2 &&
-    mobileMetrics.terrain.normalStrength >= 0.95,
+    mobileMetrics.terrain.normalStrength >= 1.15,
     'mobile terrain must use deterministic 256px albedo, normal and roughness maps with capped anisotropy and authored relief strength');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
@@ -789,6 +798,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(mobileCombatBefore?.livingBlueCombatUnits > 0 && mobileCombatBefore?.livingRedCombatUnits > 0, 'mobile combat QA must find live units on both factions');
+  assert.ok(mobileCombatBefore?.combatSuppressed === true, 'mobile autonomous combat must remain frozen during deterministic VFX checks');
   assert.ok(mobileCombatBefore.started && !mobileCombatBefore.gameOver, 'mobile gameplay simulation must be active before VFX tests');
   // Keep the mobile page foregrounded: Chromium may throttle requestAnimationFrame on a background page.
   await mobile.bringToFront();
