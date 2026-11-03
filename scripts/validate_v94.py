@@ -288,7 +288,7 @@ def main():
     infantry_qa_section = source[infantry_qa_start:infantry_qa_end]
     required_infantry_qa = ("weaponGripProfile", "weaponHoldProfile", "leftGripError", "rightGripError",
                             "muzzleAxisDot", "pelvisBob", "pelvisSway", "leftAnklePitch",
-                            "rightAnklePitch", "leftAnkleLift", "rightAnkleLift", "camDist = 9.5")
+                            "rightAnklePitch", "leftAnkleLift", "rightAnkleLift", "headScale", "helmetProfile", "faceProtectionProfile", "uniformProfile", "camDist = 9.5")
     missing = [token for token in required_infantry_qa if token not in infantry_qa_section]
     if missing:
         raise SystemExit("FAIL: infantry QA must verify hand-to-rifle alignment and forward muzzle axis: " + ", ".join(missing))
@@ -384,6 +384,11 @@ def main():
         "locomotionProfile:'PLANTED_FOOT_WEIGHT_SHIFT_V1'",
         "handGeometryProfile:'ANATOMICAL_GLOVE_WRAP_V1'",
         "bootGeometryProfile:'SCULPTED_FIELD_BOOT_V1'",
+        "renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V4'",
+        "helmetProfile:'LOW_PROFILE_BALLISTIC_HELMET_GOGGLES_V2'",
+        "faceProtectionProfile:'BALLISTIC_BALACLAVA_COMPACT_RESPIRATOR_V2'",
+        "uniformProfile:'MATTE_FIELD_UNIFORM_PLATE_CARRIER_V2'",
+        "head.scale.setScalar(.74)",
         "createInfantryLoftGeometry(THREE, [",
         "rig.pelvis.position.y = .75",
         "rig.leftAnkle.position.y = -.28 + leftLift",

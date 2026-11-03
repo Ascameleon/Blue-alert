@@ -29,7 +29,7 @@ header{padding:12px;gap:8px;align-items:flex-start}
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-import {createTank,createInfantry,updateInfantryAnimation,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode} from './blue-alert-models.js';
+import {createTank,createInfantry,updateInfantryAnimation,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode} from './blue-alert-models.js?v=11';
 const host=document.querySelector('#view'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9aa9a4);scene.fog=new THREE.Fog(0x9aa9a4,45,125);
 const camera=new THREE.PerspectiveCamera(42,1,.1,300);camera.position.set(9,8,12);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
@@ -42,7 +42,7 @@ const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStand
 let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
 const desc={
 tank:['Char de combat','Deux silhouettes de faction : BLUE SENTINEL à tourelle basse et RED BASTION à tourelle renforcée, avec chenilles segmentées, galets boulonnés et blindage incliné.'],
-infantry:['Fantassin','Silhouette tactique renforcée : casque facetté, respirateur scellé à filtres latéraux, plaques d’armure biseautées, équipement dorsal et fusil détaillé. Modèle procédural original, sans image générique.'],
+infantry:['Fantassin','Infanterie de campagne à proportions humaines : casque balistique à profil bas, lunettes de protection, cagoule et respirateur compact, porte-plaques textile mat, équipement dorsal et fusil tenu à deux mains. Modèle procédural original.'],
 hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile latérale et marquage de faction.'],
 barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
 refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],
@@ -137,6 +137,9 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     surfaceTextureCount:current?.userData?.surfaceTextureCount||0,
     surfaceMaterialCount:current?.userData?.surfaceMaterialCount||0,
     headScale:current?.userData?.headScale??null,
+    helmetProfile:current?.userData?.helmetProfile||null,
+    faceProtectionProfile:current?.userData?.faceProtectionProfile||null,
+    uniformProfile:current?.userData?.uniformProfile||null,
     bodyGeometryProfile:current?.userData?.bodyGeometryProfile||null,
     animationJointProfile:current?.userData?.animationJointProfile||null,
     locomotionProfile:current?.userData?.locomotionProfile||null,

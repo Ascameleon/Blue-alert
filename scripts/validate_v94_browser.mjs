@@ -310,7 +310,8 @@ try {
   try {
     await desktop.waitForFunction(sequence => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-      return state && state.impactSequence > sequence && state.impactRings > 0 && state.impactSparks > 0;
+      const event = state?.lastImpactEvent;
+      return event && event.id > sequence && event.ringCount === 1 && event.sparkCount >= 4;
     }, desktopShot.impactSequence, { timeout: 6000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -492,6 +493,10 @@ try {
     'desktop V94 rifleman must use the existing two-hand forward weapon rig');
   assert.equal(infantryReady.weaponHoldProfile, 'TORSO_LOCKED_TWO_HAND_READY_V1',
     'desktop V94 rifleman must use the torso-locked two-hand hold profile');
+  assert.equal(infantryReady.headScale, .74, 'desktop live infantry must use the reduced human-proportion head scale');
+  assert.equal(infantryReady.helmetProfile, 'LOW_PROFILE_BALLISTIC_HELMET_GOGGLES_V2');
+  assert.equal(infantryReady.faceProtectionProfile, 'BALLISTIC_BALACLAVA_COMPACT_RESPIRATOR_V2');
+  assert.equal(infantryReady.uniformProfile, 'MATTE_FIELD_UNIFORM_PLATE_CARRIER_V2');
   assert.ok(infantryReady.leftGripError < .07 && infantryReady.rightGripError < .07 &&
     infantryReady.muzzleAxisDot > .99 && infantryReady.muzzleAttached,
     'desktop live rifleman must hold the forward-facing weapon at both sockets');
@@ -823,7 +828,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   try {
     await mobile.waitForFunction(sequence => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-      return state && state.impactSequence > sequence && state.impactRings > 0 && state.impactSparks > 0;
+      const event = state?.lastImpactEvent;
+      return event && event.id > sequence && event.ringCount === 1 && event.sparkCount >= 4;
     }, mobileShot.impactSequence, { timeout: 9000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -963,6 +969,10 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     'mobile V94 rifleman must use the existing two-hand forward weapon rig');
   assert.equal(mobileInfantryReady.weaponHoldProfile, 'TORSO_LOCKED_TWO_HAND_READY_V1',
     'mobile V94 rifleman must use the torso-locked two-hand hold profile');
+  assert.equal(mobileInfantryReady.headScale, .74, 'mobile live infantry must use the reduced human-proportion head scale');
+  assert.equal(mobileInfantryReady.helmetProfile, 'LOW_PROFILE_BALLISTIC_HELMET_GOGGLES_V2');
+  assert.equal(mobileInfantryReady.faceProtectionProfile, 'BALLISTIC_BALACLAVA_COMPACT_RESPIRATOR_V2');
+  assert.equal(mobileInfantryReady.uniformProfile, 'MATTE_FIELD_UNIFORM_PLATE_CARRIER_V2');
   assert.ok(mobileInfantryReady.leftGripError < .07 && mobileInfantryReady.rightGripError < .07 &&
     mobileInfantryReady.muzzleAxisDot > .99 && mobileInfantryReady.muzzleAttached,
     'mobile live rifleman must hold the forward-facing weapon at both sockets');

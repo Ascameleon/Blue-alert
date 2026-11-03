@@ -55,18 +55,26 @@ def main():
     if missing:
         raise SystemExit("FAIL: faction infantry model is missing: " + ", ".join(missing))
     REQUIRED_HERO_PARTS = (
-        "SENTINEL_BASTION_FIELD_SOLDIER_V3", "faceted-helmet-shell", "gas-mask-faceplate",
-        "gas-mask-optic-lens", "respirator-filter-housing", "respirator-filter-cap",
-        "respirator-filter-vent", "respirator-breathing-hose", "gas-mask-chin-guard",
-        "angular-pauldron", "articulated-knee-guard", "rifle-top-rail", "rifle-ejection-port",
-        "createInfantrySurfaceTextures", "FIELDWEAVE_CERAMIC_MICROSCUFF_V2", "fabricBump", "armorBump", "metalBump",
-        "head.scale.setScalar(.82)", "helmet shell above is the sole crown surface",
+        "SENTINEL_BASTION_FIELD_SOLDIER_V4", "ballistic-helmet-shell",
+        "ballistic-balaclava-face-wrap", "low-profile-respirator-shell", "respirator-nose-bridge",
+        "ballistic-goggle-lens", "respirator-filter-housing", "respirator-filter-cap",
+        "respirator-filter-vent", "balaclava-chin-seam", "soft-shoulder-guard",
+        "low-profile-knee-pad", "rifle-top-rail", "rifle-ejection-port",
+        "createInfantrySurfaceTextures", "MATTE_FIELDWEAVE_PLATE_CARRIER_V3", "fabricBump", "armorBump", "metalBump",
+        "head.scale.setScalar(.74)", "smooth ballistic helmet shell is the sole crown surface",
     )
     missing = [name for name in REQUIRED_HERO_PARTS if name not in model]
     if missing:
         raise SystemExit("FAIL: hero infantry sculpt is missing: " + ", ".join(missing))
+    FORBIDDEN_HERO_PARTS = (
+        "gas-mask-faceplate", "gas-mask-optic-lens", "respirator-breathing-hose",
+        "gas-mask-chin-guard", "angular-pauldron", "articulated-knee-guard",
+    )
+    present = [name for name in FORBIDDEN_HERO_PARTS if name in model]
+    if present:
+        raise SystemExit("FAIL: superseded bulky infantry silhouette returned: " + ", ".join(present))
     REQUIRED_ANATOMY = (
-        "createInfantryLoftGeometry", "ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1",
+        "createInfantryLoftGeometry", "FIELD_INFANTRY_HUMAN_PROPORTIONS_V2",
         "anatomical-torso-loft", "PELVIS_SHOULDER_ELBOW_HIP_KNEE_ANKLE_V2",
         "PLANTED_FOOT_WEIGHT_SHIFT_V1", "infantry-pelvis-rig",
         "TWO_HAND_FORWARD_READY_V1", "TORSO_LOCKED_TWO_HAND_READY_V1",
@@ -91,6 +99,9 @@ def main():
             raise SystemExit(f"FAIL: model preview is missing infantry locomotion diagnostic {token}")
     if "surfaceFinish" not in preview or "surfaceTextureCount" not in preview or "surfaceMaterialCount" not in preview:
         raise SystemExit("FAIL: preview must expose real infantry PBR surface-map diagnostics")
+    for token in ("helmetProfile", "faceProtectionProfile", "uniformProfile"):
+        if token not in preview:
+            raise SystemExit(f"FAIL: preview is missing infantry field-gear diagnostic {token}")
     if "mergedPartNames" not in preview or "renderOptimization" not in preview:
         raise SystemExit("FAIL: preview must retain source part names and render-batching diagnostics")
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
@@ -116,7 +127,7 @@ def main():
 
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=10", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=11", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")
