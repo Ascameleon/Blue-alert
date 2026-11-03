@@ -1122,7 +1122,7 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
 
 export function createBuilding(THREE, type='barracks', options={}) {
   const {team='blue',scale=1}=options, g=new THREE.Group(); g.name='BA_Building_'+type;
-  let rotatingGun = null;
+  let rotatingGun = null, defenseTurretGeometryProfile = null, defenseTurretStationCount = 0;
   const faction=teamColor(THREE,team), concrete=mat(THREE,PALETTE.concrete), dark=mat(THREE,PALETTE.dark), glass=mat(THREE,PALETTE.glass), roof=mat(THREE,0x454d49);
   const metal=mat(THREE,PALETTE.metal,0.38,0.72);
   box(THREE,g,'foundation',[3.5,.22,2.8],[0,.11,0],dark);
@@ -1193,7 +1193,26 @@ export function createBuilding(THREE, type='barracks', options={}) {
     cylinder(THREE,g,'rotating-platform',.82,.9,.2,[0,1.08,0],faction,16);
     const head=new THREE.Group();head.name='rotating-gun';head.position.y=1.18;g.add(head);
     cylinder(THREE,head,'cupola-lower-ring',.72,.78,.2,[0,.08,0],edge,16);
-    const dome=new THREE.Mesh(new THREE.SphereGeometry(.68,16,10,0,Math.PI*2,0,Math.PI*.58),armor);dome.name='armored-cupola';dome.position.y=.34;dome.scale.y=.82;dome.castShadow=true;dome.receiveShadow=true;head.add(dome);
+    // One continuous cast cupola: seven longitudinal stations shape the front glacis,
+    // shoulder break and low roof without a spherical placeholder or stacked boxes.
+    const cupolaStations = [
+      [-.78,.12,.34,.30,.48,.60,.37,.54],
+      [-.62,.12,.44,.38,.60,.72,.45,.66],
+      [-.34,.12,.49,.44,.65,.82,.49,.75],
+      [0,.12,.50,.45,.66,.84,.50,.77],
+      [.34,.12,.48,.43,.64,.80,.48,.73],
+      [.62,.12,.41,.36,.58,.68,.43,.62],
+      [.78,.12,.31,.26,.46,.54,.35,.48]
+    ];
+    const cupola = new THREE.Mesh(createCastTurretGeometry(THREE,cupolaStations),[armor,roof]);
+    cupola.name='armored-cupola';
+    cupola.position.y=.02;
+    cupola.castShadow=true; cupola.receiveShadow=true;
+    cupola.userData.defenseTurretGeometryProfile='DEFENSE_CUPOLA_LOFT_V2';
+    cupola.userData.defenseTurretStationCount=cupolaStations.length;
+    head.add(cupola);
+    defenseTurretGeometryProfile='DEFENSE_CUPOLA_LOFT_V2';
+    defenseTurretStationCount=cupolaStations.length;
     cylinder(THREE,head,'roof-hatch',.2,.24,.1,[-.2,.82,0],edge,12);
     sphere(THREE,head,'targeting-optic',.13,[.3,.66,.43],optic,[1,.65,.65]);
     for(const side of [-1,1]){
@@ -1226,7 +1245,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
       for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
     }
   }
-  g.userData={kind:'building',buildingType:type,team,rotatingGun}; g.scale.setScalar(scale); return g;
+  g.userData={kind:'building',buildingType:type,team,rotatingGun,defenseTurretGeometryProfile,defenseTurretStationCount}; g.scale.setScalar(scale); return g;
 }
 
 export function createTree(THREE, options={}) {

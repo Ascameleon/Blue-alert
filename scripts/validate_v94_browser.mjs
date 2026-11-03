@@ -428,6 +428,10 @@ try {
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(desktopBuildingStart?.shooterKind,
     'desktop building-damage QA must use a live blue combat unit');
+  assert.equal(desktopBuildingStart.defenseTurretGeometryProfile,'DEFENSE_CUPOLA_LOFT_V2',
+    'the live V94 enemy turret must use the cast cupola model, not the former spherical shell');
+  assert.equal(desktopBuildingStart.defenseTurretStationCount,7,
+    'the live V94 turret must expose all seven cast-cupola stations');
   assert.ok(desktopBuildingStart.projectileStartDistance < 4.0,
     'controlled building-damage shots must originate at the aimed tank muzzle within 4 world units: ' +
       desktopBuildingStart.projectileStartDistance);

@@ -246,6 +246,8 @@ try {
   const turret=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.ok(turret.physicalMaterialCount>0 && turret.drawCalls>0,'turret must render with PBR materials');
   assert.equal(turret.genericDecorationCount,0,'turret must not have detached rectangular-building details');
+  assert.equal(turret.defenseTurretGeometryProfile,'DEFENSE_CUPOLA_LOFT_V2','defensive turret must use the continuous cast cupola, not a spherical placeholder');
+  assert.equal(turret.defenseTurretStationCount,7,'defensive turret cast cupola must retain all seven sculpt stations');
   await page.screenshot({path:output+'/desktop-turret.png',fullPage:true});
 
   await page.selectOption('#asset','controlTower');

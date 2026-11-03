@@ -111,12 +111,21 @@ def main():
     if missing:
         raise SystemExit("FAIL: faction tank signatures missing: " + ", ".join(missing))
 
+    required_defense_turret_features = (
+        "DEFENSE_CUPOLA_LOFT_V2", "defenseTurretGeometryProfile",
+        "defenseTurretStationCount", "createCastTurretGeometry",
+        "cupolaStations", "armored-cupola",
+    )
+    missing = [feature for feature in required_defense_turret_features if feature not in model]
+    if missing:
+        raise SystemExit("FAIL: cast defensive turret sculpt missing: " + ", ".join(missing))
+
     if "camera.position.set(a==='landscape'?22:a==='infantry'?2.75:8" not in preview or "infantryArmorParts" not in preview:
         raise SystemExit("FAIL: infantry preview must use close framing and expose actual armor mesh diagnostics")
 
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=11", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=12", "defenseTurretGeometryProfile", "defenseTurretStationCount", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")
