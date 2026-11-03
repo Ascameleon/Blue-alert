@@ -225,7 +225,7 @@ try {
     !missionAfterProduction.objectives[2].complete && missionAfterProduction.progressPercent >= 66,
     'the force objective must count three produced combat units without completing the citadel objective');
   console.log('DESKTOP_MISSION_OBJECTIVES ' + JSON.stringify({ initial: missionInitial, afterOre: missionAfterOre, afterProduction: missionAfterProduction }));
-  assert.ok(desktopMetrics.terrain?.albedoMap && desktopMetrics.terrain.surfaceMode === 'procedural-albedo-grain' && desktopMetrics.terrain.textureResolution === 512 && desktopMetrics.terrain.textureChecksum > 0 && desktopMetrics.terrain.anisotropy >= 1, 'desktop terrain must use a deterministic 512px procedural albedo surface');
+  assert.ok(desktopMetrics.terrain?.albedoMap && desktopMetrics.terrain.roughnessMap && desktopMetrics.terrain.bumpMap && desktopMetrics.terrain.surfaceTextureCount === 3 && desktopMetrics.terrain.surfaceMode === 'procedural-albedo-roughness-relief-v2' && desktopMetrics.terrain.bumpScale === 0.11 && desktopMetrics.terrain.textureResolution === 512 && desktopMetrics.terrain.textureChecksum > 0 && desktopMetrics.terrain.anisotropy >= 1, 'desktop terrain must use deterministic 512px albedo, roughness and micro-relief maps');
   assert.ok(desktopMetrics.terrainDressing?.scrubInstances >= 160 && desktopMetrics.terrainDressing.roadMarkers === 26,
     'desktop battlefield must include instanced scrub and reflective supply-road markers');
   assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
@@ -535,7 +535,23 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
   const terrainFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must be available');
-  await desktop.waitForTimeout(300);
+  const desktopTerrainBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setReliefMaps(false));
+  assert.equal(desktopTerrainBaseline?.enabled, false, 'desktop terrain A/B baseline must disable roughness and relief maps');
+  assert.equal(desktopTerrainBaseline?.roughnessMap, false, 'desktop terrain baseline roughness map must be disabled');
+  assert.equal(desktopTerrainBaseline?.bumpMap, false, 'desktop terrain baseline relief map must be disabled');
+  await desktop.waitForTimeout(350);
+  await desktop.screenshot({ path: output + '/desktop-v94-terrain-relief-baseline.png', fullPage: true });
+  const desktopTerrainDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setReliefMaps(true));
+  assert.equal(desktopTerrainDetail?.enabled, true, 'desktop terrain detail must restore roughness and relief maps');
+  assert.equal(desktopTerrainDetail?.roughnessMap, true, 'desktop terrain detail roughness map must be active');
+  assert.equal(desktopTerrainDetail?.bumpMap, true, 'desktop terrain detail bump map must be active');
+  assert.equal(desktopTerrainDetail?.bumpScale, 0.11, 'desktop terrain relief must use the authored restrained bump scale');
+  assert.deepEqual(desktopTerrainDetail?.target, desktopTerrainBaseline?.target, 'desktop terrain A/B must preserve the same camera target');
+  assert.equal(desktopTerrainDetail?.distance, desktopTerrainBaseline?.distance, 'desktop terrain A/B must preserve camera distance');
+  assert.equal(desktopTerrainDetail?.yaw, desktopTerrainBaseline?.yaw, 'desktop terrain A/B must preserve camera yaw');
+  assert.equal(desktopTerrainDetail?.pitch, desktopTerrainBaseline?.pitch, 'desktop terrain A/B must preserve camera pitch');
+  await desktop.waitForTimeout(350);
+  await desktop.screenshot({ path: output + '/desktop-v94-terrain-relief-detail.png', fullPage: true });
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
 
   const desktopTankFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusTank());
@@ -571,6 +587,12 @@ try {
   });
   await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true, freezeCombatAtStart: true });
   const mobileMetrics = await metrics(mobile);
+  assert.ok(mobileMetrics.terrain?.albedoMap && mobileMetrics.terrain.roughnessMap && mobileMetrics.terrain.bumpMap &&
+    mobileMetrics.terrain.surfaceTextureCount === 3 &&
+    mobileMetrics.terrain.surfaceMode === 'procedural-albedo-roughness-relief-v2' &&
+    mobileMetrics.terrain.bumpScale === 0.11 && mobileMetrics.terrain.textureResolution === 256 &&
+    mobileMetrics.terrain.textureChecksum > 0 && mobileMetrics.terrain.anisotropy >= 1,
+    'mobile terrain must use deterministic 256px albedo, roughness and micro-relief maps');
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
       const r = el.getBoundingClientRect();
@@ -986,7 +1008,23 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true });
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must be available');
-  await mobile.waitForTimeout(300);
+  const mobileTerrainBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setReliefMaps(false));
+  assert.equal(mobileTerrainBaseline?.enabled, false, 'mobile terrain A/B baseline must disable roughness and relief maps');
+  assert.equal(mobileTerrainBaseline?.roughnessMap, false, 'mobile terrain baseline roughness map must be disabled');
+  assert.equal(mobileTerrainBaseline?.bumpMap, false, 'mobile terrain baseline relief map must be disabled');
+  await mobile.waitForTimeout(350);
+  await mobile.screenshot({ path: output + '/mobile-v94-terrain-relief-baseline-390x844.png', fullPage: true });
+  const mobileTerrainDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setReliefMaps(true));
+  assert.equal(mobileTerrainDetail?.enabled, true, 'mobile terrain detail must restore roughness and relief maps');
+  assert.equal(mobileTerrainDetail?.roughnessMap, true, 'mobile terrain detail roughness map must be active');
+  assert.equal(mobileTerrainDetail?.bumpMap, true, 'mobile terrain detail bump map must be active');
+  assert.equal(mobileTerrainDetail?.bumpScale, 0.11, 'mobile terrain relief must use the authored restrained bump scale');
+  assert.deepEqual(mobileTerrainDetail?.target, mobileTerrainBaseline?.target, 'mobile terrain A/B must preserve the same camera target');
+  assert.equal(mobileTerrainDetail?.distance, mobileTerrainBaseline?.distance, 'mobile terrain A/B must preserve camera distance');
+  assert.equal(mobileTerrainDetail?.yaw, mobileTerrainBaseline?.yaw, 'mobile terrain A/B must preserve camera yaw');
+  assert.equal(mobileTerrainDetail?.pitch, mobileTerrainBaseline?.pitch, 'mobile terrain A/B must preserve camera pitch');
+  await mobile.waitForTimeout(350);
+  await mobile.screenshot({ path: output + '/mobile-v94-terrain-relief-detail-390x844.png', fullPage: true });
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
 
   const mobileTreeDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
