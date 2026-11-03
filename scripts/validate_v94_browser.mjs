@@ -806,7 +806,9 @@ try {
     'the selected mobile production category must expose its expanded state');
   await mobile.locator('#sidebar .tab[data-t="units"]').tap();
   await mobile.waitForFunction(() => !document.body.classList.contains('mobile-build-open') &&
-    getComputedStyle(document.getElementById('cards')).display === 'none');
+    getComputedStyle(document.getElementById('cards')).display === 'none' &&
+    Math.abs(document.getElementById('sidebar').getBoundingClientRect().height - 54) < 2,
+    null, { timeout: 5000, polling: 40 });
   const mobileDockAfterUse = await mobile.evaluate(() => ({
     sidebarHeight: document.getElementById('sidebar').getBoundingClientRect().height,
     viewportHeight: document.getElementById('viewport').getBoundingClientRect().height
