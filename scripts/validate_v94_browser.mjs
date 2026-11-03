@@ -137,6 +137,20 @@ try {
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.equal(desktopMetrics.camera?.defaultDistance, 38, 'desktop opening camera must use the closer tactical framing');
   assert.equal(desktopMetrics.camera?.distance, 38, 'desktop opening camera must start at the authored tactical distance');
+  const desktopGameplayFieldBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(false));
+  assert.ok(desktopGameplayFieldBaseline && !desktopGameplayFieldBaseline.enabled,
+    'desktop gameplay A/B baseline must use the accepted mainline terrain colors');
+  await desktop.waitForTimeout(180);
+  await desktop.screenshot({ path: output + '/desktop-v94-gameplay-field-baseline.png', fullPage: true });
+  const desktopGameplayFieldDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(true));
+  assert.ok(desktopGameplayFieldDetail?.enabled &&
+    desktopGameplayFieldDetail.colorChecksum !== desktopGameplayFieldBaseline.colorChecksum,
+    'desktop gameplay A/B detail must apply the authored field strata');
+  assert.deepEqual(desktopGameplayFieldDetail?.camera, desktopGameplayFieldBaseline?.camera,
+    'desktop gameplay A/B must preserve the default RTS camera pose');
+  await desktop.waitForTimeout(180);
+  await desktop.screenshot({ path: output + '/desktop-v94-gameplay-field-detail.png', fullPage: true });
+
   assert.ok(desktopMetrics.battlefieldWear?.shoulderShading === 'per-segment-uniform-low-contrast' &&
     desktopMetrics.battlefieldWear?.roadShoulderSegments === 100 &&
     desktopMetrics.battlefieldWear.accessSpur &&
@@ -186,14 +200,14 @@ try {
   assert.ok(desktopCameraBaseline.distance / desktopCameraCloser.distance >= 1.2, 'desktop A/B framing must create a clearly visible scale increase of at least 20%');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-tactical-camera-framing.png', fullPage: true });
-  assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
+  assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount >= 11000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount && desktopMetrics.terrain.meshResolution?.widthSegments === 120 && desktopMetrics.terrain.meshResolution?.heightSegments === 96, 'desktop terrain must expose the denser 120x96 authored field mesh');
   assert.ok(desktopMetrics.terrain?.albedoMap &&
     desktopMetrics.terrain.surfaceMode === 'procedural-albedo-normal-roughness' &&
     desktopMetrics.terrain.normalMap && desktopMetrics.terrain.roughnessMap &&
     desktopMetrics.terrain.textureResolution === 512 &&
     desktopMetrics.terrain.textureChecksum > 0 &&
     desktopMetrics.terrain.anisotropy <= 2 &&
-    desktopMetrics.terrain.normalField === 'microstructure-only' && desktopMetrics.terrain.normalStrength >= 0.80 && desktopMetrics.terrain.normalStrength <= 0.90,
+    desktopMetrics.terrain.normalField === 'microstructure-only' && desktopMetrics.terrain.normalStrength >= 0.90 && desktopMetrics.terrain.normalStrength <= 0.95,
     'desktop terrain must expose deterministic 512px PBR maps with bounded sampling and authored relief strength');
   assert.ok(desktopMetrics.terrain.surfaceCoverage?.dry >= 0.30 &&
     desktopMetrics.terrain.surfaceCoverage?.soil >= 0.12 &&
@@ -211,9 +225,9 @@ try {
     desktopMetrics.terrain.fieldCoverage?.soil >= 0.10 &&
     desktopMetrics.terrain.fieldCoverage?.stone >= 0.002 &&
     desktopMetrics.terrain.baselineColorChecksum !== desktopMetrics.terrain.fieldColorChecksum &&
-    desktopMetrics.terrain.surfaceAlbedo?.r >= 220 && desktopMetrics.terrain.surfaceAlbedo?.r <= 250 &&
-    desktopMetrics.terrain.surfaceAlbedo?.g >= 220 && desktopMetrics.terrain.surfaceAlbedo?.g <= 250 &&
-    desktopMetrics.terrain.surfaceAlbedo?.b >= 210 && desktopMetrics.terrain.surfaceAlbedo?.b <= 245,
+    desktopMetrics.terrain.surfaceAlbedo?.r >= 210 && desktopMetrics.terrain.surfaceAlbedo?.r <= 250 &&
+    desktopMetrics.terrain.surfaceAlbedo?.g >= 210 && desktopMetrics.terrain.surfaceAlbedo?.g <= 250 &&
+    desktopMetrics.terrain.surfaceAlbedo?.b >= 200 && desktopMetrics.terrain.surfaceAlbedo?.b <= 245,
     'desktop terrain must keep macro field strata in the authored vertex palette and neutral micro-albedo in the PBR map: ' +
       JSON.stringify({ vertexTint: desktopMetrics.terrain?.vertexTint, fieldCoverage: desktopMetrics.terrain?.fieldCoverage, surfaceAlbedo: desktopMetrics.terrain?.surfaceAlbedo }));
   console.log('DESKTOP_FIELD_SURFACE_COVERAGE ' + JSON.stringify({
@@ -244,7 +258,7 @@ try {
     !missionAfterProduction.objectives[2].complete && missionAfterProduction.progressPercent >= 66,
     'the force objective must count three produced combat units without completing the citadel objective');
   console.log('DESKTOP_MISSION_OBJECTIVES ' + JSON.stringify({ initial: missionInitial, afterOre: missionAfterOre, afterProduction: missionAfterProduction }));
-  assert.ok(desktopMetrics.terrain?.albedoMap && desktopMetrics.terrain.surfaceMode === 'procedural-albedo-normal-roughness' && desktopMetrics.terrain.normalMap && desktopMetrics.terrain.roughnessMap && desktopMetrics.terrain.normalField === 'microstructure-only' && desktopMetrics.terrain.normalStrength >= 0.80 && desktopMetrics.terrain.normalStrength <= 0.90 && desktopMetrics.terrain.textureResolution === 512 && desktopMetrics.terrain.textureChecksum > 0 && desktopMetrics.terrain.anisotropy >= 1, 'desktop terrain must use deterministic 512px albedo, normal and roughness surfaces');
+  assert.ok(desktopMetrics.terrain?.albedoMap && desktopMetrics.terrain.surfaceMode === 'procedural-albedo-normal-roughness' && desktopMetrics.terrain.normalMap && desktopMetrics.terrain.roughnessMap && desktopMetrics.terrain.normalField === 'microstructure-only' && desktopMetrics.terrain.normalStrength >= 0.90 && desktopMetrics.terrain.normalStrength <= 0.95 && desktopMetrics.terrain.textureResolution === 512 && desktopMetrics.terrain.textureChecksum > 0 && desktopMetrics.terrain.anisotropy >= 1, 'desktop terrain must use deterministic 512px albedo, normal and roughness surfaces');
   assert.ok(desktopMetrics.terrainDressing?.scrubInstances >= 160 && desktopMetrics.terrainDressing.roadMarkers === 26,
     'desktop battlefield must include instanced scrub and reflective supply-road markers');
   assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
@@ -551,7 +565,7 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
   const terrainFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must use the authored 512px surface');
-  assert.ok(terrainFocus?.normalMap && terrainFocus?.roughnessMap && terrainFocus.normalField === 'microstructure-only' && terrainFocus.normalStrength >= 0.80 && terrainFocus.normalStrength <= 0.90,
+  assert.ok(terrainFocus?.normalMap && terrainFocus?.roughnessMap && terrainFocus.normalField === 'microstructure-only' && terrainFocus.normalStrength >= 0.90 && terrainFocus.normalStrength <= 0.95,
     'desktop terrain must expose live normal and roughness maps');
   const desktopFieldBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(false));
   assert.ok(desktopFieldBaseline && !desktopFieldBaseline.enabled &&
@@ -574,7 +588,7 @@ try {
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-microrelief-baseline.png', fullPage: true });
   const desktopTerrainDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(true));
-  assert.ok(desktopTerrainDetail?.normalMap && desktopTerrainDetail?.roughnessMap && desktopTerrainDetail.normalField === 'microstructure-only' && desktopTerrainDetail.normalStrength >= 0.80 && desktopTerrainDetail.normalStrength <= 0.90,
+  assert.ok(desktopTerrainDetail?.normalMap && desktopTerrainDetail?.roughnessMap && desktopTerrainDetail.normalField === 'microstructure-only' && desktopTerrainDetail.normalStrength >= 0.90 && desktopTerrainDetail.normalStrength <= 0.95,
     'desktop terrain detail must restore normal and roughness maps');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-microrelief-detail.png', fullPage: true });
@@ -601,20 +615,36 @@ try {
     if (toast) { toast.style.opacity = '0'; toast.textContent = ''; }
   });
   const mobileMetrics = await metrics(mobile);
-  assert.ok(mobileMetrics.terrain?.vertexTint === 'authored-field-strata' &&
+  const mobileGameplayFieldBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(false));
+  assert.ok(mobileGameplayFieldBaseline && !mobileGameplayFieldBaseline.enabled,
+    'mobile gameplay A/B baseline must use the accepted mainline terrain colors');
+  await mobile.waitForTimeout(180);
+  await mobile.screenshot({ path: output + '/mobile-v94-gameplay-field-baseline-390x844.png', fullPage: false });
+  const mobileGameplayFieldDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(true));
+  assert.ok(mobileGameplayFieldDetail?.enabled &&
+    mobileGameplayFieldDetail.colorChecksum !== mobileGameplayFieldBaseline.colorChecksum,
+    'mobile gameplay A/B detail must apply the authored field strata');
+  assert.deepEqual(mobileGameplayFieldDetail?.camera, mobileGameplayFieldBaseline?.camera,
+    'mobile gameplay A/B must preserve the default RTS camera pose');
+  await mobile.waitForTimeout(180);
+  await mobile.screenshot({ path: output + '/mobile-v94-gameplay-field-detail-390x844.png', fullPage: false });
+  assert.ok(mobileMetrics.terrain?.vertexCount >= 11000 &&
+    mobileMetrics.terrain.meshResolution?.widthSegments === 120 &&
+    mobileMetrics.terrain.meshResolution?.heightSegments === 96 &&
+    mobileMetrics.terrain?.vertexTint === 'authored-field-strata' &&
     mobileMetrics.terrain.fieldStrataMode === 'domain-warped-vertex-color' &&
     mobileMetrics.terrain.fieldCoverage?.dry >= 0.25 &&
     mobileMetrics.terrain.fieldCoverage?.soil >= 0.10 &&
     mobileMetrics.terrain.fieldCoverage?.stone >= 0.002 &&
     mobileMetrics.terrain.baselineColorChecksum !== mobileMetrics.terrain.fieldColorChecksum &&
-    mobileMetrics.terrain.surfaceAlbedo?.r >= 220 && mobileMetrics.terrain.surfaceAlbedo?.r <= 250 &&
-    mobileMetrics.terrain.surfaceAlbedo?.g >= 220 && mobileMetrics.terrain.surfaceAlbedo?.g <= 250 &&
-    mobileMetrics.terrain.surfaceAlbedo?.b >= 210 && mobileMetrics.terrain.surfaceAlbedo?.b <= 245,
+    mobileMetrics.terrain.surfaceAlbedo?.r >= 210 && mobileMetrics.terrain.surfaceAlbedo?.r <= 250 &&
+    mobileMetrics.terrain.surfaceAlbedo?.g >= 210 && mobileMetrics.terrain.surfaceAlbedo?.g <= 250 &&
+    mobileMetrics.terrain.surfaceAlbedo?.b >= 200 && mobileMetrics.terrain.surfaceAlbedo?.b <= 245,
     'mobile terrain must preserve the authored macro field and neutral PBR micro-albedo: ' +
       JSON.stringify({ vertexTint: mobileMetrics.terrain?.vertexTint, fieldCoverage: mobileMetrics.terrain?.fieldCoverage, surfaceAlbedo: mobileMetrics.terrain?.surfaceAlbedo }));
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must use the authored 256px surface');
-  assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalField === 'microstructure-only' && mobileTerrainFocus.normalStrength >= 0.80 && mobileTerrainFocus.normalStrength <= 0.90,
+  assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalField === 'microstructure-only' && mobileTerrainFocus.normalStrength >= 0.90 && mobileTerrainFocus.normalStrength <= 0.95,
     'mobile terrain must expose the same bounded PBR relief strength at its 256px texture resolution');
   const mobileFieldBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(false));
   assert.ok(mobileFieldBaseline && !mobileFieldBaseline.enabled &&
@@ -637,7 +667,7 @@ try {
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-baseline-390x844.png', fullPage: false });
   const mobileTerrainDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(true));
-  assert.ok(mobileTerrainDetail?.normalMap && mobileTerrainDetail?.roughnessMap && mobileTerrainDetail.normalField === 'microstructure-only' && mobileTerrainDetail.normalStrength >= 0.80 && mobileTerrainDetail.normalStrength <= 0.90,
+  assert.ok(mobileTerrainDetail?.normalMap && mobileTerrainDetail?.roughnessMap && mobileTerrainDetail.normalField === 'microstructure-only' && mobileTerrainDetail.normalStrength >= 0.90 && mobileTerrainDetail.normalStrength <= 0.95,
     'mobile terrain detail must restore the authored normal and roughness maps');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-detail-390x844.png', fullPage: false });
@@ -716,7 +746,7 @@ try {
     mobileMetrics.terrain.textureResolution === 256 &&
     mobileMetrics.terrain.textureChecksum > 0 &&
     mobileMetrics.terrain.anisotropy <= 2 &&
-    mobileMetrics.terrain.normalField === 'microstructure-only' && mobileMetrics.terrain.normalStrength >= 0.80 && mobileMetrics.terrain.normalStrength <= 0.90,
+    mobileMetrics.terrain.normalField === 'microstructure-only' && mobileMetrics.terrain.normalStrength >= 0.90 && mobileMetrics.terrain.normalStrength <= 0.95,
     'mobile terrain must use deterministic 512px albedo, normal and roughness maps with capped anisotropy and authored relief strength');
   assert.ok(mobileMetrics.terrain.surfaceCoverage?.dry >= 0.30 &&
     mobileMetrics.terrain.surfaceCoverage?.soil >= 0.12 &&
@@ -1064,7 +1094,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-result-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-field-strata-baseline.png', 'desktop-v94-field-strata-detail.png', 'mobile-v94-field-strata-baseline-390x844.png', 'mobile-v94-field-strata-detail-390x844.png', 'desktop-v94-terrain-microrelief-baseline.png', 'desktop-v94-terrain-microrelief-detail.png', 'mobile-v94-terrain-microrelief-baseline-390x844.png', 'mobile-v94-terrain-microrelief-detail-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-gameplay-field-baseline.png', 'desktop-v94-gameplay-field-detail.png', 'mobile-v94-gameplay-field-baseline-390x844.png', 'mobile-v94-gameplay-field-detail-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-result-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-field-strata-baseline.png', 'desktop-v94-field-strata-detail.png', 'mobile-v94-field-strata-baseline-390x844.png', 'mobile-v94-field-strata-detail-390x844.png', 'desktop-v94-terrain-microrelief-baseline.png', 'desktop-v94-terrain-microrelief-detail.png', 'mobile-v94-terrain-microrelief-baseline-390x844.png', 'mobile-v94-terrain-microrelief-detail-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
@@ -1082,7 +1112,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       desktop: { baseline: desktopCameraBaseline, improved: desktopCameraCloser },
       mobile: { baseline: mobileCameraBaseline, improved: mobileCameraCloser }
     },
-    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-field-strata-baseline.png', 'desktop-v94-field-strata-detail.png', 'mobile-v94-field-strata-baseline-390x844.png', 'mobile-v94-field-strata-detail-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png']
+    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-gameplay-field-baseline.png', 'desktop-v94-gameplay-field-detail.png', 'mobile-v94-gameplay-field-baseline-390x844.png', 'mobile-v94-gameplay-field-detail-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-field-strata-baseline.png', 'desktop-v94-field-strata-detail.png', 'mobile-v94-field-strata-baseline-390x844.png', 'mobile-v94-field-strata-detail-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png']
   }, null, 2));
 } catch (error) {
   console.error(error);
