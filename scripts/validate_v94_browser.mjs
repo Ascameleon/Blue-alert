@@ -593,19 +593,73 @@ try {
     mobileMetrics.terrain.bumpScale === 0.11 && mobileMetrics.terrain.textureResolution === 256 &&
     mobileMetrics.terrain.textureChecksum > 0 && mobileMetrics.terrain.anisotropy >= 1 && mobileMetrics.terrain.anisotropy <= 2,
     'mobile terrain must use deterministic 256px albedo, roughness and micro-relief maps');
+  const mobileDockBaselineCamera = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.snapshot());
+  const mobileDockCollapsed = await mobile.evaluate(() => ({
+    open: document.body.classList.contains('mobile-build-open'),
+    sidebarHeight: document.getElementById('sidebar').getBoundingClientRect().height,
+    cardsDisplay: getComputedStyle(document.getElementById('cards')).display,
+    viewportHeight: document.getElementById('viewport').getBoundingClientRect().height,
+    expanded: document.querySelector('#sidebar .tab.active')?.getAttribute('aria-expanded')
+  }));
+  assert.ok(!mobileDockCollapsed.open && mobileDockCollapsed.sidebarHeight <= 56 &&
+    mobileDockCollapsed.cardsDisplay === 'none' && mobileDockCollapsed.viewportHeight >= 780 &&
+    mobileDockCollapsed.expanded === 'false',
+    'mobile production dock must start collapsed and return the maximum unobstructed battlefield area');
+  await mobile.screenshot({ path: output + '/mobile-v94-build-dock-collapsed-390x844.png', fullPage: false, timeout: 60000 });
+  await mobile.locator('#sidebar .tab[data-t="struct"]').tap();
+  await mobile.waitForFunction(() =>
+    document.body.classList.contains('mobile-build-open') &&
+    getComputedStyle(document.getElementById('cards')).display === 'flex' &&
+    Math.abs(document.getElementById('sidebar').getBoundingClientRect().height - 132) < 2,
+    null, { timeout: 5000, polling: 40 });
+  const mobileDockOpen = await mobile.evaluate(() => ({
+    sidebarHeight: document.getElementById('sidebar').getBoundingClientRect().height,
+    cardsDisplay: getComputedStyle(document.getElementById('cards')).display,
+    viewportHeight: document.getElementById('viewport').getBoundingClientRect().height,
+    expanded: document.querySelector('#sidebar .tab.active')?.getAttribute('aria-expanded'),
+    camera: window.__BLUE_ALERTS_CAMERA_QA__?.snapshot()
+  }));
+  assert.ok(mobileDockOpen.sidebarHeight >= 130 && mobileDockOpen.sidebarHeight <= 134 &&
+    mobileDockOpen.cardsDisplay === 'flex' && mobileDockOpen.viewportHeight >= 710 &&
+    mobileDockOpen.viewportHeight <= 714 && mobileDockOpen.expanded === 'true',
+    'opening the production drawer must expose a compact 132px card tray and preserve a large battlefield');
+  assert.deepEqual(mobileDockOpen.camera?.target, mobileDockBaselineCamera?.target,
+    'opening the production drawer must not move the tactical camera target');
+  assert.equal(mobileDockOpen.camera?.distance, mobileDockBaselineCamera?.distance,
+    'opening the production drawer must preserve tactical camera zoom');
+  assert.equal(mobileDockOpen.camera?.yaw, mobileDockBaselineCamera?.yaw,
+    'opening the production drawer must preserve tactical camera yaw');
+  assert.equal(mobileDockOpen.camera?.pitch, mobileDockBaselineCamera?.pitch,
+    'opening the production drawer must preserve tactical camera pitch');
+  await mobile.screenshot({ path: output + '/mobile-v94-build-dock-open-390x844.png', fullPage: false, timeout: 60000 });
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
       const r = el.getBoundingClientRect();
-      return { width: r.width, height: r.height, text: el.textContent.trim() };
+      return { width: r.width, height: r.height, text: el.textContent.trim(), expanded: el.getAttribute('aria-expanded') };
     });
     const card = document.querySelector('#cards .card');
     const r = card?.getBoundingClientRect();
     return {
       tabs,
       firstCard: r ? { width: r.width, height: r.height } : null,
-      sidebarHeight: document.querySelector('#sidebar').getBoundingClientRect().height
+      cardsDisplay: getComputedStyle(document.getElementById('cards')).display,
+      sidebarHeight: document.querySelector('#sidebar').getBoundingClientRect().height,
+      viewportHeight: document.getElementById('viewport').getBoundingClientRect().height
     };
   });
+  assert.ok(touchTargets.cardsDisplay === 'flex' && touchTargets.sidebarHeight >= 130 &&
+    touchTargets.sidebarHeight <= 134 && touchTargets.viewportHeight >= 710 &&
+    touchTargets.firstCard && touchTargets.firstCard.width >= 60 && touchTargets.firstCard.height >= 44,
+    'expanded mobile production cards must remain visible and comfortably tappable');
+  assert.ok(touchTargets.tabs.every(t => t.width >= 44 && t.height >= 44),
+    'all three horizontal mobile production tabs must retain 44px touch targets');
+  await mobile.locator('#sidebar .tab[data-t="struct"]').tap();
+  await mobile.waitForFunction(() =>
+    !document.body.classList.contains('mobile-build-open') &&
+    getComputedStyle(document.getElementById('cards')).display === 'none' &&
+    Math.abs(document.getElementById('sidebar').getBoundingClientRect().height - 54) < 2,
+    null, { timeout: 5000, polling: 40 });
+
   assert.ok(mobileMetrics.webgl && !mobileMetrics.contextLost, 'mobile viewport must render with a live WebGL context');
   assert.ok(mobileMetrics.documentWidth <= mobileMetrics.viewportWidth + 1, 'mobile game must not overflow horizontally');
   assert.ok(mobileMetrics.canvasRect.width >= 380 && mobileMetrics.canvasRect.height >= 600, 'mobile battlefield must retain a usable touch area');
@@ -748,6 +802,18 @@ try {
   const tabBox = await mobile.locator('#sidebar .tab[data-t="units"]').boundingBox();
   await mobile.touchscreen.tap(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2);
   await assert.ok(await mobile.locator('#sidebar .tab[data-t="units"]').evaluate(el => el.classList.contains('active')), 'mobile touch must switch the unit tab');
+  assert.equal(await mobile.locator('#sidebar .tab[data-t="units"]').getAttribute('aria-expanded'), 'true',
+    'the selected mobile production category must expose its expanded state');
+  await mobile.locator('#sidebar .tab[data-t="units"]').tap();
+  await mobile.waitForFunction(() => !document.body.classList.contains('mobile-build-open') &&
+    getComputedStyle(document.getElementById('cards')).display === 'none');
+  const mobileDockAfterUse = await mobile.evaluate(() => ({
+    sidebarHeight: document.getElementById('sidebar').getBoundingClientRect().height,
+    viewportHeight: document.getElementById('viewport').getBoundingClientRect().height
+  }));
+  assert.ok(mobileDockAfterUse.sidebarHeight <= 56 && mobileDockAfterUse.viewportHeight >= 780,
+    'tapping the active category again must collapse the production drawer after use');
+  await mobile.screenshot({ path: output + '/mobile-v94-build-dock-collapsed-after-use-390x844.png', fullPage: false, timeout: 60000 });
 
   const mobileCommands = await mobile.evaluate(() => {
     const ids = ['mobileSelect', 'mobileAttack', 'mobileStop', 'mobileCenter', 'mobileSound'];

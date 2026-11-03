@@ -166,20 +166,26 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 .panel button:hover{background:linear-gradient(180deg,#2280a8,#104060)}
 .hidden{display:none!important}
 
-/* Mobile */
+/* Mobile — collapsible production drawer keeps the battlefield open by default. */
 @media(max-width:800px){
-  #viewport{right:0;bottom:150px}
-  #sidebar{top:auto;left:0;right:0;bottom:0;width:100%;height:150px;flex-direction:row;
-    border-left:none;border-top:2px solid #1e4060}
-  .sb-head,.mission,.queue,.sb-btns{display:none}
-  .res-row{display:none}
-  .tabs{flex-direction:column;width:52px;border-bottom:none;border-right:1px solid #1a3048}
-  .tab{min-height:44px;display:flex;align-items:center;justify-content:center}
-  #cards{grid-template-columns:repeat(4,1fr);flex:1}
-  #topbar{
-    right:0;height:36px;padding:0 8px;gap:6px;
-    justify-content:space-between;flex-wrap:nowrap
-  }
+  #viewport{right:0;bottom:54px}
+  body.mobile-build-open #viewport{bottom:132px}
+  #sidebar{top:auto;left:0;right:0;bottom:0;width:100%;height:54px;flex-direction:column;border-left:none;border-top:2px solid #1e4060;overflow:hidden;transition:height .16s ease}
+  body.mobile-build-open #sidebar{height:132px}
+  .sb-head,.mission,.queue,.sb-btns,.res-row{display:none}
+  .tabs{order:2;flex:0 0 52px;display:flex;flex-direction:row;width:100%;height:52px;border-bottom:none;border-right:none;border-top:1px solid #1a3048;background:#0a121c}
+  .tab{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;padding:4px 2px;font-size:11px;border-bottom:2px solid transparent}
+  .tab:focus-visible{outline:2px solid #66dcff;outline-offset:-3px}
+  .tab.active::after{content:"⌃";margin-left:5px;color:#e8c040;font-size:12px}
+  body.mobile-build-open .tab.active::after{content:"⌄"}
+  #cards{order:1;display:none;flex:1 1 auto;min-height:0;overflow-x:auto;overflow-y:hidden;padding:6px 8px;gap:6px;align-items:stretch;scrollbar-width:none}
+  #cards::-webkit-scrollbar{display:none}
+  body.mobile-build-open #cards{display:flex}
+  #cards .card{flex:0 0 clamp(72px,calc((100vw - 46px)/4),92px);min-height:66px;max-height:74px;padding:4px;gap:3px}
+  #cards .card .icon{font-size:19px}
+  #cards .card .name{font-size:10px;line-height:1.1}
+  #cards .card .cost{font-size:10px}
+  #topbar{right:0;height:36px;padding:0 8px;gap:6px;justify-content:space-between;flex-wrap:nowrap}
   #topbar .pill{padding:3px 8px;font-size:10px;line-height:1.2;white-space:nowrap}
   #topbar .pill:first-child{min-width:0;flex:0 1 auto}
   #topbar .pill:first-child span{display:none}
@@ -193,11 +199,13 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
   #mobileMission .mobileMissionHead{font-size:8px;letter-spacing:.05em}
   #mobileMissionObjective{margin-top:3px;font-size:9px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #mobileMission .mobileMissionBar{height:2px;margin-top:4px}
-  /* Compact top HUD ends before mission feedback begins. */
   #toast{top:138px;max-width:calc(100vw - 16px);font-size:10px;padding:6px 10px}
-  #minimap{right:8px;bottom:140px;width:110px;height:82px}
-  #selinfo{bottom:140px}
-  #dmglayer,#hbarlayer{right:0;bottom:130px}
+  #minimap{right:8px;bottom:64px;width:110px;height:82px}
+  body.mobile-build-open #minimap{bottom:142px}
+  #selinfo{bottom:64px}
+  body.mobile-build-open #selinfo{bottom:142px}
+  #dmglayer,#hbarlayer{right:0;bottom:54px}
+  body.mobile-build-open #dmglayer,body.mobile-build-open #hbarlayer{bottom:132px}
 }</style>
 </head>
 <body>
@@ -249,10 +257,10 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
     </div>
     <div class="mprog"><i id="mBar"></i></div>
   </div>
-  <div class="tabs">
-    <div class="tab active" data-t="struct">Bâtir</div>
-    <div class="tab" data-t="units">Unités</div>
-    <div class="tab" data-t="def">Défense</div>
+  <div class="tabs" aria-label="Catégories de production">
+    <div class="tab active" data-t="struct" role="button" tabindex="0" aria-controls="cards" aria-expanded="false">Bâtir</div>
+    <div class="tab" data-t="units" role="button" tabindex="0" aria-controls="cards" aria-expanded="false">Unités</div>
+    <div class="tab" data-t="def" role="button" tabindex="0" aria-controls="cards" aria-expanded="false">Défense</div>
   </div>
   <div id="cards"></div>
   <div class="queue">
@@ -3596,15 +3604,42 @@ $('mobileAttack')?.addEventListener('click', () => {
 });
 $('mobileSound')?.addEventListener('click', () => $('btnSound').click());
 
-// Tabs
+// Tabs — on mobile, tapping the active category toggles the production drawer.
+const mobileBuildDrawerMedia = window.matchMedia('(max-width: 800px)');
 document.querySelectorAll('.tab').forEach(t => {
-  t.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  t.setAttribute('aria-controls', 'cards');
+  t.setAttribute('aria-expanded', 'false');
+  const activate = () => {
+    const isMobile = mobileBuildDrawerMedia.matches;
+    const wasActive = t.classList.contains('active');
+    const drawerOpen = document.body.classList.contains('mobile-build-open');
+    if (isMobile && drawerOpen && wasActive) {
+      document.body.classList.remove('mobile-build-open');
+      t.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    document.querySelectorAll('.tab').forEach(x => {
+      x.classList.remove('active');
+      x.setAttribute('aria-expanded', 'false');
+    });
     t.classList.add('active');
     tab = t.dataset.t;
+    if (isMobile) {
+      document.body.classList.add('mobile-build-open');
+      t.setAttribute('aria-expanded', 'true');
+    } else {
+      document.body.classList.remove('mobile-build-open');
+    }
     placeKind = null; mode = 'select'; clearGhost();
     $('cmdMode').textContent = 'SÉLECTION';
     renderCards();
+  };
+  t.addEventListener('click', activate);
+  t.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      activate();
+    }
   });
 });
 
