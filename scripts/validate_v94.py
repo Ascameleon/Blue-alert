@@ -395,7 +395,7 @@ def main():
         "surfaceCoverage?.soilGrain >= 0.004",
         "surfaceCoverage?.stoneGrain >= 0.0005",
         "textureResolution === 512",
-        "textureResolution === 256",
+        "mobileTerrainFocus?.textureResolution, 256",
         "vertexTint === 'neutral-white'",
         "surfaceAlbedo?.r >= 95",
         "surfaceAlbedo?.g >= 110",
