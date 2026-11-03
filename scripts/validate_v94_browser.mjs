@@ -763,9 +763,26 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileEconomyResume = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.resumeEconomyRewards());
   assert.equal(mobileEconomyResume?.economyRewardsFrozen, false, 'mobile construction-cost QA must restore economy rewards after the placement assertion');
 
+  const mobileFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  assert.ok(mobileFreeze?.combatSuppressed === true,
+    'mobile VFX and building-damage QA must suppress autonomous combat before controlled probes');
+  try {
+    await mobile.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 &&
+        state.impactRings === 0 && state.impactSparks === 0;
+    }, null, { timeout: 15000, polling: 50 });
+  } catch (error) {
+    const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('MOBILE_PRE_VFX_COMBAT_DRAIN_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
   const mobileCombatBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
-  assert.ok(mobileCombatBefore?.livingBlueCombatUnits > 0 && mobileCombatBefore?.livingRedCombatUnits > 0, 'mobile combat QA must find live units on both factions');
-  assert.ok(mobileCombatBefore.started && !mobileCombatBefore.gameOver, 'mobile gameplay simulation must be active before VFX tests');
+  assert.ok(mobileCombatBefore?.livingBlueCombatUnits > 0 && mobileCombatBefore?.livingRedCombatUnits > 0,
+    'mobile combat QA must retain live units on both factions after autonomous fire is drained');
+  assert.ok(mobileCombatBefore.started && !mobileCombatBefore.gameOver,
+    'mobile gameplay simulation must be active before controlled VFX tests');
   // Keep the mobile page foregrounded: Chromium may throttle requestAnimationFrame on a background page.
   await mobile.bringToFront();
   await mobile.waitForFunction(() => document.visibilityState === 'visible', null, { timeout: 3000 });
@@ -836,8 +853,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileExplosionIndex = mobileExplosionState.modelExplosionPositions.findIndex(p => Math.abs(p.x - mobileKill.targetPosition.x) < 0.001 && Math.abs(p.z - mobileKill.targetPosition.z) < 0.001);
   assert.ok(mobileExplosionIndex >= 0 && mobileExplosionState.modelExplosionLives[mobileExplosionIndex] < mobileKill.spawnedExplosionLife, 'mobile death explosion simulation lifetime must advance');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
-  const mobileFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
-  assert.ok(mobileFreeze, 'mobile cleanup probe must freeze only new combat spawns while existing VFX expire');
+  // Autonomous combat was frozen and drained before the controlled VFX probes above.
+  // Keep that gate active while the test verifies natural expiry of its own effects.
   const mobileCleanupStartedAt = Date.now();
   try {
     await mobile.waitForFunction(() => {
