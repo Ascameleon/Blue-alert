@@ -120,8 +120,15 @@ try {
   await page.selectOption('#asset','infantry');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='infantry' &&
     window.__BLUE_ALERTS_PREVIEW__().hasAnimationRig && window.__BLUE_ALERTS_PREVIEW__().meshCount>=25,null,{timeout:10000});
-  await page.waitForTimeout(450);
-  const blueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  const blueInfantryHandle=await page.waitForFunction(()=>{
+    const state=window.__BLUE_ALERTS_PREVIEW__?.();
+    const pose=state?.jointPose;
+    return state && state.asset==='infantry' && state.hasAnimationRig &&
+      state.previewFrameCount>=8 && state.animationPhase>.5 && state.walkAmount>=.8 &&
+      pose && Math.abs(pose.leftLeg-pose.rightLeg)>.08 &&
+      Math.abs(pose.leftArm-pose.rightArm)>.015 ? state : false;
+  },null,{timeout:10000,polling:50});
+  const blueInfantry=await blueInfantryHandle.jsonValue();
   assert.equal(blueInfantry.factionProfile,'BLUE_SENTINEL_RIFLEMAN','blue infantry must use the Sentinel faction profile');
   assert.equal(blueInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V2','blue infantry must render original fabric/ceramic surface maps');
   assert.ok(blueInfantry.surfaceTextureCount>=7 && blueInfantry.surfaceMaterialCount>=5,
@@ -158,8 +165,12 @@ try {
     'blue infantry mesh count must reflect the static geometry batching: '+blueInfantry.meshCount);
   assert.ok(blueInfantry.drawCalls<=60,
     'blue infantry must stay within the 60-draw-call mobile preview ceiling: '+blueInfantry.drawCalls);
-  assert.ok(blueInfantry.animationPhase>0 && blueInfantry.walkAmount>=0.8,
-    'preview gait must advance its deterministic animation rig');
+  assert.ok(blueInfantry.previewFrameCount>=8 && blueInfantry.animationPhase>.5 && blueInfantry.walkAmount>=.8,
+    'preview render loop must advance the deterministic infantry rig using real frame time');
+  assert.ok(Math.abs(blueInfantry.jointPose.leftLeg-blueInfantry.jointPose.rightLeg)>.08,
+    'preview gait must swing both legs in opposition');
+  assert.ok(Math.abs(blueInfantry.jointPose.leftArm-blueInfantry.jointPose.rightArm)>.015,
+    'preview gait must articulate both arms while retaining the ready-weapon pose');
   await page.screenshot({path:output+'/desktop-blue-sentinel-infantry.png',fullPage:true});
 
   await page.selectOption('#team','red');
