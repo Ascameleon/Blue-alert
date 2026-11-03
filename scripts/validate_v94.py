@@ -90,7 +90,10 @@ def main():
         "terrainSurfaceTextures.albedo",
                         "textureResolution: terrainSurfaceTextures.size",
         "textureChecksum: terrainSurfaceTextures.checksum",
-        "surfaceMode: 'procedural-albedo-grain'",
+        "surfaceMode: 'procedural-albedo-normal-roughness'",
+        "terrainMaterial.normalMap = terrainSurfaceTextures.normal",
+        "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness",
+        "setMicroRelief(enabled)",
         "function createLayeredTreeFoliageGeometry",
         "battlefield-trees-trunks-instanced",
         "battlefield-trees-foliage-instanced",
@@ -206,6 +209,10 @@ def main():
         raise SystemExit("FAIL: terrain must use deterministic vertex color variation")
     if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
+    if "terrainMaterial.normalMap = terrainSurfaceTextures.normal" not in terrain_section or "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness" not in terrain_section:
+        raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
+    if "terrainMaterial.normalScale.set(0.55, 0.55)" not in terrain_section or "setMicroRelief(enabled)" not in terrain_section:
+        raise SystemExit("FAIL: terrain micro-relief must be measurable and A/B switchable")
 
     tree_start = source.index("function createLayeredTreeFoliageGeometry()")
     tree_end = source.index("const treeCapacity", tree_start)
