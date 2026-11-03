@@ -375,8 +375,9 @@ def main():
     required_infantry_rig = (
         "pelvis.name = 'infantry-pelvis-rig'",
         "pelvis.add(torso)",
-        "pelvis.add(head)",
-        "pelvis.add(pivot)",
+        "torso.add(head)",
+        "torso.add(pivot)",
+        "torso.add(rifleGroup)",
         "label + '-ankle-pivot'",
         "sole.name = label + '-reinforced-combat-boot-sole'",
         "label+'-reinforced-combat-boot-toe-cap'",

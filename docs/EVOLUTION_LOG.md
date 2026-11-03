@@ -572,3 +572,10 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Changed files: `game-data/models/blue-alert-models.js`, `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_model_kit.py`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, and this log.
 - Exact code/test commit and exact-head workflow result: pending. No new desktop/mobile screenshots exist for this corrected head yet; previous captures are not evidence for this change. No release/version is created; budget remains 0 €.
 - Evidence boundary: desktop and 390×844 mobile are Chromium captures/emulation, not a physical Samsung test. OpenRTS is a separate native-engine validation and does not render the Three.js infantry model.
+
+
+### Exact-head validation attempt — workflow #379 — 7557a2bccacd98093a2ed4955cf878350cac7b93
+
+- The workflow [#379](https://github.com/Ascameleon/Blue-alert/actions/runs/41575241854) stopped at `scripts/validate_v94.py` before browser or native-engine tests. The production hierarchy had correctly moved the head and shoulder pivots from the pelvis to the torso, but this static validator still required the old `pelvis.add(head)` and `pelvis.add(pivot)` strings. No gameplay assertion ran and no graphical artifacts were produced.
+- Correct the validator to require `torso.add(head)`, `torso.add(pivot)`, and `torso.add(rifleGroup)`, while retaining `pelvis.add(torso)`. This is a validator-contract correction; no further production geometry or animation change is made in this commit.
+- The code/test head `7557a2bccacd98093a2ed4955cf878350cac7b93` remains unaccepted pending a fresh exact-head workflow. The correction and this evidence note are committed together; no branch writes occur during the next validation. No release/version is created; budget remains 0 €.
