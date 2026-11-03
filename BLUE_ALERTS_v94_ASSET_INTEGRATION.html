@@ -4341,6 +4341,17 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     yaw: Number(camYaw.toFixed(3)),
     pitch: Number(camPitch.toFixed(3))
   });
+  const tankQaUnit = () => units.find(candidate => !candidate.dead && candidate.team === 1 &&
+    candidate.g?.userData?.factionProfile === 'BLUE_SENTINEL');
+  const tankQaSnapshot = unit => ({
+    ...cameraQaSnapshot(),
+    unitKind: unit.kind,
+    factionProfile: unit.g.userData.factionProfile,
+    surfaceFinish: unit.g.userData.surfaceFinish || null,
+    surfaceTextureCount: unit.g.userData.surfaceTextureCount || 0,
+    surfaceMaterialCount: unit.g.userData.surfaceMaterialCount || 0,
+    surfaceMapsEnabled: unit.g.userData.surfaceMapsEnabled === true
+  });
   window.__BLUE_ALERTS_CAMERA_QA__ = Object.freeze({
     snapshot: cameraQaSnapshot,
     setDistance(distance) {
@@ -4352,6 +4363,32 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       camVelX = 0;
       camVelZ = 0;
       return cameraQaSnapshot();
+    },
+    focusTank() {
+      const unit = tankQaUnit();
+      if (!unit) throw new Error('A live BLUE SENTINEL tank is required for runtime surface evidence.');
+      camTarget.set(unit.g.position.x, 0, unit.g.position.z);
+      camYaw = .4;
+      camPitch = .72;
+      camDist = isMobile ? 17 : 16;
+      camVelX = 0;
+      camVelZ = 0;
+      return tankQaSnapshot(unit);
+    },
+    setTankSurfaceMaps(enabled) {
+      const unit = tankQaUnit();
+      if (!unit) throw new Error('A live BLUE SENTINEL tank is required for runtime surface A/B.');
+      for (const material of unit.g.userData.surfaceMaterialRefs || []) {
+        const maps = material.userData?.tankSurfaceMaps;
+        if (!maps) continue;
+        material.map = enabled ? maps.map : null;
+        material.roughnessMap = enabled ? maps.roughnessMap : null;
+        material.bumpMap = enabled ? maps.bumpMap : null;
+        material.bumpScale = enabled ? maps.bumpScale : 0;
+        material.needsUpdate = true;
+      }
+      unit.g.userData.surfaceMapsEnabled = !!enabled;
+      return { ...tankQaSnapshot(unit), enabled: !!enabled };
     }
   });
   const infantryProbe = () => {

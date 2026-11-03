@@ -293,8 +293,24 @@ try {
   await desktop.locator('#btnSound').click();
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : ON', 'desktop sound toggle must restore');
 
+  const desktopCombatFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  assert.ok(desktopCombatFreeze?.combatSuppressed === true,
+    'desktop controlled VFX QA must suppress autonomous fire before the deterministic probe');
+  try {
+    await desktop.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 &&
+        state.impactRings === 0 && state.impactSparks === 0;
+    }, null, { timeout: 15000, polling: 50 });
+  } catch (error) {
+    const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('DESKTOP_PRE_VFX_COMBAT_DRAIN_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
   const desktopCombatBefore = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(desktopCombatBefore?.livingBlueCombatUnits > 0 && desktopCombatBefore?.livingRedCombatUnits > 0, 'desktop combat QA must find live units on both factions');
+  assert.equal(desktopCombatBefore?.combatSuppressed, true, 'desktop controlled VFX probe must remain isolated from autonomous combat');
   assert.ok(desktopCombatBefore.started && !desktopCombatBefore.gameOver, 'desktop gameplay simulation must be active before VFX tests');
   const desktopShot = await desktop.evaluate(() => {
     const qa = window.__BLUE_ALERTS_COMBAT_QA__;
@@ -365,8 +381,7 @@ try {
   assert.ok(desktopExplosionState.frameCount >= desktopKill.frameCount + 2 && desktopExplosionState.lastFrameDelta > 0, 'desktop requestAnimationFrame loop must continue after unit destruction');
   assert.ok(desktopExplosionState.modelExplosionLives[desktopExplosionIndex] < desktopKill.spawnedExplosionLife, 'desktop death explosion simulation lifetime must advance');
   await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
-  const desktopFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
-  assert.ok(desktopFreeze, 'desktop cleanup probe must freeze only new combat spawns while existing VFX expire');
+  // Autonomous fire was suppressed before the controlled shot; now verify its VFX expire naturally.
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
@@ -509,6 +524,23 @@ try {
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
 
+  const desktopTankFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusTank());
+  assert.equal(desktopTankFocus?.surfaceFinish, 'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1',
+    'desktop live V94 tank must bind the faction-seeded armor fieldwear finish');
+  assert.ok(desktopTankFocus.surfaceTextureCount >= 6 && desktopTankFocus.surfaceMaterialCount >= 5,
+    'desktop live V94 tank must bind cached albedo, roughness and micro-relief maps to its PBR materials');
+  const desktopTankBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankSurfaceMaps(false));
+  assert.equal(desktopTankBaseline?.surfaceMapsEnabled, false, 'desktop tank A/B baseline must disable only the new surface maps');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-tank-surface-baseline.png', fullPage: true });
+  const desktopTankDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankSurfaceMaps(true));
+  assert.equal(desktopTankDetail?.surfaceMapsEnabled, true, 'desktop tank A/B detail must restore the complete fieldwear maps');
+  assert.deepEqual(desktopTankDetail.target, desktopTankBaseline.target, 'desktop tank A/B must preserve the same world target');
+  assert.equal(desktopTankDetail.distance, desktopTankBaseline.distance, 'desktop tank A/B must preserve camera distance');
+  assert.equal(desktopTankDetail.yaw, desktopTankBaseline.yaw, 'desktop tank A/B must preserve camera yaw');
+  assert.equal(desktopTankDetail.pitch, desktopTankBaseline.pitch, 'desktop tank A/B must preserve camera pitch');
+  await desktop.waitForTimeout(300);
+  await desktop.screenshot({ path: output + '/desktop-v94-tank-surface-detail.png', fullPage: true });
 
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
@@ -952,9 +984,27 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-detail-390x844.png', fullPage: true });
 
+  const mobileTankFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusTank());
+  assert.equal(mobileTankFocus?.surfaceFinish, 'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1',
+    'mobile live V94 tank must bind the faction-seeded armor fieldwear finish');
+  assert.ok(mobileTankFocus.surfaceTextureCount >= 6 && mobileTankFocus.surfaceMaterialCount >= 5,
+    'mobile live V94 tank must bind the cached PBR surface maps');
+  const mobileTankBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankSurfaceMaps(false));
+  assert.equal(mobileTankBaseline?.surfaceMapsEnabled, false, 'mobile tank A/B baseline must disable only the surface maps');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-tank-surface-baseline-390x844.png', fullPage: false });
+  const mobileTankDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setTankSurfaceMaps(true));
+  assert.equal(mobileTankDetail?.surfaceMapsEnabled, true, 'mobile tank A/B detail must restore the surface maps');
+  assert.deepEqual(mobileTankDetail.target, mobileTankBaseline.target, 'mobile tank A/B must preserve the same world target');
+  assert.equal(mobileTankDetail.distance, mobileTankBaseline.distance, 'mobile tank A/B must preserve camera distance');
+  assert.equal(mobileTankDetail.yaw, mobileTankBaseline.yaw, 'mobile tank A/B must preserve camera yaw');
+  assert.equal(mobileTankDetail.pitch, mobileTankBaseline.pitch, 'mobile tank A/B must preserve camera pitch');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-tank-surface-detail-390x844.png', fullPage: false });
+
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png', 'desktop-v94-tank-surface-baseline.png', 'desktop-v94-tank-surface-detail.png', 'mobile-v94-tank-surface-baseline-390x844.png', 'mobile-v94-tank-surface-detail-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
@@ -972,7 +1022,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       desktop: { baseline: desktopCameraBaseline, improved: desktopCameraCloser },
       mobile: { baseline: mobileCameraBaseline, improved: mobileCameraCloser }
     },
-    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png']
+    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-tank-surface-baseline.png', 'desktop-v94-tank-surface-detail.png', 'mobile-v94-tank-surface-baseline-390x844.png', 'mobile-v94-tank-surface-detail-390x844.png']
   }, null, 2));
 } catch (error) {
   console.error(error);

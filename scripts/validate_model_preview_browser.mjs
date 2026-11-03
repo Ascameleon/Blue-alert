@@ -97,6 +97,9 @@ try {
   assert.ok(initial.canvasWidth>0 && initial.canvasHeight>0,'WebGL canvas must have a backing resolution');
   assert.equal(initial.team,'blue');
   assert.equal(initial.factionProfile,'BLUE_SENTINEL','blue faction must use its own low-profile turret signature');
+  assert.equal(initial.surfaceFinish,'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1','blue tank must bind the original faction-seeded armor fieldwear finish');
+  assert.ok(initial.surfaceTextureCount>=6 && initial.surfaceMaterialCount>=5,
+    'blue tank must bind cached armor, metal, roughness and micro-relief textures without adding meshes');
   assert.equal(initial.trackShoeInstances,36,'both tracks must expose 36 instanced tread shoes');
   assert.equal(initial.wheelBoltInstances,60,'twelve road wheels must expose 60 instanced wheel bolts');
   assert.deepEqual(initial.detailInstances,{engineGrilles:7,reactiveArmorTiles:8,returnRollers:6,roadWheels:12,wheelHubs:12,wheelHubCaps:12,smokeDischargers:4,faction:{turretCheeks:2,turretSidePlates:0,smokeBanks:0}},'repeated chassis and faction details must be batched');
@@ -182,6 +185,9 @@ try {
   const redTank=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(redTank.team,'red');
   assert.equal(redTank.factionProfile,'RED_BASTION','red faction must use its reinforced high turret signature');
+  assert.equal(redTank.surfaceFinish,'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1','red tank must use the same material pipeline with its own deterministic seed');
+  assert.ok(redTank.surfaceTextureCount>=6 && redTank.surfaceMaterialCount>=5,
+    'red tank must bind the cached faction-specific PBR surface maps');
   assert.equal(redTank.trackShoeInstances,36);
   assert.equal(redTank.wheelBoltInstances,60);
   assert.ok(redTank.meshCount<=45 && redTank.drawCalls<=60,'red tank must share the same mobile-friendly draw-call budget');

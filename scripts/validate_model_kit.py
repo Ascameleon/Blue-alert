@@ -100,6 +100,16 @@ def main():
     missing = [feature for feature in required_tank_features if feature not in model]
     if missing:
         raise SystemExit("FAIL: faction tank signatures missing: " + ", ".join(missing))
+    required_tank_surface = (
+        "TANK_SURFACE_TEXTURE_CACHE", "createTankSurfaceTextures",
+        "SENTINEL_BASTION_ARMOR_FIELDWEAR_V1", "armorMap", "metalMap",
+        "roughnessMap", "armorBump", "metalBump", "rubberBump",
+        "surfaceMaterialRefs", "surfaceTextureCount", "surfaceMaterialCount",
+        "tankSurfaceMaps", "new THREE.CanvasTexture",
+    )
+    missing = [feature for feature in required_tank_surface if feature not in model]
+    if missing:
+        raise SystemExit("FAIL: faction tank PBR fieldwear pipeline missing: " + ", ".join(missing))
 
     if "camera.position.set(a==='landscape'?22:a==='infantry'?2.75:8" not in preview or "infantryArmorParts" not in preview:
         raise SystemExit("FAIL: infantry preview must use close framing and expose actual armor mesh diagnostics")

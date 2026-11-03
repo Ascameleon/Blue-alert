@@ -79,6 +79,160 @@ const addMarking = (THREE, group, x, y, z, team) => {
   stripe.rotation.y = Math.PI/2; return stripe;
 };
 
+
+const TANK_SURFACE_TEXTURE_CACHE = new WeakMap();
+const createTankSurfaceTextures = (THREE, isRed) => {
+  if (typeof document === 'undefined') return null;
+  let factionCache = TANK_SURFACE_TEXTURE_CACHE.get(THREE);
+  if (!factionCache) {
+    factionCache = new Map();
+    TANK_SURFACE_TEXTURE_CACHE.set(THREE, factionCache);
+  }
+  const faction = isRed ? 'red' : 'blue';
+  if (factionCache.has(faction)) return factionCache.get(faction);
+  let seed = (isRed ? 0xBA571510 : 0x5E471E11) >>> 0;
+  const random = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const makeTexture = (name, paint, srgb = false) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (!context) return null;
+    paint(context);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.name = name;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = 3;
+    if (srgb && THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  };
+  const armorMap = makeTexture(faction + '-armour-fieldwear-albedo', ctx => {
+    ctx.fillStyle = '#ededed';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 74; i++) {
+      const x = random() * 256, y = random() * 256;
+      ctx.globalAlpha = .035 + random() * .085;
+      ctx.fillStyle = random() > .5 ? '#68665e' : '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(x, y, 3 + random() * 16, 2 + random() * 8, random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let i = 0; i < 168; i++) {
+      const x = random() * 256, y = random() * 256;
+      ctx.globalAlpha = .12 + random() * .2;
+      ctx.strokeStyle = random() > .48 ? '#484b48' : '#ffffff';
+      ctx.lineWidth = .35 + random() * 1.1;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (random() - .5) * 24, y + (random() - .5) * 5);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = .10;
+    ctx.strokeStyle = '#343a38';
+    ctx.lineWidth = .8;
+    for (let y = 28; y < 256; y += 64) {
+      for (let x = 0; x < 256; x += 64) {
+        if (random() < .24) continue;
+        ctx.beginPath();
+        ctx.moveTo(x + 5 + random() * 12, y);
+        ctx.lineTo(x + 38 + random() * 20, y + (random() - .5) * 2);
+        ctx.stroke();
+      }
+    }
+    for (let i = 0; i < 90; i++) {
+      ctx.globalAlpha = .12 + random() * .18;
+      ctx.fillStyle = random() > .5 ? '#424642' : '#ffffff';
+      ctx.fillRect(random() * 256, random() * 256, .7 + random() * 1.5, .7 + random() * 1.2);
+    }
+    ctx.globalAlpha = 1;
+  }, true);
+  const metalMap = makeTexture(faction + '-machined-steel-albedo', ctx => {
+    ctx.fillStyle = '#eeeeee';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 230; i++) {
+      const y = random() * 256;
+      ctx.globalAlpha = .07 + random() * .15;
+      ctx.strokeStyle = random() > .5 ? '#555a58' : '#ffffff';
+      ctx.lineWidth = .3 + random() * .9;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y + (random() - .5) * 4);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }, true);
+  const roughnessMap = makeTexture(faction + '-armour-roughness', ctx => {
+    ctx.fillStyle = '#d8d8d8';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 5600; i++) {
+      const value = Math.round(150 + random() * 92);
+      ctx.fillStyle = 'rgb(' + value + ',' + value + ',' + value + ')';
+      ctx.fillRect(random() * 256, random() * 256, .8 + random() * 1.5, .8 + random() * 1.5);
+    }
+  });
+  const armorBump = makeTexture(faction + '-armour-micro-relief', ctx => {
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 230; i++) {
+      const x = random() * 256, y = random() * 256;
+      ctx.globalAlpha = .2 + random() * .24;
+      ctx.strokeStyle = random() > .5 ? '#c1c1c1' : '#4d4d4d';
+      ctx.lineWidth = .4 + random() * .9;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (random() - .5) * 18, y + (random() - .5) * 4);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = .13;
+    ctx.strokeStyle = '#555555';
+    for (let y = 24; y < 256; y += 48) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y + 1);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+  const metalBump = makeTexture(faction + '-steel-brush-relief', ctx => {
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.globalAlpha = .2;
+    ctx.strokeStyle = '#bcbcbc';
+    ctx.lineWidth = .6;
+    for (let y = 0; y < 256; y += 3) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y + 1);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+  const rubberBump = makeTexture(faction + '-track-rubber-relief', ctx => {
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let x = -256; x < 512; x += 12) {
+      ctx.globalAlpha = .24;
+      ctx.strokeStyle = x % 24 === 0 ? '#b8b8b8' : '#4f4f4f';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + 256, 256);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+  const maps = { armorMap, metalMap, roughnessMap, armorBump, metalBump, rubberBump };
+  factionCache.set(faction, maps);
+  return maps;
+};
+
 export function createTank(THREE, options={}) {
   const { team='blue', variant='main-battle-tank', scale=1 } = options;
   const isRed = team === 'red';
@@ -95,6 +249,28 @@ export function createTank(THREE, options={}) {
   const optics = mat(THREE, isRed ? 0xf0a45e : 0x83d9ed, .2, .7);
   const rubber = mat(THREE, 0x1d2527, .96, .02);
   const heavyArmor = mat(THREE, isRed ? 0x897463 : 0x87908a, .66, .32);
+  const surfaceMaps = createTankSurfaceTextures(THREE, isRed);
+  const bindTankSurface = (material, map, bumpMap, bumpScale) => {
+    if (!surfaceMaps) return;
+    const binding = {
+      map: map || null,
+      roughnessMap: surfaceMaps.roughnessMap || null,
+      bumpMap: bumpMap || null,
+      bumpScale
+    };
+    material.userData.tankSurfaceMaps = binding;
+    Object.assign(material, binding);
+    material.needsUpdate = true;
+  };
+  if (surfaceMaps) {
+    bindTankSurface(hull, surfaceMaps.armorMap, surfaceMaps.armorBump, .014);
+    bindTankSurface(armor, surfaceMaps.armorMap, surfaceMaps.armorBump, .012);
+    bindTankSurface(heavyArmor, surfaceMaps.armorMap, surfaceMaps.armorBump, .014);
+    bindTankSurface(metal, surfaceMaps.metalMap, surfaceMaps.metalBump, .008);
+    bindTankSurface(edge, surfaceMaps.metalMap, surfaceMaps.metalBump, .006);
+    bindTankSurface(rubber, null, surfaceMaps.rubberBump, .006);
+  }
+  const surfaceMaterials = [hull, armor, heavyArmor, metal, edge, rubber];
 
   const addInstances=(parent,name,geometry,material,transforms)=>{
     const mesh=new THREE.InstancedMesh(geometry,material,transforms.length);
@@ -248,6 +424,13 @@ export function createTank(THREE, options={}) {
 
   g.userData={
     kind:'vehicle',unitType:variant,team,turret,factionProfile,
+    surfaceFinish:surfaceMaps?'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1':'UNTEXTURED_FALLBACK',
+    surfaceTextureCount:Object.values(surfaceMaps||{}).filter(Boolean).length,
+    surfaceMaterialCount:surfaceMaterials.filter(material=>material.map||material.roughnessMap||material.bumpMap).length,
+    surfaceTextureResolution:surfaceMaps?256:0,
+    surfaceMapsEnabled:!!surfaceMaps,
+    surfaceTextureNames:Object.values(surfaceMaps||{}).filter(Boolean).map(texture=>texture.name),
+    surfaceMaterialRefs:surfaceMaterials,
     trackShoeInstances:shoeTransforms.length,
     wheelBoltInstances:boltTransforms.length,
     detailInstances:{
