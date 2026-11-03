@@ -310,7 +310,8 @@ try {
   try {
     await desktop.waitForFunction(sequence => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-      return state && state.impactSequence > sequence && state.impactRings > 0 && state.impactSparks > 0;
+      const event = state?.lastImpactEvent;
+      return state && event && event.id > sequence && event.ringCount === 1 && event.sparkCount >= 4;
     }, desktopShot.impactSequence, { timeout: 6000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
