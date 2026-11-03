@@ -407,3 +407,6 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Correction: retain the strict ring/spark natural-expiry assertions in the dedicated desktop and mobile VFX lifecycle probes. Narrow only the later post-rig isolation gate to active projectiles, model projectiles, muzzle flashes and model explosions; add a timeout state dump. This preserves the VFX lifecycle test rather than weakening it.
 - Files changed in this follow-up: `scripts/validate_v94_browser.mjs` and `docs/EVOLUTION_LOG.md`. The mobile HUD HTML/CSS remains unchanged.
 - The exact commit and fresh screenshot artifact paths will be recorded after the next exact-head workflow completes. No mobile HUD visual acceptance is claimed yet; no game version/release is created. Budget remains 0 €.
+
+
+- Exact test-correction commit: `1d409c241d003977306e654ecb1cfd25c8d1ee90`. It retains the compact mobile HUD CSS from `673797b71f8a53f91e2efbb93c8a011456b0be51` and changes only the post-rig browser-test isolation plus this log. The follow-up validation must run against the final branch head created by this documentation update; no further branch writes are permitted until that workflow completes.
