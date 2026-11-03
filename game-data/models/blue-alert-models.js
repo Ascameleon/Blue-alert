@@ -195,6 +195,70 @@ const createCastHullGeometry = (THREE, stations) => {
   return geometry;
 };
 
+const createCastTurretGeometry = (THREE, stations) => {
+  const ringSize = 8;
+  const positions = [];
+  const uvs = [];
+  const shellIndices = [];
+  const roofIndices = [];
+  const ringFor = station => {
+    const [x,bottomY,bottomWidth,shoulderY,shoulderWidth,roofY,roofWidth,bevelY] = station;
+    return [
+      [x,bottomY,-bottomWidth],
+      [x,bottomY,bottomWidth],
+      [x,shoulderY,shoulderWidth],
+      [x,bevelY,roofWidth],
+      [x,roofY,roofWidth*.72],
+      [x,roofY,-roofWidth*.72],
+      [x,bevelY,-roofWidth],
+      [x,shoulderY,-shoulderWidth]
+    ];
+  };
+  for (const station of stations) {
+    ringFor(station).forEach((point,index) => {
+      positions.push(...point);
+      uvs.push((station[0]+.9)/1.8,index/ringSize);
+    });
+  }
+  const capCenters = [stations[0],stations[stations.length-1]].map(station => {
+    const ring = ringFor(station);
+    const y = ring.reduce((sum,point)=>sum+point[1],0)/ring.length;
+    const z = ring.reduce((sum,point)=>sum+point[2],0)/ring.length;
+    positions.push(station[0],y,z);
+    uvs.push((station[0]+.9)/1.8,.5);
+    return positions.length/3-1;
+  });
+  for (let segment=0;segment<stations.length-1;segment++) {
+    for (let edgeIndex=0;edgeIndex<ringSize;edgeIndex++) {
+      const a=segment*ringSize+edgeIndex;
+      const b=(segment+1)*ringSize+edgeIndex;
+      const c=(segment+1)*ringSize+(edgeIndex+1)%ringSize;
+      const d=segment*ringSize+(edgeIndex+1)%ringSize;
+      const target=edgeIndex===4?roofIndices:shellIndices;
+      target.push(a,c,d,a,b,c);
+    }
+  }
+  const endBase=(stations.length-1)*ringSize;
+  for(let edgeIndex=0;edgeIndex<ringSize;edgeIndex++){
+    const next=(edgeIndex+1)%ringSize;
+    shellIndices.push(capCenters[0],edgeIndex,next);
+    shellIndices.push(capCenters[1],endBase+next,endBase+edgeIndex);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setIndex([...shellIndices,...roofIndices]);
+  geometry.addGroup(0,shellIndices.length,0);
+  geometry.addGroup(shellIndices.length,roofIndices.length,1);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  geometry.userData.beveledArmor=true;
+  geometry.userData.castTurretShell=true;
+  geometry.userData.turretStationCount=stations.length;
+  return geometry;
+};
+
 export function createTank(THREE, options={}) {
   const { team='blue', variant='main-battle-tank', scale=1 } = options;
   const isRed = team === 'red';
@@ -342,18 +406,40 @@ export function createTank(THREE, options={}) {
   addInstances(g,'track-shoe-instanced',new THREE.BoxGeometry(.15,.065,.04),mat(THREE,0x56605d,.88,.28),shoeTransforms);
   addInstances(g,'wheel-bolts-instanced',new THREE.CylinderGeometry(.018,.018,.026,6),mat(THREE,0xc1c6bd,.42,.72),boltTransforms);
 
-  // The two factions have distinct turret silhouettes, not just different paint.
+  // A continuous cast turret uses seven longitudinal stations and an integrated roof.
+  // The two factions retain different roof height, shoulder width and nose taper.
   const turret=new THREE.Group();
   turret.name='rotating-turret';
   turret.position.set(.05,1.12,0);
   g.add(turret);
   cylinder(THREE,turret,'turret-ring',.54,.58,.13,[0,0,0],dark,18);
+  const turretStations = isRed ? [
+    [-.82,.10,.30,.24,.44,.56,.36,.51],
+    [-.68,.10,.39,.31,.54,.66,.43,.61],
+    [-.42,.10,.45,.34,.60,.71,.46,.66],
+    [.12,.10,.46,.34,.61,.70,.46,.65],
+    [.50,.10,.42,.29,.56,.62,.42,.57],
+    [.72,.10,.35,.23,.47,.49,.35,.44],
+    [.84,.10,.26,.18,.36,.37,.27,.32]
+  ] : [
+    [-.78,.10,.28,.22,.43,.43,.34,.385],
+    [-.66,.10,.35,.29,.52,.54,.40,.49],
+    [-.42,.10,.40,.31,.56,.58,.42,.53],
+    [.08,.10,.42,.30,.55,.56,.41,.51],
+    [.42,.10,.39,.26,.51,.49,.38,.44],
+    [.64,.10,.33,.22,.44,.40,.32,.35],
+    [.76,.10,.24,.18,.34,.31,.25,.27]
+  ];
+  const turretShell=new THREE.Mesh(createCastTurretGeometry(THREE,turretStations),[hull,armor]);
+  turretShell.name='turret-body';
+  const roofAlias=isRed?'red-bastion-roof-plate':'blue-sentinel-crown';
+  turretShell.userData.mergedPartNames=['turret-body',roofAlias];
+  turretShell.userData.mergedBeveledPartNames=['turret-body',roofAlias];
+  turretShell.castShadow=true;
+  turretShell.receiveShadow=true;
+  turret.add(turretShell);
   let factionDetailCounts={};
   if(isRed){
-    createArmoredProfileMesh(THREE,turret,'turret-body',[
-      [-.76,.12],[.68,.12],[.86,.24],[.70,.48],[.42,.60],[-.54,.56],[-.78,.34]
-    ],1.10,hull,[0,.02,0],.045);
-    beveledBox(THREE,turret,'red-bastion-roof-plate',[.82,.12,.84],[-.08,.57,0],armor,null,.018);
     const redCheeks=[],redSidePlates=[],redSmoke=[];
     for(const side of [-1,1]){
       redCheeks.push({position:[-.12,.24,side*.59],rotation:[0,0,side*.09]});
@@ -367,10 +453,6 @@ export function createTank(THREE, options={}) {
     addInstances(turret,'red-bastion-smoke-banks-instanced',new THREE.CylinderGeometry(.055,.06,.22,8),dark,redSmoke);
     factionDetailCounts={turretCheeks:2,turretSidePlates:2,smokeBanks:2};
   }else{
-    createArmoredProfileMesh(THREE,turret,'turret-body',[
-      [-.72,.12],[.62,.12],[.80,.21],[.65,.42],[.36,.54],[-.48,.50],[-.74,.31]
-    ],.98,hull,[0,.02,0],.04);
-    beveledBox(THREE,turret,'blue-sentinel-crown',[.78,.12,.8],[-.12,.47,0],armor,null,.018);
     const blueCheeks=[];
     for(const side of [-1,1]) blueCheeks.push({
       position:[.16,.2,side*.53],rotation:[0,0,side*.13]
@@ -417,7 +499,9 @@ export function createTank(THREE, options={}) {
     hullGeometryProfile:'CAST_MULTI_STATION_HULL_V2',
     hullStationCount:hullStations.length,
     trackGeometryProfile:'CLOSED_STADIUM_TREAD_LOOP_V1',
-    turretGeometryProfile:'LOW_PROFILE_CAST_TURRET_V1',
+    turretGeometryProfile:'MULTI_STATION_CAST_TURRET_V2',
+    turretStationProfile:'CAST_TURRET_STATIONS_V2',
+    turretStationCount:turretStations.length,
     trackLinkCount:shoeTransforms.length,
     trackShoeInstances:shoeTransforms.length,
     wheelBoltInstances:boltTransforms.length,

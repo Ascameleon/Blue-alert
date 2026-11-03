@@ -123,7 +123,9 @@ try {
   assert.equal(initial.hullGeometryProfile,'CAST_MULTI_STATION_HULL_V2','tank hull must use the continuous seven-station cast shell');
   assert.equal(initial.hullStationCount,7,'tank hull must retain all seven longitudinal shape stations');
   assert.equal(initial.trackGeometryProfile,'CLOSED_STADIUM_TREAD_LOOP_V1','tank must use continuous closed track belts');
-  assert.equal(initial.turretGeometryProfile,'LOW_PROFILE_CAST_TURRET_V1','tank turret must use a faction-specific cast profile');
+  assert.equal(initial.turretGeometryProfile,'MULTI_STATION_CAST_TURRET_V2','tank turret must use a faction-specific cast profile');
+  assert.equal(initial.turretStationProfile,'CAST_TURRET_STATIONS_V2');
+  assert.equal(initial.turretStationCount,7,'blue cast turret must retain seven longitudinal stations');
   assert.equal(initial.trackLinkCount,64,'both track loops must carry 32 visible tread links each');
   assert.equal(initial.detailInstances?.closedTrackBelts,2,'left and right closed track belts must both render');
   assert.equal(initial.detailInstances?.trackLinks,64,'track link diagnostics must match the visible instanced links');
@@ -219,7 +221,9 @@ try {
   assert.equal(redTank.hullGeometryProfile,'CAST_MULTI_STATION_HULL_V2');
   assert.equal(redTank.hullStationCount,7);
   assert.equal(redTank.trackGeometryProfile,'CLOSED_STADIUM_TREAD_LOOP_V1');
-  assert.equal(redTank.turretGeometryProfile,'LOW_PROFILE_CAST_TURRET_V1');
+  assert.equal(redTank.turretGeometryProfile,'MULTI_STATION_CAST_TURRET_V2');
+  assert.equal(redTank.turretStationProfile,'CAST_TURRET_STATIONS_V2');
+  assert.equal(redTank.turretStationCount,7,'red cast turret must retain seven longitudinal stations');
   assert.equal(redTank.trackLinkCount,64);
   assert.equal(redTank.trackShoeInstances,64,'red Bastion must expose the same complete closed track loops');
   assert.equal(redTank.wheelBoltInstances,60);

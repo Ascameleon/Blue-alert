@@ -95,7 +95,8 @@ def main():
     required_tank_features = (
         "factionProfile", "BLUE_SENTINEL", "RED_BASTION", "cast-hull-shell", "front-glacis",
         "createCastHullGeometry", "createArmoredProfileGeometry", "createArmoredProfileMesh", "createTrackLoopGeometry",
-        "CAST_MULTI_STATION_HULL_V2", "hullStationCount", "CLOSED_STADIUM_TREAD_LOOP_V1", "LOW_PROFILE_CAST_TURRET_V1",
+        "CAST_MULTI_STATION_HULL_V2", "hullStationCount", "CLOSED_STADIUM_TREAD_LOOP_V1",
+        "createCastTurretGeometry", "CAST_TURRET_STATIONS_V2", "turretStationCount", "MULTI_STATION_CAST_TURRET_V2",
         "track-belt-loop-left", "track-belt-loop-right", "trackLinkCount",
         "engine-deck-grilles-instanced", "reactive-armor-tiles-instanced",
         "return-rollers-instanced", "road-wheels-instanced", "wheel-hubs-instanced",
