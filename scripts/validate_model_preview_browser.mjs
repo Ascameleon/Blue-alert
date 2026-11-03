@@ -110,11 +110,17 @@ try {
   assert.deepEqual(initial.detailInstances,{engineGrilles:7,reactiveArmorTiles:8,returnRollers:6,roadWheels:12,wheelHubs:12,wheelHubCaps:12,smokeDischargers:4,faction:{turretCheeks:2,turretSidePlates:0,smokeBanks:0}},'repeated chassis and faction details must be batched');
   assert.ok(initial.cameraDistance<9,'desktop tank preview must frame the softened armor at a useful scale');
   assert.ok(initial.beveledArmorPartCount>=12,'blue tank must use bevelled armor geometry for its major silhouette and repeated plates');
-  for(const name of ['lower-hull','upper-hull','front-glacis','engine-deck','reactive-armor-tiles-instanced','side-skirt-armor-instanced','turret-body','blue-sentinel-crown','blue-turret-cheeks-instanced']) {
+  assert.equal(initial.hullGeometryProfile,'SLOPED_CAST_HULL_PROFILE_V1','tank hull must use a cast multi-slope armor shell');
+  assert.equal(initial.trackGeometryProfile,'CLOSED_STADIUM_TREAD_LOOP_V1','tank must use continuous closed track belts');
+  assert.equal(initial.turretGeometryProfile,'LOW_PROFILE_CAST_TURRET_V1','tank turret must use a faction-specific cast profile');
+  assert.equal(initial.trackLinkCount,64,'both track loops must carry 32 visible tread links each');
+  assert.equal(initial.detailInstances?.closedTrackBelts,2,'left and right closed track belts must both render');
+  assert.equal(initial.detailInstances?.trackLinks,64,'track link diagnostics must match the visible instanced links');
+  for(const name of ['lower-hull','upper-hull','front-glacis','engine-deck','track-belt-loop-left','track-belt-loop-right','cannon-mantlet','reactive-armor-tiles-instanced','side-skirt-armor-instanced','turret-body','blue-sentinel-crown','blue-turret-cheeks-instanced']) {
     assert.ok(initial.beveledArmorParts.includes(name),'blue tank must render bevelled armor part: '+name);
   }
   assert.ok(initial.triangleCount<5000,'bevelled tank geometry must remain within the preview triangle budget');
-  for(const name of ['front-glacis','engine-deck-grilles-instanced','reactive-armor-tiles-instanced','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheeks-instanced','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
+  for(const name of ['lower-hull','upper-hull','front-glacis','track-belt-loop-left','track-belt-loop-right','cannon-mantlet','engine-deck-grilles-instanced','reactive-armor-tiles-instanced','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheeks-instanced','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
   await page.screenshot({path:output+'/desktop-blue-sentinel-tank.png',fullPage:true});
 
   // Both faction riflemen must render their own equipment silhouette and live gait rig.

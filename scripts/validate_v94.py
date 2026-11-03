@@ -177,6 +177,10 @@ def main():
         "damageStage = stage",
         "scorchMark: !!target.scorch",
         "window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__",
+        "projectileDiagnostics",
+        "projectileStartDistance",
+        "turret.rotation.y = Math.atan2(dx, dz) - shooter.g.rotation.y",
+        "shooter.g.updateMatrixWorld(true)",
         "impactRings: fx.filter(e => e.kind === 'impact-ring').length",
         "buildingSmoke: fx.filter(e => e.kind === 'building-smoke').length",
     )

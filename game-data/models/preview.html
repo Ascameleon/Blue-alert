@@ -41,7 +41,7 @@ const grid=new THREE.GridHelper(80,80,0x53655e,0x718078);grid.position.y=-.12;sc
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0x56684f,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.16;ground.receiveShadow=true;scene.add(ground);
 let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
 const desc={
-tank:['Char de combat','Deux silhouettes de faction : BLUE SENTINEL à tourelle basse et RED BASTION à tourelle renforcée, avec chenilles segmentées, galets boulonnés et blindage incliné.'],
+tank:['Char de combat','Coque moulée multi-pentes, tourelle profilée à mantelet, galets de roulement et chenilles fermées composées de maillons sur tout le pourtour.'],
 infantry:['Fantassin','Fantassin V4 : volumes anatomiques lissés, plaques composites convexes, casque haute définition, respirateur scellé, bottes à semelles crantées, équipement dorsal et fusil détaillé. Rig d’épaules, coudes, hanches et genoux conservé.'],
 hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile latérale et marquage de faction.'],
 barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
@@ -117,7 +117,7 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     const partNames=object.userData?.mergedPartNames || [object.name];
     for(const partName of partNames){
       if(object.isMesh && (partName.includes('gas-mask') || partName.includes('respirator-') || partName.includes('faceted-helmet') || partName.includes('angular-pauldron') || partName.includes('articulated-knee-guard'))) infantryArmorParts.push(partName);
-      if(object.isMesh && (partName==='front-glacis' || partName==='engine-deck-grilles-instanced' || partName==='reactive-armor-tiles-instanced' || partName==='track-shoe-instanced' || partName==='wheel-bolts-instanced' || partName.includes('blue-sentinel') || partName==='blue-turret-cheeks-instanced' || partName.includes('red-bastion') || partName==='red-turret-cheeks-instanced' || partName==='red-bastion-side-plates-instanced' || partName==='heavy-turret-reinforcements-instanced')) signatureParts.push(partName);
+      if(object.isMesh && (partName==='lower-hull' || partName==='upper-hull' || partName==='front-glacis' || partName==='cannon-mantlet' || partName==='track-belt-loop-left' || partName==='track-belt-loop-right' || partName==='engine-deck-grilles-instanced' || partName==='reactive-armor-tiles-instanced' || partName==='track-shoe-instanced' || partName==='wheel-bolts-instanced' || partName.includes('blue-sentinel') || partName==='blue-turret-cheeks-instanced' || partName.includes('red-bastion') || partName==='red-turret-cheeks-instanced' || partName==='red-bastion-side-plates-instanced' || partName==='heavy-turret-reinforcements-instanced')) signatureParts.push(partName);
     }
   });
   return {
@@ -127,6 +127,10 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     team:document.querySelector('#team').value,
     factionProfile:current?.userData?.factionProfile||null,
     trackShoeInstances:current?.userData?.trackShoeInstances||0,
+    trackLinkCount:current?.userData?.trackLinkCount||0,
+    hullGeometryProfile:current?.userData?.hullGeometryProfile||null,
+    trackGeometryProfile:current?.userData?.trackGeometryProfile||null,
+    turretGeometryProfile:current?.userData?.turretGeometryProfile||null,
     wheelBoltInstances:current?.userData?.wheelBoltInstances||0,
     detailInstances:current?.userData?.detailInstances||null,
     signatureParts,

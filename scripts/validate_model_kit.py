@@ -94,6 +94,9 @@ def main():
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
     required_tank_features = (
         "factionProfile", "BLUE_SENTINEL", "RED_BASTION", "front-glacis",
+        "createArmoredProfileGeometry", "createArmoredProfileMesh", "createTrackLoopGeometry",
+        "SLOPED_CAST_HULL_PROFILE_V1", "CLOSED_STADIUM_TREAD_LOOP_V1", "LOW_PROFILE_CAST_TURRET_V1",
+        "track-belt-loop-left", "track-belt-loop-right", "trackLinkCount",
         "engine-deck-grilles-instanced", "reactive-armor-tiles-instanced",
         "return-rollers-instanced", "road-wheels-instanced", "wheel-hubs-instanced",
         "wheel-hub-caps-instanced", "track-shoe-instanced", "wheel-bolts-instanced",

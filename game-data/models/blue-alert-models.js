@@ -79,6 +79,58 @@ const addMarking = (THREE, group, x, y, z, team) => {
   stripe.rotation.y = Math.PI/2; return stripe;
 };
 
+const createArmoredProfileGeometry = (THREE, points, depth, bevel = 0.04) => {
+  const shape = new THREE.Shape();
+  points.forEach(([x, y], index) => {
+    if (index === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  });
+  shape.closePath();
+  const b = Math.min(bevel, depth * 0.12);
+  const innerDepth = Math.max(0.02, depth - 2 * b);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: innerDepth, bevelEnabled: true, bevelSegments: 3,
+    steps: 1, bevelSize: b, bevelThickness: b, curveSegments: 4
+  });
+  geometry.translate(0, 0, -innerDepth / 2);
+  geometry.computeVertexNormals();
+  geometry.userData.beveledArmor = true;
+  geometry.userData.armoredProfile = true;
+  return geometry;
+};
+
+const createArmoredProfileMesh = (THREE, parent, name, points, depth, material, position, bevel = 0.04) => {
+  const mesh = new THREE.Mesh(createArmoredProfileGeometry(THREE, points, depth, bevel), material);
+  mesh.name = name;
+  mesh.position.set(...position);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.armoredProfile = true;
+  parent.add(mesh);
+  return mesh;
+};
+
+const createTrackLoopGeometry = (THREE, halfStraight, radius, depth) => {
+  const shape = new THREE.Shape();
+  shape.moveTo(-halfStraight, -radius);
+  shape.lineTo(halfStraight, -radius);
+  shape.absarc(halfStraight, 0, radius, -Math.PI / 2, Math.PI / 2, false);
+  shape.lineTo(-halfStraight, radius);
+  shape.absarc(-halfStraight, 0, radius, Math.PI / 2, Math.PI * 1.5, false);
+  shape.closePath();
+  const bevel = 0.018;
+  const innerDepth = Math.max(0.02, depth - bevel * 2);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: innerDepth, bevelEnabled: true, bevelSegments: 2,
+    steps: 1, bevelSize: bevel, bevelThickness: bevel, curveSegments: 8
+  });
+  geometry.translate(0, 0, -innerDepth / 2);
+  geometry.computeVertexNormals();
+  geometry.userData.beveledArmor = true;
+  geometry.userData.armoredTrackLoop = true;
+  return geometry;
+};
+
 export function createTank(THREE, options={}) {
   const { team='blue', variant='main-battle-tank', scale=1 } = options;
   const isRed = team === 'red';
@@ -115,9 +167,13 @@ export function createTank(THREE, options={}) {
     return mesh;
   };
 
-  // Layered hull: lower chassis, raised crew cell and a sloped forward glacis.
-  beveledBox(THREE,g,'lower-hull',[2.62,.48,1.5],[0,.55,0],hull,null,.055);
-  beveledBox(THREE,g,'upper-hull',[1.9,.35,1.22],[-.12,.91,0],armor,null,.045);
+  // Cast, multi-slope hull shells replace the old rectangular chassis blocks.
+  createArmoredProfileMesh(THREE,g,'lower-hull',[
+    [-1.34,.08],[1.34,.08],[1.18,.27],[.93,.53],[.56,.58],[-.88,.54],[-1.26,.30]
+  ],1.48,hull,[0,.23,0],.05);
+  createArmoredProfileMesh(THREE,g,'upper-hull',[
+    [-.96,.05],[.80,.05],[1.00,.17],[.78,.40],[.46,.47],[-.68,.44],[-.96,.22]
+  ],1.18,armor,[-.12,.66,0],.04);
   beveledBox(THREE,g,'front-glacis',[.72,.2,1.22],[.82,.72,0],heavyArmor,[0,0,-.34],.028);
   beveledBox(THREE,g,'engine-deck',[.76,.13,.98],[-.82,1.105,0],dark,null,.018);
 
@@ -153,11 +209,16 @@ export function createTank(THREE, options={}) {
   sphere(THREE,g,'gunner-optic',.075,[.36,1.18,.28],optics,[1,.55,.7]);
   cylinder(THREE,g,'radio-antenna',.018,.018,.72,[-.86,1.42,-.35],dark,6);
 
-  // Track belts, road wheels, hubs and tread shoes are batched by part type.
-  const beltTransforms=[],wheelTransforms=[],hubTransforms=[],capTransforms=[];
+  // A continuous stadium belt now wraps every wheel; 64 visible tread shoes
+  // follow its complete perimeter instead of stopping at the sides.
+  const wheelTransforms=[],hubTransforms=[],capTransforms=[];
   const shoeTransforms=[],boltTransforms=[];
+  const trackHalfStraight=1.0, trackRadius=.24, trackLinkCount=32;
+  const lowerStraight=trackHalfStraight*2;
+  const rightArc=Math.PI*trackRadius;
+  const upperStraightEnd=lowerStraight+rightArc+trackHalfStraight*2;
+  const trackPerimeter=upperStraightEnd+rightArc;
   for(const side of [-1,1]){
-    beltTransforms.push({position:[0,.39,side*.79]});
     for(let i=0;i<6;i++){
       const x=-.98+i*.39;
       wheelTransforms.push({position:[x,.38,side*.84],rotation:[Math.PI/2,0,0]});
@@ -171,16 +232,39 @@ export function createTank(THREE, options={}) {
         });
       }
     }
-    for(let i=0;i<18;i++) shoeTransforms.push({
-      position:[-1.18+i*.139,.39,side*.925],
-      rotation:[0,0,(i%2===0?-.025:.025)]
-    });
+    for(let i=0;i<trackLinkCount;i++){
+      const distance=i*trackPerimeter/trackLinkCount;
+      let x,y,angle;
+      if(distance<lowerStraight){
+        x=-trackHalfStraight+distance; y=-trackRadius; angle=0;
+      }else if(distance<lowerStraight+rightArc){
+        const arc=-Math.PI/2+(distance-lowerStraight)/trackRadius;
+        x=trackHalfStraight+trackRadius*Math.cos(arc);
+        y=trackRadius*Math.sin(arc);
+        angle=arc+Math.PI/2;
+      }else if(distance<upperStraightEnd){
+        const along=distance-(lowerStraight+rightArc);
+        x=trackHalfStraight-along; y=trackRadius; angle=Math.PI;
+      }else{
+        const arc=Math.PI/2+(distance-upperStraightEnd)/trackRadius;
+        x=-trackHalfStraight+trackRadius*Math.cos(arc);
+        y=trackRadius*Math.sin(arc);
+        angle=arc+Math.PI/2;
+      }
+      shoeTransforms.push({position:[x,.39+y,side*.925],rotation:[0,0,angle]});
+    }
   }
-  addInstances(g,'track-belts-instanced',new THREE.BoxGeometry(2.68,.48,.22),rubber,beltTransforms);
+  const trackBeltGeometry=createTrackLoopGeometry(THREE,trackHalfStraight,trackRadius,.22);
+  for(const side of [-1,1]){
+    const belt=new THREE.Mesh(trackBeltGeometry,rubber);
+    belt.name=side<0?'track-belt-loop-left':'track-belt-loop-right';
+    belt.position.set(0,.39,side*.79);
+    belt.castShadow=true; belt.receiveShadow=true; g.add(belt);
+  }
   addInstances(g,'road-wheels-instanced',new THREE.CylinderGeometry(.19,.19,.13,16),metal,wheelTransforms);
   addInstances(g,'wheel-hubs-instanced',new THREE.CylinderGeometry(.085,.085,.145,12),dark,hubTransforms);
   addInstances(g,'wheel-hub-caps-instanced',new THREE.CylinderGeometry(.045,.045,.155,10),edge,capTransforms);
-  addInstances(g,'track-shoe-instanced',new THREE.BoxGeometry(.105,.29,.035),mat(THREE,0x56605d,.88,.28),shoeTransforms);
+  addInstances(g,'track-shoe-instanced',new THREE.BoxGeometry(.15,.065,.04),mat(THREE,0x56605d,.88,.28),shoeTransforms);
   addInstances(g,'wheel-bolts-instanced',new THREE.CylinderGeometry(.018,.018,.026,6),mat(THREE,0xc1c6bd,.42,.72),boltTransforms);
 
   // The two factions have distinct turret silhouettes, not just different paint.
@@ -191,7 +275,9 @@ export function createTank(THREE, options={}) {
   cylinder(THREE,turret,'turret-ring',.54,.58,.13,[0,0,0],dark,18);
   let factionDetailCounts={};
   if(isRed){
-    beveledBox(THREE,turret,'turret-body',[1.3,.5,1.08],[0,.29,0],hull,null,.055);
+    createArmoredProfileMesh(THREE,turret,'turret-body',[
+      [-.76,.12],[.68,.12],[.86,.24],[.70,.48],[.42,.60],[-.54,.56],[-.78,.34]
+    ],1.10,hull,[0,.02,0],.045);
     beveledBox(THREE,turret,'red-bastion-roof-plate',[.82,.12,.84],[-.08,.57,0],armor,null,.018);
     const redCheeks=[],redSidePlates=[],redSmoke=[];
     for(const side of [-1,1]){
@@ -206,7 +292,9 @@ export function createTank(THREE, options={}) {
     addInstances(turret,'red-bastion-smoke-banks-instanced',new THREE.CylinderGeometry(.055,.06,.22,8),dark,redSmoke);
     factionDetailCounts={turretCheeks:2,turretSidePlates:2,smokeBanks:2};
   }else{
-    beveledBox(THREE,turret,'turret-body',[1.22,.36,.96],[0,.24,0],hull,null,.045);
+    createArmoredProfileMesh(THREE,turret,'turret-body',[
+      [-.72,.12],[.62,.12],[.80,.21],[.65,.42],[.36,.54],[-.48,.50],[-.74,.31]
+    ],.98,hull,[0,.02,0],.04);
     beveledBox(THREE,turret,'blue-sentinel-crown',[.78,.12,.8],[-.12,.47,0],armor,null,.018);
     const blueCheeks=[];
     for(const side of [-1,1]) blueCheeks.push({
@@ -218,6 +306,9 @@ export function createTank(THREE, options={}) {
     beveledBox(THREE,turret,'blue-sentinel-rear-sensor',[.25,.12,.32],[-.42,.43,0],dark,null,.012);
     factionDetailCounts={turretCheeks:2,turretSidePlates:0,smokeBanks:0};
   }
+  createArmoredProfileMesh(THREE,turret,'cannon-mantlet',[
+    [-.18,.08],[.18,.08],[.22,.18],[.14,.28],[-.14,.28],[-.22,.18]
+  ],.58,heavyArmor,[.62,.17,0],.02);
   if(isHeavy){
     const reinforcementTransforms=[];
     for(const side of [-1,1]) reinforcementTransforms.push({
@@ -248,6 +339,10 @@ export function createTank(THREE, options={}) {
 
   g.userData={
     kind:'vehicle',unitType:variant,team,turret,factionProfile,
+    hullGeometryProfile:'SLOPED_CAST_HULL_PROFILE_V1',
+    trackGeometryProfile:'CLOSED_STADIUM_TREAD_LOOP_V1',
+    turretGeometryProfile:'LOW_PROFILE_CAST_TURRET_V1',
+    trackLinkCount:shoeTransforms.length,
     trackShoeInstances:shoeTransforms.length,
     wheelBoltInstances:boltTransforms.length,
     detailInstances:{
@@ -258,6 +353,8 @@ export function createTank(THREE, options={}) {
       wheelHubs:hubTransforms.length,
       wheelHubCaps:capTransforms.length,
       smokeDischargers:smokeTransforms.length,
+      trackLinks:shoeTransforms.length,
+      closedTrackBelts:2,
       faction: factionDetailCounts
     }
   };
