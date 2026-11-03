@@ -454,16 +454,16 @@ try {
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
-      return state && state.damageStage === 1 && state.hp <= state.maxHp * 0.55 &&
-        state.hp > state.maxHp * 0.25 && state.smokeSpawned > 0;
-    }, null, { timeout: 7000, polling: 50 });
+      return state && state.pendingProjectiles === 0 && state.damageStage === 1 &&
+        state.hp <= state.maxHp * 0.55 && state.hp > state.maxHp * 0.25 && state.smokeSpawned > 0;
+    }, null, { timeout: 15000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
     console.log('DESKTOP_BUILDING_STAGE1_TIMEOUT ' + JSON.stringify({ start: desktopBuildingStart, state }));
     throw error;
   }
   const desktopBuildingStage1 = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
-  assert.ok(desktopBuildingStage1 && desktopBuildingStage1.hp <= desktopBuildingStage1.maxHp * 0.55 &&
+  assert.ok(desktopBuildingStage1 && desktopBuildingStage1.pendingProjectiles === 0 && desktopBuildingStage1.hp <= desktopBuildingStage1.maxHp * 0.55 &&
     desktopBuildingStage1.hp > desktopBuildingStage1.maxHp * 0.25 && desktopBuildingStage1.damageStage === 1 &&
     desktopBuildingStage1.smokeSpawned > 0,
     'desktop building must enter damaged state with visible smoke after real projectile hits');
@@ -473,9 +473,9 @@ try {
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
-      return state && state.damageStage === 2 && state.hp <= state.maxHp * 0.25 &&
-        state.hp > 0 && state.scorchMark && state.flamesSpawned > 0;
-    }, null, { timeout: 7000, polling: 50 });
+      return state && state.pendingProjectiles === 0 && state.damageStage === 2 &&
+        state.hp <= state.maxHp * 0.25 && state.hp > 0 && state.scorchMark && state.flamesSpawned > 0;
+    }, null, { timeout: 15000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
     console.log('DESKTOP_BUILDING_STAGE2_TIMEOUT ' + JSON.stringify({ start: desktopBuildingCriticalStart, state }));
@@ -483,7 +483,7 @@ try {
   }
   const desktopBuildingStage2 = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
   console.log('DESKTOP_BUILDING_DAMAGE ' + JSON.stringify({ start: desktopBuildingStart, stage1: desktopBuildingStage1, criticalStart: desktopBuildingCriticalStart, stage2: desktopBuildingStage2 }));
-  assert.ok(desktopBuildingStage2 && desktopBuildingStage2.hp <= desktopBuildingStage2.maxHp * 0.25 &&
+  assert.ok(desktopBuildingStage2 && desktopBuildingStage2.pendingProjectiles === 0 && desktopBuildingStage2.hp <= desktopBuildingStage2.maxHp * 0.25 &&
     desktopBuildingStage2.hp > 0 && desktopBuildingStage2.scorchMark && desktopBuildingStage2.flamesSpawned > 0,
     'desktop critical building damage must show scorch and fire while the building remains alive');
   await desktop.screenshot({ path: output + '/desktop-v94-building-critical.png', fullPage: true });
@@ -940,16 +940,16 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   try {
     await mobile.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
-      return state && state.damageStage === 1 && state.hp <= state.maxHp * 0.55 &&
-        state.hp > state.maxHp * 0.25 && state.smokeSpawned > 0;
-    }, null, { timeout: 7000, polling: 50 });
+      return state && state.pendingProjectiles === 0 && state.damageStage === 1 &&
+        state.hp <= state.maxHp * 0.55 && state.hp > state.maxHp * 0.25 && state.smokeSpawned > 0;
+    }, null, { timeout: 15000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
     console.log('MOBILE_BUILDING_STAGE1_TIMEOUT ' + JSON.stringify({ start: mobileBuildingStart, state }));
     throw error;
   }
   const mobileBuildingStage1 = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
-  assert.ok(mobileBuildingStage1 && mobileBuildingStage1.hp <= mobileBuildingStage1.maxHp * 0.55 &&
+  assert.ok(mobileBuildingStage1 && mobileBuildingStage1.pendingProjectiles === 0 && mobileBuildingStage1.hp <= mobileBuildingStage1.maxHp * 0.55 &&
     mobileBuildingStage1.hp > mobileBuildingStage1.maxHp * 0.25 && mobileBuildingStage1.damageStage === 1 &&
     mobileBuildingStage1.smokeSpawned > 0,
     'mobile building must enter damaged state with visible smoke after real projectile hits');
@@ -959,9 +959,9 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   try {
     await mobile.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
-      return state && state.damageStage === 2 && state.hp <= state.maxHp * 0.25 &&
-        state.hp > 0 && state.scorchMark && state.flamesSpawned > 0;
-    }, null, { timeout: 7000, polling: 50 });
+      return state && state.pendingProjectiles === 0 && state.damageStage === 2 &&
+        state.hp <= state.maxHp * 0.25 && state.hp > 0 && state.scorchMark && state.flamesSpawned > 0;
+    }, null, { timeout: 15000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
     console.log('MOBILE_BUILDING_STAGE2_TIMEOUT ' + JSON.stringify({ start: mobileBuildingCriticalStart, state }));
@@ -969,7 +969,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   }
   const mobileBuildingStage2 = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
   console.log('MOBILE_BUILDING_DAMAGE ' + JSON.stringify({ start: mobileBuildingStart, stage1: mobileBuildingStage1, criticalStart: mobileBuildingCriticalStart, stage2: mobileBuildingStage2 }));
-  assert.ok(mobileBuildingStage2 && mobileBuildingStage2.hp <= mobileBuildingStage2.maxHp * 0.25 &&
+  assert.ok(mobileBuildingStage2 && mobileBuildingStage2.pendingProjectiles === 0 && mobileBuildingStage2.hp <= mobileBuildingStage2.maxHp * 0.25 &&
     mobileBuildingStage2.hp > 0 && mobileBuildingStage2.scorchMark && mobileBuildingStage2.flamesSpawned > 0,
     'mobile critical building damage must show scorch and fire while the building remains alive');
   await mobile.screenshot({ path: output + '/mobile-v94-building-critical-390x844.png', fullPage: true });
