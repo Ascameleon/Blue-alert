@@ -147,7 +147,7 @@ try {
     pelvis:true,leftElbow:true,rightElbow:true,leftKnee:true,rightKnee:true,leftAnkle:true,rightAnkle:true
   },'pelvis, both elbows, both knees and both ankles must be real articulated rig pivots');
   assert.ok(blueInfantry.cameraDistance<8,'blue infantry preview camera must frame the model closely: '+blueInfantry.cameraDistance);
-  assert.ok(blueInfantry.namedParts.includes('sentinel-visor') && blueInfantry.namedParts.includes('infantry-assault-rifle') &&
+  assert.ok(blueInfantry.namedParts.includes('sentinel-goggle-bridge') && blueInfantry.namedParts.includes('infantry-assault-rifle') &&
     blueInfantry.namedParts.includes('anatomical-torso-loft') &&
     blueInfantry.namedParts.includes('left-upper-arm-loft') && blueInfantry.namedParts.includes('right-forearm-loft') &&
     blueInfantry.namedParts.includes('left-thigh-loft') && blueInfantry.namedParts.includes('right-calf-loft') &&
