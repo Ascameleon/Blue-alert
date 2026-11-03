@@ -408,7 +408,7 @@ try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0;
+        state.modelMuzzleFlashes === 0;
     }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const diagnostic = await desktop.evaluate(() => ({
@@ -421,12 +421,11 @@ try {
   }
   const desktopPostRigVfx = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(desktopPostRigVfx && desktopPostRigVfx.activeProjectiles === 0 &&
-    desktopPostRigVfx.modelProjectiles === 0 && desktopPostRigVfx.modelMuzzleFlashes === 0 &&
-    desktopPostRigVfx.modelExplosions === 0,
-    'desktop building-damage probe must start without in-flight projectiles, muzzle flashes or explosions');
-  // The preceding full cleanup probe already asserts impact-ring/spark disposal.
-  // This second gate follows the turret-alignment shot and only needs to drain
-  // projectiles and larger effects before the unrelated structural-damage probe.
+    desktopPostRigVfx.modelProjectiles === 0 && desktopPostRigVfx.modelMuzzleFlashes === 0,
+    'desktop building-damage probe must start without in-flight projectiles or muzzle flashes');
+  // The preceding full cleanup probe already asserts impact-ring/spark disposal and
+  // explosion lifecycle. A verified explosion may finish its visual tail without
+  // affecting building HP; this second gate only drains projectiles and muzzle flashes.
   console.log('DESKTOP_POST_RIG_VFX_READY ' + JSON.stringify({
     activeProjectiles: desktopPostRigVfx.activeProjectiles,
     modelMuzzleFlashes: desktopPostRigVfx.modelMuzzleFlashes,
