@@ -545,7 +545,7 @@ try {
   await desktop.waitForTimeout(650);
   await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
   const terrainFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
-  assert.equal(terrainFocus?.textureResolution, 1024, 'desktop terrain detail focus must be available');
+  assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must use the authored 512px surface');
   assert.ok(terrainFocus?.normalMap && terrainFocus?.roughnessMap && terrainFocus.normalField === 'microstructure-only' && terrainFocus.normalStrength >= 0.80 && terrainFocus.normalStrength <= 0.90,
     'desktop terrain must expose live normal and roughness maps');
   const desktopTerrainBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(false));
