@@ -217,8 +217,11 @@ def main():
     terrain_section = source[terrain_start:terrain_end]
     if "Math.random()" in terrain_section:
         raise SystemExit("FAIL: terrain prop placement must be deterministic")
-    if "vertexColors: true" not in terrain_section or "terrainColors.fill(1);" not in terrain_section:
-        raise SystemExit("FAIL: terrain must use an explicit neutral-white vertex tint so the albedo owns the field palette")
+    if ("vertexColors: true" not in terrain_section or
+            "terrainBaselineColors" not in terrain_section or
+            "fieldColor.toArray(terrainColors, i * 3);" not in terrain_section or
+            "terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));" not in terrain_section):
+        raise SystemExit("FAIL: terrain must keep an authored macro vertex field with an accepted-mainline A/B baseline")
     if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
     if "terrainMaterial.normalMap = terrainSurfaceTextures.normal" not in terrain_section or "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness" not in terrain_section:
@@ -226,15 +229,21 @@ def main():
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
     required_field_surface = (
-        "terrainColors.fill(1);",
-        "terrainMaterial.normalScale.set(0.85, 0.85)",
-        "setMicroRelief(enabled)",
-        "* 2.2;",
-        "const warpX = (terrainNoise(",
-        "const warpZ = (terrainNoise(",
+        "const terrainBaselineColors = new Float32Array",
+        "const terrainFieldCoverage = {",
+        "const terrainColorChecksum = colors =>",
         "const fieldMix = broad * 0.68 + medium * 0.32;",
         "const dry = terrainSmoothstep(0.53, 0.72, fieldMix);",
         "const soil = terrainSmoothstep(0.58, 0.76,",
+        "const exposedStone = terrainSmoothstep(0.76, 0.90,",
+        "fieldColor.toArray(terrainColors, i * 3);",
+        "terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));",
+        "terrainBaselineColorChecksum",
+        "terrainFieldColorChecksum",
+        "setFieldStrata(enabled)",
+        "terrainMaterial.normalScale.set(0.85, 0.85)",
+        "setMicroRelief(enabled)",
+        "* 2.2;",
         "const micro = terrainNoise(",
         "const grainNoise = terrainNoise(",
         "const fiberPatch = terrainSmoothstep(0.22, 0.68, micro);",
@@ -242,9 +251,10 @@ def main():
         "const soilGrain = terrainSmoothstep(",
         "const stoneGrain = terrainSmoothstep(",
         "heightField[py * size + px] = micro * 0.12 + grainNoise * 0.06 +",
-        "const dryMix = dry * 0.50;",
-        "const soilMix = soil * 0.64;",
-        "let red = 110, green = 132, blue = 72;",
+        "const fiberTone = grassFiber * 7;",
+        "const soilTone = soilGrain * 12;",
+        "const stoneTone = stoneGrain * 5;",
+        "let red = 239, green = 241, blue = 232;",
         "let redSum = 0, greenSum = 0, blueSum = 0;",
         "grassFiber: grassFiberSamples / (size * size)",
         "soilGrain: soilGrainSamples / (size * size)",
@@ -253,7 +263,8 @@ def main():
         "meanAlbedo: {",
         "surfaceCoverage: terrainSurfaceTextures.coverage",
         "surfaceAlbedo: terrainSurfaceTextures.meanAlbedo",
-        "vertexTint: 'neutral-white'",
+        "vertexTint: 'authored-field-strata'",
+        "fieldStrataMode: 'domain-warped-vertex-color'",
         "normalField: 'microstructure-only',"
     )
     missing_field_surface = [token for token in required_field_surface if token not in terrain_section]
@@ -395,12 +406,23 @@ def main():
         "surfaceCoverage?.soilGrain >= 0.004",
         "surfaceCoverage?.stoneGrain >= 0.0005",
         "textureResolution === 512",
+        "mobileMetrics.terrain.textureResolution === 256",
         "terrainFocus?.textureResolution, 512",
         "mobileTerrainFocus?.textureResolution, 256",
-        "vertexTint === 'neutral-white'",
-        "surfaceAlbedo?.r >= 95",
-        "surfaceAlbedo?.g >= 110",
-        "surfaceAlbedo?.b >= 55",
+        "vertexTint === 'authored-field-strata'",
+        "fieldStrataMode === 'domain-warped-vertex-color'",
+        "fieldCoverage?.dry >= 0.25",
+        "fieldCoverage?.soil >= 0.10",
+        "fieldCoverage?.stone >= 0.002",
+        "surfaceAlbedo?.r >= 220",
+        "surfaceAlbedo?.g >= 220",
+        "surfaceAlbedo?.b >= 210",
+        "setFieldStrata(false)",
+        "setFieldStrata(true)",
+        "desktop-v94-field-strata-baseline.png",
+        "desktop-v94-field-strata-detail.png",
+        "mobile-v94-field-strata-baseline-390x844.png",
+        "mobile-v94-field-strata-detail-390x844.png",
         "procedural-albedo-normal-roughness",
         "normalField === 'microstructure-only'",
         "normalStrength >= 0.80",
