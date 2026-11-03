@@ -55,7 +55,7 @@ def main():
     if missing:
         raise SystemExit("FAIL: faction infantry model is missing: " + ", ".join(missing))
     REQUIRED_HERO_PARTS = (
-        "SENTINEL_BASTION_FIELD_SOLDIER_V3", "faceted-helmet-shell", "gas-mask-faceplate",
+        "SENTINEL_BASTION_FIELD_SOLDIER_V4", "faceted-helmet-shell", "gas-mask-faceplate",
         "gas-mask-optic-lens", "respirator-filter-housing", "respirator-filter-cap",
         "respirator-filter-vent", "respirator-breathing-hose", "gas-mask-chin-guard",
         "angular-pauldron", "articulated-knee-guard", "rifle-top-rail", "rifle-ejection-port",
