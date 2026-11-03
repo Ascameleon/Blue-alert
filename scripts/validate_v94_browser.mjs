@@ -187,6 +187,14 @@ try {
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-tactical-camera-framing.png', fullPage: true });
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
+  assert.ok(desktopMetrics.terrain?.albedoMap &&
+    desktopMetrics.terrain.surfaceMode === 'procedural-albedo-normal-roughness' &&
+    desktopMetrics.terrain.normalMap && desktopMetrics.terrain.roughnessMap &&
+    desktopMetrics.terrain.textureResolution === 512 &&
+    desktopMetrics.terrain.textureChecksum > 0 &&
+    desktopMetrics.terrain.anisotropy <= 2 &&
+    desktopMetrics.terrain.normalStrength >= 0.95,
+    'desktop terrain must expose deterministic 512px PBR maps with bounded sampling and authored relief strength');
   const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
   assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
   assert.equal(missionInitial.deliveredOre, 0, 'starting credits and ore in the field must not count as delivered resources');
@@ -504,7 +512,7 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
   const terrainFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must be available');
-  assert.ok(terrainFocus?.normalMap && terrainFocus?.roughnessMap && terrainFocus.normalStrength > 0.5,
+  assert.ok(terrainFocus?.normalMap && terrainFocus?.roughnessMap && terrainFocus.normalStrength >= 0.95,
     'desktop terrain must expose live normal and roughness maps');
   const desktopTerrainBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(false));
   assert.ok(desktopTerrainBaseline && !desktopTerrainBaseline.normalMap && !desktopTerrainBaseline.roughnessMap,
@@ -512,7 +520,7 @@ try {
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-microrelief-baseline.png', fullPage: true });
   const desktopTerrainDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(true));
-  assert.ok(desktopTerrainDetail?.normalMap && desktopTerrainDetail?.roughnessMap && desktopTerrainDetail.normalStrength > 0.5,
+  assert.ok(desktopTerrainDetail?.normalMap && desktopTerrainDetail?.roughnessMap && desktopTerrainDetail.normalStrength >= 0.95,
     'desktop terrain detail must restore normal and roughness maps');
   await desktop.waitForTimeout(300);
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-microrelief-detail.png', fullPage: true });
@@ -530,6 +538,20 @@ try {
   });
   await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true });
   const mobileMetrics = await metrics(mobile);
+  const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
+  assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must use the authored 256px surface');
+  assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalStrength >= 0.95,
+    'mobile terrain must expose the same bounded PBR relief strength at its 256px texture resolution');
+  const mobileTerrainBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(false));
+  assert.ok(mobileTerrainBaseline && !mobileTerrainBaseline.normalMap && !mobileTerrainBaseline.roughnessMap,
+    'mobile terrain A/B baseline must disable only normal and roughness maps');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-baseline-390x844.png', fullPage: false });
+  const mobileTerrainDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(true));
+  assert.ok(mobileTerrainDetail?.normalMap && mobileTerrainDetail?.roughnessMap && mobileTerrainDetail.normalStrength >= 0.95,
+    'mobile terrain detail must restore the authored normal and roughness maps');
+  await mobile.waitForTimeout(300);
+  await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-detail-390x844.png', fullPage: false });
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
       const r = el.getBoundingClientRect();
@@ -599,7 +621,14 @@ try {
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-tactical-camera-framing-390x844.png', fullPage: false });
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
-  assert.ok(mobileMetrics.terrain?.albedoMap && mobileMetrics.terrain.surfaceMode === 'procedural-albedo-grain' && mobileMetrics.terrain.textureResolution === 256 && mobileMetrics.terrain.textureChecksum > 0 && mobileMetrics.terrain.anisotropy <= 2, 'mobile terrain must use a deterministic 256px procedural albedo surface with capped anisotropy');
+  assert.ok(mobileMetrics.terrain?.albedoMap &&
+    mobileMetrics.terrain.surfaceMode === 'procedural-albedo-normal-roughness' &&
+    mobileMetrics.terrain.normalMap && mobileMetrics.terrain.roughnessMap &&
+    mobileMetrics.terrain.textureResolution === 256 &&
+    mobileMetrics.terrain.textureChecksum > 0 &&
+    mobileMetrics.terrain.anisotropy <= 2 &&
+    mobileMetrics.terrain.normalStrength >= 0.95,
+    'mobile terrain must use deterministic 256px albedo, normal and roughness maps with capped anisotropy and authored relief strength');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&

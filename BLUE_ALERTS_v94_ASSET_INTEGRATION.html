@@ -618,7 +618,7 @@ function createTerrainSurfaceTextures(size) {
       albedoPixels[offset + 2] = blue;
       albedoPixels[offset + 3] = 255;
 
-      const roughness = channel(236 - soil * 24 - exposedStone * 40 + (fine - 0.5) * 14);
+      const roughness = channel(232 - soil * 34 - exposedStone * 46 + (fine - 0.5) * 18);
       roughnessPixels[offset] = roughness;
       roughnessPixels[offset + 1] = roughness;
       roughnessPixels[offset + 2] = roughness;
@@ -636,8 +636,8 @@ function createTerrainSurfaceTextures(size) {
     const up = Math.max(0, py - 1), down = Math.min(size - 1, py + 1);
     for (let px = 0; px < size; px++) {
       const left = Math.max(0, px - 1), right = Math.min(size - 1, px + 1);
-      const dx = (heightField[py * size + right] - heightField[py * size + left]) * 1.65;
-      const dy = (heightField[down * size + px] - heightField[up * size + px]) * 1.65;
+      const dx = (heightField[py * size + right] - heightField[py * size + left]) * 2.4;
+      const dy = (heightField[down * size + px] - heightField[up * size + px]) * 2.4;
       let nx = -dx, ny = -dy, nz = 1;
       const length = Math.hypot(nx, ny, nz) || 1;
       nx /= length; ny /= length; nz /= length;
@@ -675,7 +675,7 @@ const terrainMaterial = new THREE.MeshStandardMaterial({
 });
 terrainMaterial.map = terrainSurfaceTextures.albedo;
 terrainMaterial.normalMap = terrainSurfaceTextures.normal;
-terrainMaterial.normalScale.set(0.55, 0.55);
+terrainMaterial.normalScale.set(0.95, 0.95);
 terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness;
 terrainMaterial.needsUpdate = true;
 const ground = new THREE.Mesh(terrainGeometry, terrainMaterial);
@@ -713,7 +713,7 @@ window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
     const active = !!enabled;
     terrainMaterial.normalMap = active ? terrainSurfaceTextures.normal : null;
     terrainMaterial.roughnessMap = active ? terrainSurfaceTextures.roughness : null;
-    terrainMaterial.normalScale.setScalar(active ? 0.55 : 0);
+    terrainMaterial.normalScale.setScalar(active ? 0.95 : 0);
     terrainMaterial.needsUpdate = true;
     return {
       enabled: active,

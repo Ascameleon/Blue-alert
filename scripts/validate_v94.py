@@ -213,7 +213,7 @@ def main():
         raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
-    if "terrainMaterial.normalScale.set(0.55, 0.55)" not in terrain_section or "setMicroRelief(enabled)" not in terrain_section:
+    if "terrainMaterial.normalScale.set(0.95, 0.95)" not in terrain_section or "setMicroRelief(enabled)" not in terrain_section or "* 2.4;" not in terrain_section or "const roughness = channel(232 - soil * 34 - exposedStone * 46 + (fine - 0.5) * 18);" not in terrain_section:
         raise SystemExit("FAIL: terrain micro-relief must be measurable and A/B switchable")
 
     tree_start = source.index("function createLayeredTreeFoliageGeometry()")
@@ -338,6 +338,13 @@ def main():
         "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
         "desktop-v94-industrial-yard.png",
         "desktop-v94-terrain-surface.png",
+        "mobileTerrainFocus",
+        "mobileTerrainBaseline",
+        "mobileTerrainDetail",
+        "mobile-v94-terrain-microrelief-baseline-390x844.png",
+        "mobile-v94-terrain-microrelief-detail-390x844.png",
+        "procedural-albedo-normal-roughness",
+        "normalStrength >= 0.95",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
