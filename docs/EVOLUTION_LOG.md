@@ -410,3 +410,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 
 
 - Exact test-correction commit: `1d409c241d003977306e654ecb1cfd25c8d1ee90`. It retains the compact mobile HUD CSS from `673797b71f8a53f91e2efbb93c8a011456b0be51` and changes only the post-rig browser-test isolation plus this log. The follow-up validation must run against the final branch head created by this documentation update; no further branch writes are permitted until that workflow completes.
+
+
+### Compact mobile HUD — stale assertion correction (2026-11-03)
+
+- Exact-head workflow [41553206890](https://github.com/Ascameleon/Blue-alert/actions/runs/41553206890) completed the standalone HTML build, desktop/mobile model previews, desktop gameplay, mission completion, combat/VFX lifecycle and building-damage stages, then failed only at the legacy mobile assertion requiring the separate `#mobileHQBadge` to be visible below the command dock.
+- That assertion contradicted the deliberate compact-HUD CSS, which hides the redundant badge (`display:none`) to reclaim battlefield space. The new geometry probe immediately above had already verified the intended state: 36px top bar, 44px command row, 44.5px mission card at y=88–132.5, and the HQ badge hidden.
+- Inspected the exact-runtime screenshot from artifact [13193433407](https://github.com/Ascameleon/Blue-alert/actions/runs/41553206890/artifacts/13193433407), `v94-browser/mobile-v94-hud-compact-390x844.png`. It confirms the compact header, all five 44px touch controls, compact mission objective and substantially larger unobstructed battlefield region compared with the supplied Samsung baseline. This is a mobile usability/layout improvement only; it is not evidence of a graphical asset upgrade or commercial-grade visual quality.
+- Corrected the obsolete assertion to require the HQ badge to stay hidden while retaining the command dock. No gameplay/runtime code or combat contract changed. The strict mission, toast-clearance, build-placement, combat and VFX assertions remain intact.
+- Changed files in this correction: `scripts/validate_v94_browser.mjs` and `docs/EVOLUTION_LOG.md`. A fresh workflow on the resulting exact HEAD is required; OpenRTS/native checks did not run after the prior browser failure.
+- Evidence boundary: the screenshot is 390×844 Chromium emulation, not a physical Samsung capture. Budget remains 0 €; no version/release is created.

@@ -737,11 +737,9 @@ try {
   const mobileBuildBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
 const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: 'artifacts/v94-browser/mobile-v94-gameplay-390x844.png', fullPage: false });
-  const mobileHQBadgeBox = await mobile.locator('#mobileHQBadge').boundingBox();
-  assert.ok(mobileCommandsBox && mobileHQBadgeBox && mobileHQBadgeBox.y >= mobileCommandsBox.y + mobileCommandsBox.height + 6,
-    'the dedicated HQ badge must remain visible below the mobile command dock');
-  assert.equal(await mobile.locator('#mobileHQBadge').textContent(), 'QG • BASE ALPHA',
-    'mobile HUD must identify the blue command HQ');
+  assert.ok(mobileCommandsBox, 'mobile command dock must remain present after HUD compaction');
+  assert.equal(await mobile.locator('#mobileHQBadge').evaluate(el => getComputedStyle(el).display), 'none',
+    'redundant mobile HQ badge must remain collapsed to preserve battlefield space');
   assert.ok(mobileBuildBefore && mobileBuildBefore.pads.every(p => p.pad && p.grid && p.border),
     'mobile must render the same two construction pads');
   await mobile.waitForTimeout(2800);
