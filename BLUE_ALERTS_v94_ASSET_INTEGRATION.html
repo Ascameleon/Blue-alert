@@ -566,10 +566,10 @@ function insideBuildZone(x, z, radius = 0) {
 const terrainGeometry = new THREE.PlaneGeometry(200, 160, 60, 48);
 const terrainPositions = terrainGeometry.attributes.position;
 const terrainColors = new Float32Array(terrainPositions.count * 3);
-const grassColor = new THREE.Color(0x65734f);
-const dryColor = new THREE.Color(0x88764e);
-const shadedColor = new THREE.Color(0x405540);
-const soilColor = new THREE.Color(0x705239);
+const grassColor = new THREE.Color(0xe0dfc9);
+const dryColor = new THREE.Color(0xe6d8b8);
+const shadedColor = new THREE.Color(0xd2d9c6);
+const soilColor = new THREE.Color(0xd8c5ac);
 const terrainSmoothstep = (a, b, value) => {
   const t = Math.max(0, Math.min(1, (value - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -582,11 +582,11 @@ for (let i = 0; i < terrainPositions.count; i++) {
   const fine = terrainNoise(x - 5, z + 11, 0.42);
   const moisture = broad * 0.62 + medium * 0.27 + fine * 0.11;
   const color = grassColor.clone();
-  color.lerp(dryColor, terrainSmoothstep(0.57, 0.82, moisture) * 0.42);
-  color.lerp(shadedColor, terrainSmoothstep(0.12, 0.42, 1 - moisture) * 0.28);
+  color.lerp(dryColor, terrainSmoothstep(0.57, 0.82, moisture) * 0.18);
+  color.lerp(shadedColor, terrainSmoothstep(0.12, 0.42, 1 - moisture) * 0.10);
   const roadShoulder = 1 - terrainSmoothstep(3.4, 7.8, Math.abs(z));
-  color.lerp(soilColor, roadShoulder * 0.24);
-  color.multiplyScalar(0.94 + fine * 0.12);
+  color.lerp(soilColor, roadShoulder * 0.10);
+  color.multiplyScalar(0.975 + fine * 0.045);
   color.toArray(terrainColors, i * 3);
 }
 terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
@@ -621,21 +621,22 @@ function createTerrainSurfaceTextures(size) {
 
       // Fine grass fibers follow a gently changing wind direction. Soil grains
       // and stone flecks use separate deterministic high-frequency fields.
-      const fiberAngle = (broad * 0.7 + medium * 0.3 - 0.5) * 1.5;
+      const fiberAngle = 0.42 + (medium - 0.5) * 0.45;
       const fiberWave = Math.sin((worldX * Math.cos(fiberAngle) +
-        worldZ * Math.sin(fiberAngle)) * 2.4 + (micro - 0.5) * 2.8);
-      const grassFiber = Math.pow(Math.max(0, fiberWave), 8) *
+        worldZ * Math.sin(fiberAngle)) * 1.8 + (micro - 0.5) * 1.8);
+      const fiberPatch = terrainSmoothstep(0.22, 0.68, micro);
+      const grassFiber = Math.pow(Math.max(0, fiberWave), 3.2) * fiberPatch *
         (1 - soil * 0.9) * (1 - exposedStone * 0.9);
-      const soilGrain = terrainSmoothstep(0.68, 0.86, micro * 0.55 + grainNoise * 0.45) * soil;
-      const stoneGrain = terrainSmoothstep(0.70, 0.90, grainNoise * 0.65 + fleck * 0.35) * exposedStone;
+      const soilGrain = terrainSmoothstep(0.62, 0.82, micro * 0.58 + grainNoise * 0.42) * soil;
+      const stoneGrain = terrainSmoothstep(0.76, 0.92, grainNoise * 0.55 + fleck * 0.45) * exposedStone;
       if (dry > 0.32) drySamples++;
       if (soil > 0.32) soilSamples++;
       if (exposedStone > 0.28) stoneSamples++;
       if (grassFiber > 0.22) grassFiberSamples++;
       if (soilGrain > 0.18) soilGrainSamples++;
       if (stoneGrain > 0.15) stoneGrainSamples++;
-      const grain = (fine - 0.5) * 12 + (micro - 0.5) * 20 +
-        (grainNoise - 0.5) * 16 + (fleck - 0.5) * 8;
+      const grain = (fine - 0.5) * 8 + (micro - 0.5) * 10 +
+        (grainNoise - 0.5) * 8 + (fleck - 0.5) * 4;
       const offset = (py * size + px) * 4;
 
       // Layered field materials retain their broad strata while adding readable
@@ -653,9 +654,9 @@ function createTerrainSurfaceTextures(size) {
       red = red * (1 - stoneMix) + 190 * stoneMix;
       green = green * (1 - stoneMix) + 186 * stoneMix;
       blue = blue * (1 - stoneMix) + 168 * stoneMix;
-      red += grassFiber * (dry * 10 - (1 - dry) * 5) - soilGrain * 18;
-      green += grassFiber * (dry * 2 + (1 - dry) * 13) - soilGrain * 15;
-      blue += grassFiber * (dry * -5 + 2) - soilGrain * 10;
+      red += grassFiber * (dry * 12 - (1 - dry) * 6) - soilGrain * 14;
+      green += grassFiber * (dry * 4 + (1 - dry) * 14) - soilGrain * 12;
+      blue += grassFiber * (dry * -4 + 1) - soilGrain * 8;
       const stoneGrainMix = stoneGrain * 0.42;
       red = red * (1 - stoneGrainMix) + 198 * stoneGrainMix;
       green = green * (1 - stoneGrainMix) + 194 * stoneGrainMix;
@@ -665,16 +666,16 @@ function createTerrainSurfaceTextures(size) {
       albedoPixels[offset + 2] = channel(blue + grain * 0.45);
       albedoPixels[offset + 3] = 255;
 
-      const roughness = channel(190 + soil * 36 + dry * 24 - exposedStone * 18 +
-        (micro - 0.5) * 22 + (grainNoise - 0.5) * 18 +
-        grassFiber * 18 + soilGrain * 14 + stoneGrain * 10);
+      const roughness = channel(210 + soil * 18 + dry * 10 - exposedStone * 24 +
+        (micro - 0.5) * 10 + (grainNoise - 0.5) * 8 +
+        grassFiber * 10 + soilGrain * 12 + stoneGrain * 8);
       roughnessPixels[offset] = roughness;
       roughnessPixels[offset + 1] = roughness;
       roughnessPixels[offset + 2] = roughness;
       roughnessPixels[offset + 3] = 255;
-      heightField[py * size + px] = broad * 0.20 + medium * 0.18 + fine * 0.06 +
-        micro * 0.18 + grainNoise * 0.12 + dry * 0.08 + soil * 0.10 +
-        exposedStone * 0.06 + grassFiber * 0.06 + soilGrain * 0.05 + stoneGrain * 0.04;
+      // Keep broad field masks in albedo only; the normal field represents tactile microstructure.
+      heightField[py * size + px] = micro * 0.10 + grainNoise * 0.05 +
+        grassFiber * 0.07 + soilGrain * 0.05 + stoneGrain * 0.06;
 
       if ((px & 15) === 0 && (py & 3) === 0) {
         checksum = Math.imul(checksum ^ albedoPixels[offset] ^
@@ -688,8 +689,8 @@ function createTerrainSurfaceTextures(size) {
     const up = Math.max(0, py - 1), down = Math.min(size - 1, py + 1);
     for (let px = 0; px < size; px++) {
       const left = Math.max(0, px - 1), right = Math.min(size - 1, px + 1);
-      const dx = (heightField[py * size + right] - heightField[py * size + left]) * 4.0;
-      const dy = (heightField[down * size + px] - heightField[up * size + px]) * 4.0;
+      const dx = (heightField[py * size + right] - heightField[py * size + left]) * 1.8;
+      const dy = (heightField[down * size + px] - heightField[up * size + px]) * 1.8;
       let nx = -dx, ny = -dy, nz = 1;
       const length = Math.hypot(nx, ny, nz) || 1;
       nx /= length; ny /= length; nz /= length;
@@ -735,7 +736,7 @@ const terrainMaterial = new THREE.MeshStandardMaterial({
 });
 terrainMaterial.map = terrainSurfaceTextures.albedo;
 terrainMaterial.normalMap = terrainSurfaceTextures.normal;
-terrainMaterial.normalScale.set(1.3, 1.3);
+terrainMaterial.normalScale.set(0.7, 0.7);
 terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness;
 terrainMaterial.needsUpdate = true;
 const ground = new THREE.Mesh(terrainGeometry, terrainMaterial);
@@ -753,6 +754,7 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   normalMap: !!terrainMaterial.normalMap,
   roughnessMap: !!terrainMaterial.roughnessMap,
   normalStrength: terrainMaterial.normalScale.x,
+  normalField: 'microstructure-only'
   textureResolution: terrainSurfaceTextures.size,
   textureChecksum: terrainSurfaceTextures.checksum,
   surfaceCoverage: terrainSurfaceTextures.coverage,
@@ -767,20 +769,22 @@ window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
       checksum: terrainSurfaceTextures.checksum,
       normalMap: !!terrainMaterial.normalMap,
       roughnessMap: !!terrainMaterial.roughnessMap,
-      normalStrength: terrainMaterial.normalScale.x
+      normalStrength: terrainMaterial.normalScale.x,
+  normalField: 'microstructure-only'
     };
   },
   setMicroRelief(enabled) {
     const active = !!enabled;
     terrainMaterial.normalMap = active ? terrainSurfaceTextures.normal : null;
     terrainMaterial.roughnessMap = active ? terrainSurfaceTextures.roughness : null;
-    terrainMaterial.normalScale.setScalar(active ? 1.3 : 0);
+    terrainMaterial.normalScale.setScalar(active ? 0.7 : 0);
     terrainMaterial.needsUpdate = true;
     return {
       enabled: active,
       normalMap: !!terrainMaterial.normalMap,
       roughnessMap: !!terrainMaterial.roughnessMap,
-      normalStrength: terrainMaterial.normalScale.x
+      normalStrength: terrainMaterial.normalScale.x,
+  normalField: 'microstructure-only'
     };
   }
 });

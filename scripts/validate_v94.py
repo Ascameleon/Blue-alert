@@ -214,17 +214,19 @@ def main():
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
     required_field_surface = (
-        "terrainMaterial.normalScale.set(1.3, 1.3)",
+        "terrainMaterial.normalScale.set(0.7, 0.7)",
         "setMicroRelief(enabled)",
-        "* 4.0;",
+        "* 1.8;",
         "const warpX = (terrainNoise(",
         "const warpZ = (terrainNoise(",
         "const fieldMix = broad * 0.68 + medium * 0.32;",
         "const micro = terrainNoise(",
         "const grainNoise = terrainNoise(",
-        "const grassFiber = Math.pow(",
+        "const fiberPatch = terrainSmoothstep(0.22, 0.68, micro);",
+        "const grassFiber = Math.pow(Math.max(0, fiberWave), 3.2) * fiberPatch *",
         "const soilGrain = terrainSmoothstep(",
         "const stoneGrain = terrainSmoothstep(",
+        "heightField[py * size + px] = micro * 0.10 + grainNoise * 0.05 +",
         "const dryMix = dry * 0.52;",
         "const soilMix = soil * 0.62;",
         "grassFiber: grassFiberSamples / (size * size)",
@@ -233,7 +235,8 @@ def main():
         "createTerrainSurfaceTextures(isMobile ? 512 : 1024)",
         "coverage: {",
         "surfaceCoverage: terrainSurfaceTextures.coverage",
-        "0x65734f", "0x88764e", "0x405540", "0x705239",
+        "0xe0dfc9", "0xe6d8b8", "0xd2d9c6", "0xd8c5ac",
+        "normalField: 'microstructure-only',"
     )
     missing_field_surface = [token for token in required_field_surface if token not in terrain_section]
     if missing_field_surface:
@@ -376,7 +379,9 @@ def main():
         "textureResolution === 1024",
         "textureResolution === 512",
         "procedural-albedo-normal-roughness",
-        "normalStrength >= 1.3",
+        "normalField === 'microstructure-only'",
+        "normalStrength >= 0.65",
+        "normalStrength <= 0.75",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
