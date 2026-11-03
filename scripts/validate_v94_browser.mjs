@@ -94,7 +94,11 @@ async function loadGame(page, options = {}) {
     );
     const frozen = await page.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.freezeNewCombat());
     assert.equal(frozen?.combatSuppressed, true,
-      'mobile QA must suppress autonomous combat before the simulation starts');
+      'controlled QA must suppress autonomous combat before the simulation starts');
+    assert.ok(frozen.activeProjectiles === 0 && frozen.modelProjectiles === 0 &&
+      frozen.modelMuzzleFlashes === 0 && frozen.modelExplosions === 0 &&
+      frozen.impactRings === 0 && frozen.impactSparks === 0,
+      'controlled QA must freeze a clean combat scene before dismissing the start overlay');
   }
   await page.locator('#btnStart').click();
   await page.waitForFunction(() => document.getElementById('startOverlay')?.classList.contains('hidden'));
@@ -140,7 +144,7 @@ try {
   });
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  await loadGame(desktop, { combatRig: true, combatVfx: true, buildQa: true, environment: true });
+  await loadGame(desktop, { combatRig: true, combatVfx: true, buildQa: true, environment: true, freezeCombatAtStart: true });
   const desktopMetrics = await metrics(desktop);
   assert.ok(desktopMetrics.webgl && !desktopMetrics.contextLost, 'desktop must render with a live WebGL context');
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
@@ -303,9 +307,9 @@ try {
   await desktop.locator('#btnSound').click();
   await assert.equal(await desktop.locator('#btnSound').textContent(), 'Son : ON', 'desktop sound toggle must restore');
 
-  const desktopCombatFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  const desktopCombatFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   assert.ok(desktopCombatFreeze?.combatSuppressed === true,
-    'desktop controlled VFX QA must suppress autonomous fire before the deterministic probe');
+    'desktop controlled VFX QA must remain suppressed from simulation start');
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
