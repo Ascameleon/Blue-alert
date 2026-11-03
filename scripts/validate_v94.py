@@ -9,6 +9,7 @@ import tempfile
 HTML = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("BLUE_ALERTS_v94_ASSET_INTEGRATION.html")
 MODEL_LIBRARY = Path("game-data/models/blue-alert-models.js")
 BROWSER_TEST = Path("scripts/validate_v94_browser.mjs")
+WORKFLOW = Path(".github/workflows/openrts-build.yml")
 
 
 class ScriptCollector(HTMLParser):
@@ -63,6 +64,17 @@ def main():
         raise SystemExit(f"FAIL: {HTML} is missing")
     if not MODEL_LIBRARY.is_file():
         raise SystemExit(f"FAIL: {MODEL_LIBRARY} is missing")
+    if not WORKFLOW.is_file():
+        raise SystemExit(f"FAIL: {WORKFLOW} is missing")
+
+    workflow_text = WORKFLOW.read_text(encoding="utf-8")
+    readiness_deadline_index = workflow_text.find("readiness_deadline=$((SECONDS + 60))")
+    controller_ready_index = workflow_text.find('grep -q "battlefield controller online"')
+    runtime_ready_index = workflow_text.find('grep -q "BLUE ALERTS runtime loaded 12 units"')
+    movement_deadline_index = workflow_text.find("movement_deadline=$((SECONDS + 20))")
+    if not (0 <= readiness_deadline_index < controller_ready_index < movement_deadline_index and
+            0 <= readiness_deadline_index < runtime_ready_index < movement_deadline_index):
+        raise SystemExit("FAIL: OpenRTS movement timeout must start only after the runtime and battlefield controller are ready")
 
     source = HTML.read_text(encoding="utf-8")
     lower = source.lower()
