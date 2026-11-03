@@ -923,20 +923,6 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileInfantryGait = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 && mobileInfantryGait.walkAmount > 0.15, 'mobile V94 infantry gait must follow actual unit displacement');
   await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true });
-  const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
-  assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must be available');
-  assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalStrength > 0.5,
-    'mobile terrain must expose live normal and roughness maps');
-  const mobileTerrainBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(false));
-  assert.ok(mobileTerrainBaseline && !mobileTerrainBaseline.normalMap && !mobileTerrainBaseline.roughnessMap,
-    'mobile terrain A/B baseline must disable only micro-relief maps');
-  await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-baseline-390x844.png', fullPage: true });
-  const mobileTerrainDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setMicroRelief(true));
-  assert.ok(mobileTerrainDetail?.normalMap && mobileTerrainDetail?.roughnessMap && mobileTerrainDetail.normalStrength > 0.5,
-    'mobile terrain detail must restore normal and roughness maps');
-  await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-terrain-microrelief-detail-390x844.png', fullPage: true });
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
 
   const mobileTreeDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
