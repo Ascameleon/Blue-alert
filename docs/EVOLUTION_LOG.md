@@ -404,3 +404,19 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Revised the same procedural surface rather than adding more props: normal-field gradient gain `1.65 → 2.4`, normal strength `0.55 → 0.95`, and a broader but still rough terrain-response range in the deterministic roughness map. The albedo, 512px desktop/256px mobile resolutions, single terrain mesh, anisotropy cap of 2, movement and combat contracts remain unchanged.
 - Updated the desktop/mobile browser assertions to require all three maps, the correct PBR surface mode, deterministic checksum, resolution and anisotropy cap. Added fresh mobile 390×844 baseline/detail captures with the same terrain focus and camera pose. The static validator now enforces the revised relief field and evidence paths.
 - Exact-head browser, standalone, OpenRTS/native validation and inspection of fresh desktop/mobile captures are pending. This remains an unaccepted visual experiment; no merge, game version, release or commercial-grade claim is authorized. Budget: 0 €.
+
+
+## Cycle — infantry hard-surface sculpt and anatomical refinement (2026-11-03)
+
+- Base exact PR head: `63276cf91ca966ecf4a14df57f19e5106cf78552`; branch remains `art/v94-terrain-pbr-relief-20261103`, PR #50 remains draft against `main`.
+- Inspected exact-head workflow #410: all static/model-kit checks, standalone V94 build, desktop/mobile model previews, desktop/mobile live V94 gameplay, OpenRTS build/launch and native input checks completed successfully. The fresh gameplay capture still showed infantry as a small, angular figure at normal RTS scale; the model preview showed box-dominant chest/boot armor and visibly faceted limbs.
+- Deepened the existing shared BLUE SENTINEL / RED BASTION infantry constructor rather than adding a new unit or changing gameplay:
+  - Re-profiled the torso, upper arms, forearms, thighs and calves with additional anatomical cross-sections and higher radial resolution.
+  - Replaced flat chest, abdominal, rib and shoulder-lock armor plates with convex composite shells.
+  - Increased helmet shell tessellation while retaining faction-specific silhouette, respirator, optics and communication hardware.
+  - Rebuilt combat boots as layered ankle cuffs, toe caps, tread soles and lacing details.
+  - Preserved the outer V94 unit transform, four-joint gait rig, weapon group, faction identity, collision/pathing, combat targeting and muzzle/impact contracts.
+- Added model diagnostics and static/browser contracts for the new sculpt profile, convex armor and boot construction. The browser test now captures the frozen base-branch infantry alongside the new desktop and 390×844 mobile previews for direct visual review.
+- Changed files: `game-data/models/blue-alert-models.js`, `game-data/models/preview.html`, `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_model_kit.py`, `scripts/validate_model_preview_browser.mjs`, and this log.
+- Exact-head validation, actual desktop/mobile capture inspection, standalone build and separate OpenRTS/native verification are pending. This is an implementation candidate, not an accepted visual improvement; no release/version, merge or commercial-grade claim is authorized.
+- Budget: 0 €. No external assets, paid APIs or services.

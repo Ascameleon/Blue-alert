@@ -67,7 +67,11 @@ def main():
         raise SystemExit("FAIL: hero infantry sculpt is missing: " + ", ".join(missing))
     REQUIRED_ANATOMY = (
         "createInfantryLoftGeometry", "ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1",
-        "anatomical-torso-loft", "SHOULDER_ELBOW_HIP_KNEE_V1",
+        "anatomical-torso-loft", "ANATOMICAL_HARDSHELL_FIELDWEAVE_V2",
+        "CONVEX_COMPOSITE_CERAMIC_V2", "REINFORCED_TREAD_AND_TOE_CAP_V2",
+        "curvedPlate", "curvedArmorPlateCount", "-boot-tread-sole", "-boot-toe-cap",
+        "new THREE.SphereGeometry(1, 18, 12)", "new THREE.SphereGeometry(.17, 28, 18)",
+        "SHOULDER_ELBOW_HIP_KNEE_V1",
         "TWO_HAND_FORWARD_READY_V1", "-elbow-pivot", "-knee-pivot",
         "-upper-arm-loft", "-forearm-loft", "-thigh-loft", "-calf-loft",
         "-glove-palm", "leftKnee.rotation.x", "rightKnee.rotation.x",
@@ -106,7 +110,7 @@ def main():
 
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=10", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=11", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")

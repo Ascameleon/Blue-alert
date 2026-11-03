@@ -556,6 +556,21 @@ export function createInfantry(THREE, options={}) {
   const accent = mat(THREE, isRed ? 0xd7834f : 0x65bcd6, .42, .36);
   const rifleMat = mat(THREE, 0x242b2d, .76, .32);
   const rubber = mat(THREE, 0x171d20, .98, .01);
+  // Hero-scale forms use a smoother surface; tiny fingers retain the lighter helper.
+  const heroSphere = (parent, name, radius, position, material, scale=[1,1,1]) => {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 18, 12), material);
+    mesh.name = name; mesh.position.set(...position); mesh.scale.set(...scale);
+    mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+  };
+  let curvedArmorPlateCount = 0;
+  const curvedPlate = (parent, name, size, position, material, rotation=[0,0,0]) => {
+    curvedArmorPlateCount++;
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 18, 12), material);
+    mesh.name = name; mesh.position.set(...position);
+    mesh.scale.set(size[0] * .5, size[1] * .5, size[2] * .5);
+    mesh.rotation.set(...rotation); mesh.castShadow = true; mesh.receiveShadow = true;
+    mesh.userData.compositeArmor = true; parent.add(mesh); return mesh;
+  };
   const surfaceTextures = createInfantrySurfaceTextures(THREE, isRed);
   if (surfaceTextures) {
     const applySurface = (material, map, bumpMap, bumpScale) => {
@@ -598,20 +613,20 @@ export function createInfantry(THREE, options={}) {
   torso.position.y = 0.80;
   g.add(torso);
   const anatomicalTorso = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-    [-.25,.135,.10],[-.20,.16,.115],[-.07,.175,.125],
-    [.07,.195,.13],[.18,.21,.12],[.24,.175,.105]
-  ], 18), uniform);
+    [-.25,.13,.10],[-.20,.155,.112],[-.14,.17,.12],[-.07,.178,.126],
+    [0,.188,.132],[.08,.202,.134],[.15,.207,.126],[.21,.19,.115],[.25,.165,.105]
+  ], 24), uniform);
   anatomicalTorso.name = 'anatomical-torso-loft';
   anatomicalTorso.castShadow = true; anatomicalTorso.receiveShadow = true; torso.add(anatomicalTorso);
   cylinder(THREE, torso, 'armored-neck-collar', .078,.088,.13,[0,.255,0],dark,12);
-  beveledBox(THREE, torso, 'reinforced-chest-carrier', [.37,.29,.085], [0,.035,.132], armor, [0,0,0], .022);
+  curvedPlate(torso, 'reinforced-chest-carrier', [.39,.30,.105], [0,.035,.145], armor);
   beveledBox(THREE, torso, 'upper-chest-split-plate', [.295,.13,.06], [0,.145,.172], cloth, [0,0,0], .014);
-  beveledBox(THREE, torso, 'lower-abdominal-armor', [.30,.105,.07], [0,-.17,.142], armor, [0,0,0], .014);
+  curvedPlate(torso, 'lower-abdominal-armor', [.31,.12,.082], [0,-.17,.145], armor);
   for(const side of [-1,1]) {
-    beveledBox(THREE,torso,'rib-side-armor', [.085,.20,.105], [side*.17,-.015,.025], armor, [0,0,side*.12], .014);
-    beveledBox(THREE,torso,'upper-chest-shoulder-lock', [.10,.075,.06], [side*.135,.17,.145], metal, [0,0,side*-.16], .01);
+    curvedPlate(torso,'rib-side-armor', [.105,.22,.12], [side*.17,-.015,.025], armor, [0,0,side*.12]);
+    curvedPlate(torso,'upper-chest-shoulder-lock', [.115,.085,.07], [side*.135,.17,.15], metal, [0,0,side*-.16]);
   }
-  beveledBox(THREE, torso, 'lower-abdomen-plate', [.29,.105,.075], [0,-.195,.12], cloth, [0,0,0], .012);
+  curvedPlate(torso, 'lower-abdomen-plate', [.30,.11,.075], [0,-.195,.13], cloth);
   box(THREE, torso, 'belt-webbing', [.36, .06, .22], [0, -.205, .015], dark);
   box(THREE, torso, 'belt-buckle', [.075, .07, .03], [0, -.205, .14], metal);
   box(THREE, torso, 'sternum-rail', [.035, .20, .026], [0, .035, .18], dark);
@@ -633,9 +648,9 @@ export function createInfantry(THREE, options={}) {
   head.name = 'infantry-head-rig';
   head.position.set(0, 1.17, 0);
   g.add(head);
-  sphere(THREE, head, 'head', .13, [0, 0, 0], dark, [.86, 1.02, .88]);
+  heroSphere(head, 'head', .13, [0, 0, 0], dark, [.86, 1.02, .88]);
   // Sculpted helmet shell: faceted crown, raised brow and side protection.
-  const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 16, 10), cloth);
+  const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 28, 18), cloth);
   helmetShell.name = 'faceted-helmet-shell'; helmetShell.position.set(0,.105,-.015); helmetShell.scale.set(1.04,.76,1.0); helmetShell.castShadow=true; head.add(helmetShell);
   beveledBox(THREE, head, 'helmet-front-brow-armor', [.30,.085,.075], [0,.018,.132], armor, [-.08,0,0], .014);
   for (const side of [-1,1]) beveledBox(THREE, head, 'helmet-temple-armor', [.105,.17,.18], [side*.155,-.025,.005], armor, [0,0,side*.08], .016);
@@ -685,21 +700,21 @@ export function createInfantry(THREE, options={}) {
     pivot.name = label + '-arm-pivot';
     pivot.position.set(side * .215, .99, .015);
     g.add(pivot);
-    sphere(THREE, pivot, label + '-shoulder-pad', .105, [0, -.045, .015], armor, [.95, .78, 1.02]);
+    heroSphere(pivot, label + '-shoulder-pad', .105, [0, -.045, .015], armor, [.95, .78, 1.02]);
     beveledBox(THREE,pivot,label+'-angular-pauldron',[.17,.12,.17],[side*.01,-.045,.025],armor,[0,0,side*-.08],.018);
     const upperArm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-      [-.01,.066,.064],[-.06,.071,.067],[-.12,.062,.059],[-.18,.05,.048]
-    ],14), uniform);
+      [-.01,.066,.064],[-.045,.071,.068],[-.09,.069,.064],[-.135,.058,.056],[-.18,.05,.048]
+    ],18), uniform);
     upperArm.name = label + '-upper-arm-loft';
     upperArm.position.set(side*.01,0,.015); upperArm.castShadow=true; upperArm.receiveShadow=true; pivot.add(upperArm);
     const elbow = new THREE.Group();
     elbow.name = label + '-elbow-pivot';
     elbow.position.set(side*.01,-.18,.035);
     pivot.add(elbow);
-    sphere(THREE, elbow, label + '-elbow-joint', .052, [0,0,0], armor, [.92,.9,1]);
+    heroSphere(elbow, label + '-elbow-joint', .052, [0,0,0], armor, [.92,.9,1]);
     const forearm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-      [-.01,.052,.052],[-.05,.061,.058],[-.12,.052,.049],[-.18,.043,.043]
-    ],14), cloth);
+      [-.01,.052,.052],[-.045,.06,.058],[-.09,.058,.054],[-.14,.049,.047],[-.18,.043,.043]
+    ],18), cloth);
     forearm.name = label + '-forearm-loft';
     forearm.position.set(0,0,.065); forearm.rotation.x=-.86;
     forearm.castShadow=true; forearm.receiveShadow=true; elbow.add(forearm);
@@ -728,23 +743,27 @@ export function createInfantry(THREE, options={}) {
     pivot.position.set(side * .105, .75, 0);
     g.add(pivot);
     const thigh = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-      [-.01,.078,.076],[-.08,.085,.082],[-.18,.075,.073],[-.28,.06,.06]
-    ],14), cloth);
+      [-.01,.078,.076],[-.055,.085,.083],[-.11,.084,.08],[-.17,.075,.073],[-.23,.067,.066],[-.28,.06,.06]
+    ],18), cloth);
     thigh.name = label + '-thigh-loft';
     thigh.castShadow=true; thigh.receiveShadow=true; pivot.add(thigh);
     const knee = new THREE.Group();
     knee.name = label + '-knee-pivot';
     knee.position.set(0,-.28,.005);
     pivot.add(knee);
-    sphere(THREE, knee, label + '-knee-joint', .057, [0,0,0], dark, [1,.9,1]);
-    beveledBox(THREE,knee,label+'-articulated-knee-guard',[.17,.13,.18],[0,-.005,.065],armor,[0,0,0],.016);
+    heroSphere(knee, label + '-knee-joint', .057, [0,0,0], dark, [1,.9,1]);
+    curvedPlate(knee,label+'-articulated-knee-guard',[.18,.14,.095],[0,-.005,.072],armor);
     const calf = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-      [-.01,.061,.064],[-.08,.068,.068],[-.19,.057,.059],[-.28,.047,.05]
-    ],14), uniform);
+      [-.01,.061,.064],[-.055,.068,.069],[-.11,.065,.066],[-.17,.058,.06],[-.23,.052,.055],[-.28,.047,.05]
+    ],18), uniform);
     calf.name = label + '-calf-loft';
     calf.position.z=.005; calf.castShadow=true; calf.receiveShadow=true; knee.add(calf);
     beveledBox(THREE,knee,label+'-shin-armor',[.13,.19,.065],[0,-.15,.078],armor,[0,0,0],.012);
-    beveledBox(THREE,knee,label+'-reinforced-combat-boot',[.17,.13,.24],[0,-.31,.085],rubber,[0,0,0],.016);
+    beveledBox(THREE,knee,label+'-reinforced-combat-boot',[.17,.12,.22],[0,-.305,.075],rubber,[0,0,0],.022);
+    beveledBox(THREE,knee,label+'-boot-tread-sole',[.18,.045,.25],[0,-.365,.075],dark,[0,0,0],.012);
+    curvedPlate(knee,label+'-boot-toe-cap',[.16,.075,.12],[0,-.31,.17],dark);
+    beveledBox(THREE,knee,label+'-boot-ankle-cuff',[.15,.085,.14],[0,-.225,.02],armor,[0,0,0],.012);
+    for(let lace=0;lace<3;lace++) box(THREE,knee,label+'-boot-lace',[.085,.012,.012],[0,-.255-lace*.025,.19],metal);
     return { pivot, knee };
   };
   const leftLeg = makeLeg(-1, 'left');
@@ -797,11 +816,14 @@ export function createInfantry(THREE, options={}) {
   g.userData = {
     kind: 'infantry', role, team, factionProfile, weapon: rifle,
     animationRig,
-    renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V3',
-    bodyGeometryProfile:'ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1',
+    renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V4',
+    bodyGeometryProfile:'ANATOMICAL_HARDSHELL_FIELDWEAVE_V2',
+    armorGeometryProfile:'CONVEX_COMPOSITE_CERAMIC_V2',
+    bootGeometryProfile:'REINFORCED_TREAD_AND_TOE_CAP_V2',
     animationJointProfile:'SHOULDER_ELBOW_HIP_KNEE_V1',
     weaponGripProfile:'TWO_HAND_FORWARD_READY_V1',
     armorDetailParts: renderOptimization.sourceMeshCount,
+    curvedArmorPlateCount,
     surfaceFinish: surfaceTextures ? 'FIELDWEAVE_CERAMIC_MICROSCUFF_V2' : 'UNTEXTURED_FALLBACK',
     surfaceTextureCount: surfaceTextures ? Object.values(surfaceTextures).filter(Boolean).length : 0,
     surfaceMaterialCount: surfaceTextures ? [uniform,cloth,armor,metal,rifleMat].filter(material => material.map && material.bumpMap && material.roughnessMap).length : 0,

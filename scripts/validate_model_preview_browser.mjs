@@ -74,9 +74,14 @@ try {
   const baselineMetrics=await baselinePage.evaluate(()=>({canvas:!!document.querySelector('#view canvas'),width:document.querySelector('#view canvas')?.width||0,height:document.querySelector('#view canvas')?.height||0,asset:document.querySelector('#asset').value}));
   assert.ok(baselineMetrics.canvas && baselineMetrics.width>0 && baselineMetrics.height>0,'base-branch turret must render a WebGL canvas');
   await baselinePage.screenshot({path:output+'/baseline-turret.png',fullPage:true});
+  await baselinePage.selectOption('#asset','infantry');
+  await baselinePage.waitForTimeout(650);
+  await baselinePage.screenshot({path:output+'/baseline-infantry-desktop.png',fullPage:true});
   await baselinePage.setViewportSize({width:390,height:844});
+  await baselinePage.click('#reset');
   await baselinePage.waitForTimeout(350);
   await baselinePage.screenshot({path:output+'/baseline-turret-mobile-390x844.png',fullPage:true});
+  await baselinePage.screenshot({path:output+'/baseline-infantry-mobile-390x844.png',fullPage:true});
   await baselinePage.close();
 
   const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
@@ -120,7 +125,7 @@ try {
   assert.ok(blueInfantry.surfaceTextureCount>=7 && blueInfantry.surfaceMaterialCount>=5,
     'blue infantry must bind cached color, roughness and micro-relief maps to its PBR materials');
   assert.equal(blueInfantry.headScale,.82,'infantry head/helmet silhouette must use the corrected human proportion');
-  assert.equal(blueInfantry.bodyGeometryProfile,'ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1',
+  assert.equal(blueInfantry.bodyGeometryProfile,'ANATOMICAL_HARDSHELL_FIELDWEAVE_V2',
     'infantry torso and limbs must use tapered anatomical loft geometry');
   assert.equal(blueInfantry.animationJointProfile,'SHOULDER_ELBOW_HIP_KNEE_V1',
     'infantry must expose shoulder, elbow, hip and knee articulation');
@@ -129,7 +134,15 @@ try {
   assert.deepEqual(blueInfantry.jointDiagnostics,{leftElbow:true,rightElbow:true,leftKnee:true,rightKnee:true},
     'both elbows and both knees must be real articulated rig pivots');
   assert.ok(blueInfantry.cameraDistance<8,'blue infantry preview camera must frame the model closely: '+blueInfantry.cameraDistance);
+  assert.equal(blueInfantry.armorGeometryProfile,'CONVEX_COMPOSITE_CERAMIC_V2',
+    'infantry armor must use sculpted convex composite shells rather than flat box-only armor');
+  assert.equal(blueInfantry.bootGeometryProfile,'REINFORCED_TREAD_AND_TOE_CAP_V2',
+    'infantry boots must expose layered tread, toe cap and ankle cuff geometry');
+  assert.ok(blueInfantry.curvedArmorPlateCount>=8,
+    'infantry must render a complete set of convex armor shells: '+blueInfantry.curvedArmorPlateCount);
   assert.ok(blueInfantry.namedParts.includes('sentinel-visor') && blueInfantry.namedParts.includes('infantry-assault-rifle') &&
+    blueInfantry.namedParts.includes('reinforced-chest-carrier') &&
+    blueInfantry.namedParts.includes('left-boot-tread-sole') && blueInfantry.namedParts.includes('right-boot-toe-cap') &&
     blueInfantry.namedParts.includes('anatomical-torso-loft') &&
     blueInfantry.namedParts.includes('left-upper-arm-loft') && blueInfantry.namedParts.includes('right-forearm-loft') &&
     blueInfantry.namedParts.includes('left-thigh-loft') && blueInfantry.namedParts.includes('right-calf-loft') &&
@@ -141,8 +154,8 @@ try {
     meshCount:blueInfantry.meshCount,triangleCount:blueInfantry.triangleCount,
     drawCalls:blueInfantry.drawCalls,animationPhase:blueInfantry.animationPhase
   }));
-  assert.ok(blueInfantry.triangleCount>=1200,
-    'blue infantry must retain its detailed geometry budget: '+blueInfantry.triangleCount+' triangles');
+  assert.ok(blueInfantry.triangleCount>=1800 && blueInfantry.triangleCount<=10000,
+    'blue infantry must retain its sculpted geometry budget without exceeding the mobile mesh budget: '+blueInfantry.triangleCount+' triangles');
   assert.ok(blueInfantry.boundsMinY>=-0.03,
     'blue infantry combat boots must not sink below the ground plane: '+blueInfantry.boundsMinY);
   assert.ok(blueInfantry.renderOptimization?.savedDrawCalls>=25,

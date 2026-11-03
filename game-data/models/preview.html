@@ -42,7 +42,7 @@ const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStand
 let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
 const desc={
 tank:['Char de combat','Deux silhouettes de faction : BLUE SENTINEL à tourelle basse et RED BASTION à tourelle renforcée, avec chenilles segmentées, galets boulonnés et blindage incliné.'],
-infantry:['Fantassin','Silhouette tactique renforcée : casque facetté, respirateur scellé à filtres latéraux, plaques d’armure biseautées, équipement dorsal et fusil détaillé. Modèle procédural original, sans image générique.'],
+infantry:['Fantassin','Fantassin V4 : volumes anatomiques lissés, plaques composites convexes, casque haute définition, respirateur scellé, bottes à semelles crantées, équipement dorsal et fusil détaillé. Rig d’épaules, coudes, hanches et genoux conservé.'],
 hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile latérale et marquage de faction.'],
 barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
 refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],
@@ -138,6 +138,9 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     surfaceMaterialCount:current?.userData?.surfaceMaterialCount||0,
     headScale:current?.userData?.headScale??null,
     bodyGeometryProfile:current?.userData?.bodyGeometryProfile||null,
+    armorGeometryProfile:current?.userData?.armorGeometryProfile||null,
+    bootGeometryProfile:current?.userData?.bootGeometryProfile||null,
+    curvedArmorPlateCount:current?.userData?.curvedArmorPlateCount||0,
     animationJointProfile:current?.userData?.animationJointProfile||null,
     weaponGripProfile:current?.userData?.weaponGripProfile||null,
     jointDiagnostics:{
