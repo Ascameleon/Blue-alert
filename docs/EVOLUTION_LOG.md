@@ -494,3 +494,10 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Add same-camera desktop and 390×844 mobile field-strata baseline/detail captures from the live runtime. The A/B toggle changes only the terrain color attribute; the micro-relief maps, camera, geometry and gameplay state remain fixed. Correct the mobile resolution assertion to 256px; do not relax other gameplay or visual checks.
 - Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94_browser.mjs`, `scripts/validate_v94.py`, and `docs/EVOLUTION_LOG.md`. No external textures, paid assets, APIs or services; budget remains 0 €.
 - Exact-head static/syntax, standalone build, desktop/mobile gameplay, fresh screenshot inspection and separate OpenRTS/native checks are pending. This is a corrective candidate, not an accepted visual milestone. 390×844 remains browser emulation, not a physical Samsung test; OpenRTS remains a separate native engine. Commercial-grade quality is not achieved or claimed.
+
+
+### Exact-head attempt #422 — static contract alignment (2026-11-03)
+
+- Runtime/test commit [b43f5d0](https://github.com/Ascameleon/Blue-alert/commit/b43f5d01679618162c980cf9f6ea533620a2bcb0) triggered workflow [#422](https://github.com/Ascameleon/Blue-alert/actions/runs/41702786371). Repository/prototype validation passed, then the V94 static validator stopped before model-kit, browser, standalone, OpenRTS and native checks.
+- The failure was a stale static token: it expected a temporary `let red = 239, green = 241, blue = 232` declaration, while the runtime deliberately writes the near-neutral albedo through three direct `channel(...)` expressions. The runtime and browser assertions were not changed; the validator now checks the actual red, green and blue formulas separately.
+- No screenshots or standalone/native evidence were produced by #422. The macro-field candidate remains unaccepted until a fresh exact-head run renders and the desktop/mobile captures are inspected against accepted-main artifact `13141329066`.
