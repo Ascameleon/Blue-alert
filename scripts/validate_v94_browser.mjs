@@ -310,7 +310,8 @@ try {
   try {
     await desktop.waitForFunction(sequence => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-      return state && state.impactSequence > sequence && state.impactRings > 0 && state.impactSparks > 0;
+      const event = state?.lastImpactEvent;
+      return event && event.id > sequence && event.ringCount === 1 && event.sparkCount >= 4;
     }, desktopShot.impactSequence, { timeout: 6000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -365,13 +366,14 @@ try {
   assert.ok(desktopExplosionState.modelExplosionLives[desktopExplosionIndex] < desktopKill.spawnedExplosionLife, 'desktop death explosion simulation lifetime must advance');
   await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
   const desktopFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
-  assert.ok(desktopFreeze, 'desktop cleanup probe must freeze only new combat spawns while existing VFX expire');
+  assert.ok(desktopFreeze?.combatSuppressed === true && desktopFreeze?.combatOrdersCleared === true,
+    'desktop cleanup probe must quiesce AI orders while existing VFX expire');
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 15000, polling: 50 });
+    }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('DESKTOP_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
@@ -401,13 +403,39 @@ try {
     'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
 
   const desktopBuildingFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
-  assert.ok(desktopBuildingFreeze?.combatSuppressed === true,
-    'desktop building-damage QA must freeze unrelated combat before its controlled projectile burst');
-  await desktop.waitForFunction(() => {
-    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-    return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-      state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-  }, null, { timeout: 15000, polling: 50 });
+  assert.ok(desktopBuildingFreeze?.combatSuppressed === true && desktopBuildingFreeze?.combatOrdersCleared === true,
+    'desktop building-damage QA must quiesce unrelated combat orders before its controlled projectile burst');
+  try {
+    await desktop.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+        state.modelMuzzleFlashes === 0;
+    }, null, { timeout: 30000, polling: 50 });
+  } catch (error) {
+    const diagnostic = await desktop.evaluate(() => ({
+      state: window.__BLUE_ALERTS_COMBAT_QA__?.state(),
+      hasFocus: document.hasFocus(),
+      visibilityState: document.visibilityState
+    }));
+    console.log('DESKTOP_BUILDING_PREP_TIMEOUT ' + JSON.stringify(diagnostic));
+    throw error;
+  }
+  const desktopPostRigVfx = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+  assert.ok(desktopPostRigVfx && desktopPostRigVfx.activeProjectiles === 0 &&
+    desktopPostRigVfx.modelProjectiles === 0 && desktopPostRigVfx.modelMuzzleFlashes === 0,
+    'desktop building-damage probe must start without in-flight projectiles or muzzle flashes');
+  // The preceding full cleanup probe already asserts impact-ring/spark disposal and
+  // explosion lifecycle. A verified explosion may finish its visual tail without
+  // affecting building HP; this second gate only drains projectiles and muzzle flashes.
+  console.log('DESKTOP_POST_RIG_VFX_READY ' + JSON.stringify({
+    activeProjectiles: desktopPostRigVfx.activeProjectiles,
+    modelMuzzleFlashes: desktopPostRigVfx.modelMuzzleFlashes,
+    modelExplosions: desktopPostRigVfx.modelExplosions,
+    transientImpactRings: desktopPostRigVfx.impactRings,
+    transientImpactSparks: desktopPostRigVfx.impactSparks,
+    time: desktopPostRigVfx.time,
+    frameCount: desktopPostRigVfx.frameCount
+  }));
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(desktopBuildingStart?.shooterKind,
     'desktop building-damage QA must use a live blue combat unit');
@@ -455,11 +483,51 @@ try {
   const infantryWalkStart = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
   await desktop.waitForFunction(start => {
     const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
-    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 && Math.abs(state.leftLeg - state.rightLeg) > 0.1;
+    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 &&
+      Math.abs(state.leftLeg - state.rightLeg) > 0.1 &&
+      state.locomotionProfile === 'PLANTED_FOOT_WEIGHT_SHIFT_V1' &&
+      (Math.abs(state.pelvisSway) > 0.002 || state.pelvisBob > 0.002) &&
+      Math.max(state.leftAnkleLift, state.rightAnkleLift) > 0.004;
   }, infantryWalkStart.position, { timeout: 5000, polling: 50 });
+  assert.equal(infantryReady.weaponGripProfile, 'TWO_HAND_FORWARD_READY_V1',
+    'desktop V94 rifleman must use the existing two-hand forward weapon rig');
+  assert.equal(infantryReady.weaponHoldProfile, 'TORSO_LOCKED_TWO_HAND_READY_V1',
+    'desktop V94 rifleman must use the torso-locked two-hand hold profile');
+  assert.equal(infantryReady.headScale, .74, 'desktop live infantry must use the reduced human-proportion head scale');
+  assert.equal(infantryReady.helmetProfile, 'LOW_PROFILE_BALLISTIC_HELMET_GOGGLES_V2');
+  assert.equal(infantryReady.faceProtectionProfile, 'BALLISTIC_BALACLAVA_COMPACT_RESPIRATOR_V2');
+  assert.equal(infantryReady.uniformProfile, 'MATTE_FIELD_UNIFORM_PLATE_CARRIER_V2');
+  assert.ok(infantryReady.leftGripError < .07 && infantryReady.rightGripError < .07 &&
+    infantryReady.muzzleAxisDot > .99 && infantryReady.muzzleAttached,
+    'desktop live rifleman must hold the forward-facing weapon at both sockets');
   const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
-  assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 && desktopInfantryGait.walkAmount > 0.2 && Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04, 'desktop V94 infantry arms and legs must animate in response to real movement');
+  console.log('DESKTOP_INFANTRY_GAIT ' + JSON.stringify(desktopInfantryGait));
+  assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 &&
+    desktopInfantryGait.walkAmount > 0.2 &&
+    desktopInfantryGait.weaponHoldProfile === 'TORSO_LOCKED_TWO_HAND_READY_V1' &&
+    Math.abs(desktopInfantryGait.leftArm + .04) < .01 && Math.abs(desktopInfantryGait.rightArm + .04) < .01 &&
+    Math.abs(desktopInfantryGait.leftElbow + .025) < .002 && Math.abs(desktopInfantryGait.rightElbow + .025) < .002 &&
+    desktopInfantryGait.leftGripError < .09 && desktopInfantryGait.rightGripError < .09 &&
+    desktopInfantryGait.muzzleAxisDot > .99,
+    'desktop V94 infantry gait must preserve both rifle grips and the forward muzzle axis while moving');
+  assert.ok(desktopInfantryGait.locomotionProfile === 'PLANTED_FOOT_WEIGHT_SHIFT_V1' &&
+    (Math.abs(desktopInfantryGait.pelvisSway) > 0.002 || desktopInfantryGait.pelvisBob > 0.002) &&
+    Math.max(desktopInfantryGait.leftAnkleLift, desktopInfantryGait.rightAnkleLift) > 0.004 &&
+    (Math.abs(desktopInfantryGait.leftAnklePitch) > 0.015 || Math.abs(desktopInfantryGait.rightAnklePitch) > 0.015),
+    'desktop live infantry must show weight shift, ankle lift and articulated foot pitch during locomotion');
+  await desktop.locator('#toast').evaluate(el => { el.style.opacity = '0'; el.textContent = ''; });
   await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
+  const desktopInfantryFire = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.fireInfantry());
+  assert.ok(desktopInfantryFire?.shooterKind === 'infantry' && desktopInfantryFire.flashVisible &&
+    desktopInfantryFire.muzzleError < .05 && desktopInfantryFire.muzzleAxisDot > .99 &&
+    desktopInfantryFire.leftGripError < .09 && desktopInfantryFire.rightGripError < .09,
+    'desktop infantry projectile must originate at the forward rifle muzzle while both hands remain on their grips');
+  console.log('DESKTOP_INFANTRY_MUZZLE ' + JSON.stringify(desktopInfantryFire));
+  await desktop.screenshot({ path: output + '/desktop-v94-infantry-fire.png', fullPage: true });
+  await desktop.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+    return state && state.activeProjectiles === 0 && state.modelMuzzleFlashes === 0;
+  }, null, { timeout: 5000, polling: 50 });
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
   assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
     desktopTreeDetail.needleSpraysPerArm === 3 &&
@@ -731,11 +799,26 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   // Keep the mobile page foregrounded: Chromium may throttle requestAnimationFrame on a background page.
   await mobile.bringToFront();
   await mobile.waitForFunction(() => document.visibilityState === 'visible', null, { timeout: 3000 });
+  // Stop unrelated AI fire and drain pre-existing effects before measuring one controlled
+  // shot. Without this isolation, an old muzzle flash can expire in the same frame that
+  // the new flash appears, hiding the +1 in the aggregate live-effect count.
+  const mobileShotFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+  assert.ok(mobileShotFreeze?.combatSuppressed === true && mobileShotFreeze?.combatOrdersCleared === true,
+    'mobile controlled-fire QA must isolate the shooter from unrelated AI combat');
+  await mobile.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+    return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+      state.modelMuzzleFlashes === 0;
+  }, null, { timeout: 15000, polling: 50 });
   const mobileShot = await mobile.evaluate(() => {
     const qa = window.__BLUE_ALERTS_COMBAT_QA__;
     const baseline = qa.state();
     return { ...qa.fire(), baseline };
   });
+  assert.equal(mobileShot.baseline.activeProjectiles, 0,
+    'mobile controlled-fire QA must start without in-flight projectiles');
+  assert.equal(mobileShot.baseline.modelMuzzleFlashes, 0,
+    'mobile controlled-fire QA must start without pre-existing muzzle flashes');
   assert.equal(mobileShot.modelProjectiles, mobileShot.baseline.modelProjectiles + 1,
     'mobile QA fire must add exactly one procedural projectile to the live simulation');
   assert.equal(mobileShot.modelMuzzleFlashes, mobileShot.baseline.modelMuzzleFlashes + 1,
@@ -745,7 +828,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   try {
     await mobile.waitForFunction(sequence => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-      return state && state.impactSequence > sequence && state.impactRings > 0 && state.impactSparks > 0;
+      const event = state?.lastImpactEvent;
+      return event && event.id > sequence && event.ringCount === 1 && event.sparkCount >= 4;
     }, mobileShot.impactSequence, { timeout: 9000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -799,17 +883,22 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileExplosionIndex >= 0 && mobileExplosionState.modelExplosionLives[mobileExplosionIndex] < mobileKill.spawnedExplosionLife, 'mobile death explosion simulation lifetime must advance');
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
   const mobileFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
-  assert.ok(mobileFreeze, 'mobile cleanup probe must freeze only new combat spawns while existing VFX expire');
+  assert.ok(mobileFreeze?.combatSuppressed === true && mobileFreeze?.combatOrdersCleared === true,
+    'mobile cleanup probe must quiesce AI orders while existing VFX expire');
   const mobileCleanupStartedAt = Date.now();
   try {
     await mobile.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 15000, polling: 50 });
+    }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
-    const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
-    console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
+    const diagnostic = await mobile.evaluate(() => ({
+      state: window.__BLUE_ALERTS_COMBAT_QA__?.state(),
+      hasFocus: document.hasFocus(),
+      visibilityState: document.visibilityState
+    }));
+    console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(diagnostic));
     throw error;
   }
   const mobileClean = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
@@ -870,11 +959,51 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileInfantryWalkStart = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
   await mobile.waitForFunction(start => {
     const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
-    return state && state.position[0] > start[0] + 0.25 && state.walkAmount > 0.15 && Math.abs(state.leftLeg - state.rightLeg) > 0.08;
+    return state && state.position[0] > start[0] + 0.25 && state.walkAmount > 0.15 &&
+      Math.abs(state.leftLeg - state.rightLeg) > 0.08 &&
+      state.locomotionProfile === 'PLANTED_FOOT_WEIGHT_SHIFT_V1' &&
+      (Math.abs(state.pelvisSway) > 0.002 || state.pelvisBob > 0.002) &&
+      Math.max(state.leftAnkleLift, state.rightAnkleLift) > 0.004;
   }, mobileInfantryWalkStart.position, { timeout: 6000, polling: 50 });
+  assert.equal(mobileInfantryReady.weaponGripProfile, 'TWO_HAND_FORWARD_READY_V1',
+    'mobile V94 rifleman must use the existing two-hand forward weapon rig');
+  assert.equal(mobileInfantryReady.weaponHoldProfile, 'TORSO_LOCKED_TWO_HAND_READY_V1',
+    'mobile V94 rifleman must use the torso-locked two-hand hold profile');
+  assert.equal(mobileInfantryReady.headScale, .74, 'mobile live infantry must use the reduced human-proportion head scale');
+  assert.equal(mobileInfantryReady.helmetProfile, 'LOW_PROFILE_BALLISTIC_HELMET_GOGGLES_V2');
+  assert.equal(mobileInfantryReady.faceProtectionProfile, 'BALLISTIC_BALACLAVA_COMPACT_RESPIRATOR_V2');
+  assert.equal(mobileInfantryReady.uniformProfile, 'MATTE_FIELD_UNIFORM_PLATE_CARRIER_V2');
+  assert.ok(mobileInfantryReady.leftGripError < .07 && mobileInfantryReady.rightGripError < .07 &&
+    mobileInfantryReady.muzzleAxisDot > .99 && mobileInfantryReady.muzzleAttached,
+    'mobile live rifleman must hold the forward-facing weapon at both sockets');
   const mobileInfantryGait = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
-  assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 && mobileInfantryGait.walkAmount > 0.15, 'mobile V94 infantry gait must follow actual unit displacement');
+  console.log('MOBILE_INFANTRY_GAIT ' + JSON.stringify(mobileInfantryGait));
+  assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 &&
+    mobileInfantryGait.walkAmount > 0.15 &&
+    mobileInfantryGait.weaponHoldProfile === 'TORSO_LOCKED_TWO_HAND_READY_V1' &&
+    Math.abs(mobileInfantryGait.leftArm + .04) < .01 && Math.abs(mobileInfantryGait.rightArm + .04) < .01 &&
+    Math.abs(mobileInfantryGait.leftElbow + .025) < .002 && Math.abs(mobileInfantryGait.rightElbow + .025) < .002 &&
+    mobileInfantryGait.leftGripError < .09 && mobileInfantryGait.rightGripError < .09 &&
+    mobileInfantryGait.muzzleAxisDot > .99,
+    'mobile V94 infantry gait must preserve the rifle grip and forward muzzle axis while moving');
+  assert.ok(mobileInfantryGait.locomotionProfile === 'PLANTED_FOOT_WEIGHT_SHIFT_V1' &&
+    (Math.abs(mobileInfantryGait.pelvisSway) > 0.002 || mobileInfantryGait.pelvisBob > 0.002) &&
+    Math.max(mobileInfantryGait.leftAnkleLift, mobileInfantryGait.rightAnkleLift) > 0.004 &&
+    (Math.abs(mobileInfantryGait.leftAnklePitch) > 0.015 || Math.abs(mobileInfantryGait.rightAnklePitch) > 0.015),
+    'mobile live infantry must show weight shift, ankle lift and articulated foot pitch during locomotion');
+  await mobile.locator('#toast').evaluate(el => { el.style.opacity = '0'; el.textContent = ''; });
   await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true });
+  const mobileInfantryFire = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.fireInfantry());
+  assert.ok(mobileInfantryFire?.shooterKind === 'infantry' && mobileInfantryFire.flashVisible &&
+    mobileInfantryFire.muzzleError < .05 && mobileInfantryFire.muzzleAxisDot > .99 &&
+    mobileInfantryFire.leftGripError < .09 && mobileInfantryFire.rightGripError < .09,
+    'mobile infantry projectile must originate at the forward rifle muzzle while both hands remain on their grips');
+  console.log('MOBILE_INFANTRY_MUZZLE ' + JSON.stringify(mobileInfantryFire));
+  await mobile.screenshot({ path: output + '/mobile-v94-infantry-fire-390x844.png', fullPage: true });
+  await mobile.waitForFunction(() => {
+    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+    return state && state.activeProjectiles === 0 && state.modelMuzzleFlashes === 0;
+  }, null, { timeout: 5000, polling: 50 });
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must be available');
   await mobile.waitForTimeout(300);
@@ -897,7 +1026,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'desktop-v94-infantry-fire.png', 'mobile-v94-infantry-gait-390x844.png', 'mobile-v94-infantry-fire-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,

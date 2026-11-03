@@ -282,81 +282,144 @@ const mergeInfantryStaticMeshes = (THREE, root) => {
   root.traverse(node => {
     if (node.children?.some(child => child.isMesh && !child.isInstancedMesh)) parents.push(node);
   });
+
   let sourceMeshCount = 0;
   let mergedMeshCount = 0;
+  let savedDrawCalls = 0;
+  let savedMeshObjects = 0;
+  let materialGroupCount = 0;
+
   for (const parent of parents) {
-    if (parent.userData?.keepSeparateForCombat) continue;
-    const buckets = new Map();
+    // Keep each articulated parent and render layer isolated. Within that
+    // boundary, combine opaque siblings across materials using BufferGeometry
+    // groups. This removes singleton mesh objects without pretending that
+    // different materials have become one draw call.
+    const batches = new Map();
     for (const child of [...parent.children]) {
       if (!child.isMesh || child.isInstancedMesh || child.isSkinnedMesh ||
-          child.userData?.keepSeparateForCombat || Array.isArray(child.material) ||
-          child.material?.transparent || (child.material?.opacity ?? 1) < 1 ||
+          child.visible === false || child.userData?.keepSeparateForCombat ||
+          Array.isArray(child.material) || !child.material ||
+          child.material.transparent || (child.material.opacity ?? 1) < 1 ||
+          child.material.visible === false ||
           Object.keys(child.geometry?.morphAttributes || {}).length) continue;
-      const positions = child.geometry?.getAttribute('position');
+
+      const geometry = child.geometry;
+      const positions = geometry?.getAttribute('position');
       if (!positions) continue;
-      const key = child.material.uuid + ':' + child.renderOrder;
-      if (!buckets.has(key)) buckets.set(key, []);
-      buckets.get(key).push(child);
+
+      // Preserve custom vertex data rather than silently dropping it during
+      // batching. The current field-soldier meshes use position/normal/UV.
+      const unsupportedAttribute = Object.keys(geometry.attributes || {})
+        .some(name => !['position', 'normal', 'uv'].includes(name));
+      if (unsupportedAttribute) continue;
+
+      const needsUv = !!(child.material.map || child.material.bumpMap ||
+        child.material.normalMap || child.material.roughnessMap ||
+        child.material.metalnessMap || child.material.alphaMap ||
+        child.material.emissiveMap);
+      if (needsUv && !geometry.getAttribute('uv')) continue;
+
+      const key = child.renderOrder + ':' + child.layers.mask;
+      if (!batches.has(key)) batches.set(key, []);
+      batches.get(key).push(child);
     }
-    for (const items of buckets.values()) {
+
+    for (const items of batches.values()) {
       if (items.length < 2) continue;
+
+      const materialBuckets = new Map();
+      for (const item of items) {
+        const key = item.material.uuid;
+        if (!materialBuckets.has(key)) materialBuckets.set(key, []);
+        materialBuckets.get(key).push(item);
+      }
+
+      const materials = [];
       const vertices = [];
       const normals = [];
       const uvs = [];
       const indices = [];
       const names = [];
       const beveledNames = [];
+      const groups = [];
       const hasNormals = items.every(item => item.geometry.getAttribute('normal'));
-      const hasUvs = items.every(item => item.geometry.getAttribute('uv'));
-      for (const item of items) {
-        item.updateMatrix();
-        const geometry = item.geometry;
-        const position = geometry.getAttribute('position');
-        const normal = geometry.getAttribute('normal');
-        const uv = geometry.getAttribute('uv');
-        const offset = vertices.length / 3;
-        const normalMatrix = hasNormals ? new THREE.Matrix3().getNormalMatrix(item.matrix) : null;
-        const point = new THREE.Vector3();
-        const direction = new THREE.Vector3();
-        for (let i = 0; i < position.count; i++) {
-          point.fromBufferAttribute(position, i).applyMatrix4(item.matrix);
-          vertices.push(point.x, point.y, point.z);
-          if (hasNormals) {
-            direction.fromBufferAttribute(normal, i).applyMatrix3(normalMatrix).normalize();
-            normals.push(direction.x, direction.y, direction.z);
+
+      for (const materialItems of materialBuckets.values()) {
+        const materialIndex = materials.length;
+        materials.push(materialItems[0].material);
+        const groupStart = indices.length;
+
+        for (const item of materialItems) {
+          item.updateMatrix();
+          const geometry = item.geometry;
+          const position = geometry.getAttribute('position');
+          const normal = geometry.getAttribute('normal');
+          const uv = geometry.getAttribute('uv');
+          const offset = vertices.length / 3;
+          const normalMatrix = hasNormals ? new THREE.Matrix3().getNormalMatrix(item.matrix) : null;
+          const point = new THREE.Vector3();
+          const direction = new THREE.Vector3();
+
+          for (let i = 0; i < position.count; i++) {
+            point.fromBufferAttribute(position, i).applyMatrix4(item.matrix);
+            vertices.push(point.x, point.y, point.z);
+
+            if (hasNormals) {
+              direction.fromBufferAttribute(normal, i).applyMatrix3(normalMatrix).normalize();
+              normals.push(direction.x, direction.y, direction.z);
+            }
+
+            if (uv) uvs.push(uv.getX(i), uv.getY(i));
+            else uvs.push(0, 0);
           }
-          if (hasUvs) {
-            uvs.push(uv.getX(i), uv.getY(i));
+
+          if (geometry.index) {
+            for (let i = 0; i < geometry.index.count; i++) {
+              indices.push(geometry.index.getX(i) + offset);
+            }
+          } else {
+            for (let i = 0; i < position.count; i++) indices.push(i + offset);
           }
+
+          const partNames = item.userData?.mergedPartNames || [item.name];
+          names.push(...partNames);
+          beveledNames.push(...(item.userData?.mergedBeveledPartNames ||
+            (geometry.userData?.beveledArmor ? partNames : [])));
         }
-        if (geometry.index) {
-          for (let i = 0; i < geometry.index.count; i++) indices.push(geometry.index.getX(i) + offset);
-        } else {
-          for (let i = 0; i < position.count; i++) indices.push(i + offset);
-        }
-        const partNames = item.userData?.mergedPartNames || [item.name];
-        names.push(...partNames);
-        beveledNames.push(...(item.userData?.mergedBeveledPartNames ||
-          (geometry.userData?.beveledArmor ? partNames : [])));
+
+        const groupCount = indices.length - groupStart;
+        if (groupCount > 0) groups.push({ start: groupStart, count: groupCount, materialIndex });
       }
+
       const mergedGeometry = new THREE.BufferGeometry();
       mergedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
       if (hasNormals) mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-      if (hasUvs) mergedGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+      else mergedGeometry.computeVertexNormals();
+      mergedGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
       mergedGeometry.setIndex(indices);
-      if (!hasNormals) mergedGeometry.computeVertexNormals();
+      for (const group of groups) {
+        mergedGeometry.addGroup(group.start, group.count, group.materialIndex);
+      }
       mergedGeometry.computeBoundingBox();
       mergedGeometry.computeBoundingSphere();
       mergedGeometry.userData.beveledArmor = beveledNames.length > 0;
       mergedGeometry.userData.mergedPartNames = names;
-      const merged = new THREE.Mesh(mergedGeometry, items[0].material);
+
+      const merged = new THREE.Mesh(
+        mergedGeometry,
+        materials.length === 1 ? materials[0] : materials
+      );
       merged.name = 'infantry-merged-' + names.length + '-parts';
       merged.userData.mergedPartNames = names;
       merged.userData.mergedBeveledPartNames = beveledNames;
+      merged.userData.mergedMaterialGroupCount = materials.length;
+      merged.userData.mergedSourceMeshCount = items.length;
       merged.castShadow = items.some(item => item.castShadow);
       merged.receiveShadow = items.some(item => item.receiveShadow);
       merged.renderOrder = items[0].renderOrder;
+      merged.layers.mask = items[0].layers.mask;
       merged.frustumCulled = items.every(item => item.frustumCulled);
+
       const insertAt = Math.min(...items.map(item => parent.children.indexOf(item)));
       for (const item of items) {
         parent.remove(item);
@@ -365,14 +428,21 @@ const mergeInfantryStaticMeshes = (THREE, root) => {
       parent.add(merged);
       parent.children.splice(parent.children.indexOf(merged), 1);
       parent.children.splice(Math.min(insertAt, parent.children.length), 0, merged);
+
       sourceMeshCount += items.length;
       mergedMeshCount++;
+      savedMeshObjects += items.length - 1;
+      savedDrawCalls += items.length - materials.length;
+      materialGroupCount += materials.length;
     }
   }
+
   return {
     sourceMeshCount,
     mergedMeshCount,
-    savedDrawCalls: sourceMeshCount - mergedMeshCount
+    savedDrawCalls,
+    savedMeshObjects,
+    materialGroupCount
   };
 };
 
@@ -546,14 +616,29 @@ export function createInfantry(THREE, options={}) {
   const g = new THREE.Group();
   g.name = 'BA_Infantry_' + factionProfile + '_' + role;
 
+  const pelvis = new THREE.Group();
+  pelvis.name = 'infantry-pelvis-rig';
+  pelvis.position.y = .75;
+  g.add(pelvis);
+
   const uniform = teamColor(THREE, team);
   const cloth = mat(THREE, isRed ? 0x51453d : 0x40545a, .9, .04);
-  const armor = mat(THREE, isRed ? 0x75604e : 0x536f7a, .58, .28);
+  const armor = mat(THREE, isRed ? 0x695747 : 0x4a5e63, .82, .08);
   const dark = mat(THREE, 0x20282a, .94, .04);
   const metal = mat(THREE, 0x87928f, .42, .64);
   const skin = mat(THREE, 0x9e795f, .92, .02);
   const optic = mat(THREE, isRed ? 0xf0a15b : 0x7bd5ed, .2, .68);
-  const accent = mat(THREE, isRed ? 0xd7834f : 0x65bcd6, .42, .36);
+  const lens = new THREE.MeshStandardMaterial({
+    color: isRed ? 0xffa36b : 0x79d7ed,
+    metalness: .05,
+    roughness: .16,
+    transparent: true,
+    opacity: .78,
+    depthWrite: false,
+    emissive: new THREE.Color(isRed ? 0x2c1000 : 0x042b3c),
+    emissiveIntensity: .22
+  });
+  const accent = mat(THREE, isRed ? 0xc07b4e : 0x6098a6, .68, .16);
   const rifleMat = mat(THREE, 0x242b2d, .76, .32);
   const rubber = mat(THREE, 0x171d20, .98, .01);
   const surfaceTextures = createInfantrySurfaceTextures(THREE, isRed);
@@ -595,8 +680,8 @@ export function createInfantry(THREE, options={}) {
   // the outer V94 unit transform, hit area, selection ring or weapon controller.
   const torso = new THREE.Group();
   torso.name = 'infantry-torso-rig';
-  torso.position.y = 0.80;
-  g.add(torso);
+  torso.position.y = .05;
+  pelvis.add(torso);
   const anatomicalTorso = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
     [-.25,.135,.10],[-.20,.16,.115],[-.07,.175,.125],
     [.07,.195,.13],[.18,.21,.12],[.24,.175,.105]
@@ -604,14 +689,14 @@ export function createInfantry(THREE, options={}) {
   anatomicalTorso.name = 'anatomical-torso-loft';
   anatomicalTorso.castShadow = true; anatomicalTorso.receiveShadow = true; torso.add(anatomicalTorso);
   cylinder(THREE, torso, 'armored-neck-collar', .078,.088,.13,[0,.255,0],dark,12);
-  beveledBox(THREE, torso, 'reinforced-chest-carrier', [.37,.29,.085], [0,.035,.132], armor, [0,0,0], .022);
-  beveledBox(THREE, torso, 'upper-chest-split-plate', [.295,.13,.06], [0,.145,.172], cloth, [0,0,0], .014);
-  beveledBox(THREE, torso, 'lower-abdominal-armor', [.30,.105,.07], [0,-.17,.142], armor, [0,0,0], .014);
+  beveledBox(THREE, torso, 'reinforced-chest-carrier', [.35,.255,.075], [0,.035,.122], armor, [0,0,0], .022);
+  beveledBox(THREE, torso, 'upper-chest-split-plate', [.275,.095,.05], [0,.132,.158], cloth, [0,0,0], .014);
+  beveledBox(THREE, torso, 'lower-abdominal-armor', [.275,.085,.06], [0,-.16,.132], armor, [0,0,0], .014);
   for(const side of [-1,1]) {
-    beveledBox(THREE,torso,'rib-side-armor', [.085,.20,.105], [side*.17,-.015,.025], armor, [0,0,side*.12], .014);
-    beveledBox(THREE,torso,'upper-chest-shoulder-lock', [.10,.075,.06], [side*.135,.17,.145], metal, [0,0,side*-.16], .01);
+    beveledBox(THREE,torso,'rib-side-armor', [.065,.17,.085], [side*.158,-.015,.02], armor, [0,0,side*.12], .014);
+    beveledBox(THREE,torso,'upper-chest-shoulder-lock', [.075,.055,.045], [side*.13,.15,.13], armor, [0,0,side*-.16], .01);
   }
-  beveledBox(THREE, torso, 'lower-abdomen-plate', [.29,.105,.075], [0,-.195,.12], cloth, [0,0,0], .012);
+  beveledBox(THREE, torso, 'lower-abdomen-plate', [.27,.075,.06], [0,-.185,.112], cloth, [0,0,0], .012);
   box(THREE, torso, 'belt-webbing', [.36, .06, .22], [0, -.205, .015], dark);
   box(THREE, torso, 'belt-buckle', [.075, .07, .03], [0, -.205, .14], metal);
   box(THREE, torso, 'sternum-rail', [.035, .20, .026], [0, .035, .18], dark);
@@ -631,62 +716,64 @@ export function createInfantry(THREE, options={}) {
   // Helmet and face have faction-specific silhouettes, not just recoloured cloth.
   const head = new THREE.Group();
   head.name = 'infantry-head-rig';
-  head.position.set(0, 1.17, 0);
-  g.add(head);
+  head.position.set(0, .37, 0);
+  torso.add(head);
   sphere(THREE, head, 'head', .13, [0, 0, 0], dark, [.86, 1.02, .88]);
-  // Sculpted helmet shell: faceted crown, raised brow and side protection.
-  const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 16, 10), cloth);
-  helmetShell.name = 'faceted-helmet-shell'; helmetShell.position.set(0,.105,-.015); helmetShell.scale.set(1.04,.76,1.0); helmetShell.castShadow=true; head.add(helmetShell);
-  beveledBox(THREE, head, 'helmet-front-brow-armor', [.30,.085,.075], [0,.018,.132], armor, [-.08,0,0], .014);
-  for (const side of [-1,1]) beveledBox(THREE, head, 'helmet-temple-armor', [.105,.17,.18], [side*.155,-.025,.005], armor, [0,0,side*.08], .016);
-  // The faceted helmet shell above is the sole crown surface; avoid a coplanar duplicate.
-  box(THREE, head, 'helmet-brim', [.35, .045, .28], [0, .065, .035], dark);
-  box(THREE, head, 'helmet-front-rail', [.24, .045, .035], [0, .095, .17], accent);
+  // Smooth ballistic helmet shell with a compact brow rail and low-profile side protection.
+  const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 24, 16), cloth);
+  helmetShell.name = 'ballistic-helmet-shell'; helmetShell.position.set(0,.105,-.015); helmetShell.scale.set(1.04,.76,1.0); helmetShell.castShadow=true; head.add(helmetShell);
+  beveledBox(THREE, head, 'helmet-front-brow-armor', [.27,.055,.05], [0,.02,.125], armor, [-.06,0,0], .012);
+  for (const side of [-1,1]) beveledBox(THREE, head, 'helmet-temple-armor', [.08,.13,.13], [side*.14,-.025,.005], armor, [0,0,side*.08], .012);
+  // The smooth ballistic helmet shell above is the sole crown surface; avoid a coplanar duplicate.
+  box(THREE, head, 'helmet-brim', [.31, .03, .22], [0, .065, .025], dark);
+  box(THREE, head, 'helmet-front-rail', [.21, .03, .025], [0, .095, .145], accent);
   if (isRed) {
-    box(THREE, head, 'bastion-brow-guard', [.34, .095, .075], [0, .015, .175], armor, [-.12, 0, 0]);
-    box(THREE, head, 'bastion-jaw-guard', [.25, .095, .09], [0, -.095, .125], armor);
+    box(THREE, head, 'bastion-brow-guard', [.29, .06, .05], [0, .015, .15], armor, [-.08, 0, 0]);
+    
     for (const side of [-1, 1]) {
-      box(THREE, head, 'bastion-helmet-cheek', [.075, .17, .16], [side * .145, -.025, .035], armor, [0, 0, side * -.08]);
+      box(THREE, head, 'bastion-helmet-cheek', [.06, .12, .12], [side * .14, -.025, .035], armor, [0, 0, side * -.08]);
     }
   } else {
-    box(THREE, head, 'sentinel-visor', [.28, .055, .035], [0, .025, .176], optic);
+    beveledBox(THREE, head, 'sentinel-goggle-bridge', [.16,.035,.025], [0,.028,.16], accent, [0,0,0], .008);
     box(THREE, head, 'sentinel-side-rail', [.045, .12, .22], [-.17, .08, -.005], metal);
     box(THREE, head, 'sentinel-comms-mount', [.085, .085, .09], [.17, .065, -.035], dark);
   }
-  // Sealed tactical respirator replaces the exposed toy-like lower face.
-  beveledBox(THREE, head, 'gas-mask-faceplate', [.22,.18,.075], [0,-.07,.155], dark, [0,0,0], .018);
-  beveledBox(THREE, head, 'gas-mask-brow-bridge', [.085,.075,.065], [0,.005,.18], armor, [0,0,0], .012);
-  for (const side of [-1,1]) {
-    sphere(THREE, head, 'gas-mask-optic-lens', .034, [side*.063,.018,.195], optic, [1,.9,.34]);
-    cylinder(THREE, head, 'respirator-filter-housing', .05,.058,.06, [side*.09,-.09,.19], metal, 12).rotation.x=Math.PI/2;
-    cylinder(THREE, head, 'respirator-filter-cap', .036,.036,.014, [side*.09,-.09,.228], dark, 12).rotation.x=Math.PI/2;
-    for(let vent=0;vent<3;vent++) box(THREE,head,'respirator-filter-vent',[.009,.032,.007],[side*.09+(vent-1)*.017,-.09,.241],accent);
-    const hoseCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side*.135,-.12,.15),
-      new THREE.Vector3(side*.17,-.17,.09),
-      new THREE.Vector3(side*.16,-.19,.005),
-      new THREE.Vector3(side*.13,-.14,-.075)
-    ]);
-    const hose = new THREE.Mesh(new THREE.TubeGeometry(hoseCurve,14,.012,7,false),rubber);
-    hose.name='respirator-breathing-hose'; hose.castShadow=true; head.add(hose);
+  // Low-profile ballistic face protection: fabric balaclava, sealed respirator and dual ballistic lenses.
+  const balaclava = new THREE.Mesh(new THREE.SphereGeometry(.125, 20, 14), cloth);
+  balaclava.name = 'ballistic-balaclava-face-wrap';
+  balaclava.position.set(0, -.082, .105);
+  balaclava.scale.set(.86, .74, .62);
+  balaclava.castShadow = true; balaclava.receiveShadow = true; head.add(balaclava);
+  beveledBox(THREE, head, 'low-profile-respirator-shell', [.15,.085,.05], [0,-.115,.16], dark, [0,0,0], .014);
+  beveledBox(THREE, head, 'respirator-nose-bridge', [.07,.05,.045], [0,-.055,.17], armor, [0,0,0], .01);
+  const filterHousing = cylinder(THREE, head, 'respirator-filter-housing', .034,.04,.04, [0,-.12,.198], metal, 16);
+  filterHousing.rotation.x = Math.PI / 2;
+  const filterCap = cylinder(THREE, head, 'respirator-filter-cap', .026,.026,.012, [0,-.12,.224], dark, 16);
+  filterCap.rotation.x = Math.PI / 2;
+  for (let vent = 0; vent < 5; vent++) {
+    box(THREE, head, 'respirator-filter-vent', [.008,.018,.006], [(vent-2)*.012,-.12,.234], accent);
   }
-  beveledBox(THREE, head, 'gas-mask-chin-guard', [.16,.05,.055], [0,-.17,.15], armor, [0,0,0], .01);
+  for (const side of [-1,1]) {
+    const goggle = sphere(THREE, head, 'ballistic-goggle-lens', .03, [side*.058,.035,.17], lens, [1.18,.82,.36]);
+    goggle.castShadow = false;
+  }
+  beveledBox(THREE, head, 'balaclava-chin-seam', [.13,.022,.018], [0,-.17,.145], dark, [0,0,0], .006);
   for (const side of [-1, 1]) {
     cylinder(THREE, head, 'helmet-side-comms-pod', .055,.065,.13, [side*.205,.035,-.015], dark, 10).rotation.z=Math.PI/2;
   }
 
   // Reduce the oversized helmet/head silhouette toward a more credible human proportion.
-  head.scale.setScalar(.82);
+  head.scale.setScalar(.74);
 
   // Independent shoulder, elbow, hip and knee pivots make a real deterministic
   // gait possible while preserving the model's single outer transform.
   const makeArm = (side, label) => {
     const pivot = new THREE.Group();
     pivot.name = label + '-arm-pivot';
-    pivot.position.set(side * .215, .99, .015);
-    g.add(pivot);
-    sphere(THREE, pivot, label + '-shoulder-pad', .105, [0, -.045, .015], armor, [.95, .78, 1.02]);
-    beveledBox(THREE,pivot,label+'-angular-pauldron',[.17,.12,.17],[side*.01,-.045,.025],armor,[0,0,side*-.08],.018);
+    pivot.position.set(side * .215, .19, .015);
+    torso.add(pivot);
+    sphere(THREE, pivot, label + '-shoulder-pad', .082, [0, -.045, .015], armor, [.95, .78, 1.02]);
+    beveledBox(THREE,pivot,label+'-soft-shoulder-guard',[.13,.085,.13],[side*.01,-.045,.025],cloth,[0,0,side*-.08],.018);
     const upperArm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
       [-.01,.066,.064],[-.06,.071,.067],[-.12,.062,.059],[-.18,.05,.048]
     ],14), uniform);
@@ -694,30 +781,59 @@ export function createInfantry(THREE, options={}) {
     upperArm.position.set(side*.01,0,.015); upperArm.castShadow=true; upperArm.receiveShadow=true; pivot.add(upperArm);
     const elbow = new THREE.Group();
     elbow.name = label + '-elbow-pivot';
-    elbow.position.set(side*.01,-.18,.035);
+    // Bring both wrists onto the rifle's pistol/fore-end grip sockets.
+    elbow.position.set(-side*.12,-.10,side === -1 ? .175 : .035);
     pivot.add(elbow);
-    sphere(THREE, elbow, label + '-elbow-joint', .052, [0,0,0], armor, [.92,.9,1]);
+    sphere(THREE, elbow, label + '-elbow-joint', .046, [0,0,0], armor, [.92,.9,1]);
     const forearm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
       [-.01,.052,.052],[-.05,.061,.058],[-.12,.052,.049],[-.18,.043,.043]
     ],14), cloth);
     forearm.name = label + '-forearm-loft';
     forearm.position.set(0,0,.065); forearm.rotation.x=-.86;
     forearm.castShadow=true; forearm.receiveShadow=true; elbow.add(forearm);
-    beveledBox(THREE, elbow, label + '-wrist-guard', [.125,.065,.13], [0,-.13,.16], armor, [0,0,0], .012);
-    sphere(THREE, elbow, label + '-glove-palm', .057, [0,-.16,.19], rubber, [.92,.72,1.18]);
+    beveledBox(THREE, elbow, label + '-wrist-guard', [.105,.05,.10], [0,-.13,.16], armor, [0,0,0], .012);
+    const hand = new THREE.Group();
+    hand.name = label + '-hand-rig';
+    hand.position.set(0,-.16,.19);
+    elbow.add(hand);
+    const palmGeometry = createInfantryLoftGeometry(THREE, [
+      [-.052,.031,.030,0,.010],[-.034,.043,.037,0,.012],
+      [-.008,.047,.040,0,.012],[.018,.036,.032,0,.004]
+    ], 14);
+    const palm = new THREE.Mesh(palmGeometry, rubber);
+    palm.name = label + '-glove-palm';
+    palm.castShadow = true; palm.receiveShadow = true; hand.add(palm);
+    // Four curved, tapered glove fingers wrap around the weapon instead of
+    // reading as separate spherical beads at tactical-camera distance.
     for(let finger=0;finger<4;finger++) {
-      sphere(THREE, elbow, label + '-glove-finger', .021,
-        [(finger-1.5)*.025,-.198,.235], rubber, [.82,1.25,.78]);
+      const x = (finger - 1.5) * .024;
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(x,-.012,.034),
+        new THREE.Vector3(x*1.08,-.033,.060),
+        new THREE.Vector3(x*1.05,-.054,.054),
+        new THREE.Vector3(x*.98,-.059,.022)
+      ]);
+      const digit = new THREE.Mesh(new THREE.TubeGeometry(curve, 9, .0105, 7, false), rubber);
+      digit.name = label + '-glove-finger-' + finger;
+      digit.castShadow = true; hand.add(digit);
     }
-    sphere(THREE, elbow, label + '-glove-thumb', .026, [side*-.06,-.165,.19], rubber, [.9,1.1,.85]);
+    const thumbCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(side*-.045,.002,.005),
+      new THREE.Vector3(side*-.067,-.008,.025),
+      new THREE.Vector3(side*-.060,-.030,.048),
+      new THREE.Vector3(side*-.030,-.044,.052)
+    ]);
+    const thumb = new THREE.Mesh(new THREE.TubeGeometry(thumbCurve, 9, .012, 7, false), rubber);
+    thumb.name = label + '-glove-thumb';
+    thumb.castShadow = true; hand.add(thumb);
     if (isRed) {
-      beveledBox(THREE, pivot, label + '-bastion-pauldron', [.17,.095,.15],
-        [side*.012,-.035,.025], accent, [0,0,side*-.08], .012);
+      beveledBox(THREE, pivot, label + '-bastion-pauldron', [.13,.075,.12],
+        [side*.012,-.035,.025], armor, [0,0,side*-.08], .012);
     } else {
       box(THREE, pivot, label + '-sentinel-shoulder-mark', [.10,.045,.022],
         [side*.012,-.045,.13], accent);
     }
-    return { pivot, elbow };
+    return { pivot, elbow, hand };
   };
   const leftArm = makeArm(-1, 'left');
   const rightArm = makeArm(1, 'right');
@@ -736,16 +852,56 @@ export function createInfantry(THREE, options={}) {
     knee.name = label + '-knee-pivot';
     knee.position.set(0,-.28,.005);
     pivot.add(knee);
-    sphere(THREE, knee, label + '-knee-joint', .057, [0,0,0], dark, [1,.9,1]);
-    beveledBox(THREE,knee,label+'-articulated-knee-guard',[.17,.13,.18],[0,-.005,.065],armor,[0,0,0],.016);
+    sphere(THREE, knee, label + '-knee-joint', .048, [0,0,0], dark, [1,.9,1]);
+    beveledBox(THREE,knee,label+'-low-profile-knee-pad',[.14,.095,.14],[0,-.005,.055],armor,[0,0,0],.014);
     const calf = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
       [-.01,.061,.064],[-.08,.068,.068],[-.19,.057,.059],[-.28,.047,.05]
     ],14), uniform);
     calf.name = label + '-calf-loft';
     calf.position.z=.005; calf.castShadow=true; calf.receiveShadow=true; knee.add(calf);
-    beveledBox(THREE,knee,label+'-shin-armor',[.13,.19,.065],[0,-.15,.078],armor,[0,0,0],.012);
-    beveledBox(THREE,knee,label+'-reinforced-combat-boot',[.17,.13,.24],[0,-.31,.085],rubber,[0,0,0],.016);
-    return { pivot, knee };
+    beveledBox(THREE,knee,label+'-shin-armor',[.10,.15,.05],[0,-.15,.065],armor,[0,0,0],.01);
+    const ankle = new THREE.Group();
+    ankle.name = label + '-ankle-pivot';
+    ankle.position.set(0,-.28,.005);
+    knee.add(ankle);
+    beveledBox(THREE,ankle,label+'-ankle-cuff',[.125,.13,.10],[0,.045,.005],armor,[0,0,0],.01);
+    // A shaped boot transitions from the upright ankle shaft into a forward
+    // toe box; the outsole follows the same profile rather than a square block.
+    const bootGeometry = createInfantryLoftGeometry(THREE, [
+      [-.096,.073,.132,0,.102],[-.078,.080,.145,0,.104],
+      [-.044,.074,.136,0,.090],[-.004,.061,.112,0,.056],
+      [.038,.054,.083,0,.020],[.086,.052,.070,0,.002]
+    ], 18);
+    const boot = new THREE.Mesh(bootGeometry, rubber);
+    boot.name = label + '-sculpted-combat-boot';
+    boot.castShadow = true; boot.receiveShadow = true; ankle.add(boot);
+    const soleGeometry = createInfantryLoftGeometry(THREE, [
+      [-.120,.077,.145,0,.105],[-.112,.082,.151,0,.105],
+      [-.096,.078,.145,0,.105]
+    ], 18);
+    const sole = new THREE.Mesh(soleGeometry, dark);
+    sole.name = label + '-reinforced-combat-boot-sole';
+    sole.castShadow = true; sole.receiveShadow = true; ankle.add(sole);
+    sphere(THREE,ankle,label+'-reinforced-combat-boot-toe-cap',.055,[0,-.034,.178],armor,[1,.50,.78]);
+    // Low-profile crossed laces and reinforced eyelets are merged with the
+    // existing sole/armor material groups to keep the mobile draw-call budget.
+    for(let lace=0;lace<3;lace++) {
+      const y=.042-lace*.027, z=.078-lace*.004;
+      const laceCurve=new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-.030,y,z),
+        new THREE.Vector3(-.008,y-.010,z+.027),
+        new THREE.Vector3(.030,y,z+.004)
+      ]);
+      const laceMesh=new THREE.Mesh(new THREE.TubeGeometry(laceCurve,8,.0048,5,false),dark);
+      laceMesh.name=label+'-boot-lace-'+lace;
+      laceMesh.castShadow=true; ankle.add(laceMesh);
+      for(const sideEyelet of [-1,1]) {
+        const eyelet=sphere(THREE,ankle,label+'-boot-eyelet',.008,
+          [sideEyelet*.035,y+.002,z+.015],armor,[1,1,.65]);
+        eyelet.castShadow=false;
+      }
+    }
+    return { pivot, knee, ankle };
   };
   const leftLeg = makeLeg(-1, 'left');
   const rightLeg = makeLeg(1, 'right');
@@ -753,8 +909,8 @@ export function createInfantry(THREE, options={}) {
   // A compact assault pack, radio, antenna and field canteen finish the rear silhouette.
   const pack = new THREE.Group();
   pack.name = 'infantry-field-pack';
-  pack.position.set(0, .79, -.17);
-  g.add(pack);
+  pack.position.set(0, .04, -.17);
+  pelvis.add(pack);
   box(THREE, pack, 'radio-backpack', [.25, .34, .16], [0, 0, 0], cloth);
   box(THREE, pack, 'backpack-top-flap', [.23, .075, .17], [0, .16, 0], armor);
   for (const side of [-1, 1]) {
@@ -763,49 +919,113 @@ export function createInfantry(THREE, options={}) {
   cylinder(THREE, pack, 'radio-antenna', .012, .018, .42, [-.105, .31, -.025], metal, 6);
   cylinder(THREE, pack, 'field-canteen', .065, .075, .18, [.18, -.11, -.025], dark, 8);
 
-  // Rifle details remain grouped on the chest so the existing combat unit and
-  // muzzle/targeting systems continue to use the same outer V94 unit contract.
+  // The rifle's barrel axis is +Z, matching the soldier's forward axis.
+  // Two explicit sockets keep the right hand on the pistol grip and the left on the fore-end.
   const rifleGroup = new THREE.Group();
   rifleGroup.name = 'infantry-assault-rifle';
-  rifleGroup.userData.keepSeparateForCombat = true;
-  rifleGroup.position.set(.05, .73, .29);
-  g.add(rifleGroup);
-  const rifle = box(THREE, rifleGroup, 'rifle-receiver', [.48, .06, .075], [0, 0, 0], rifleMat);
-  box(THREE, rifleGroup, 'rifle-stock', [.18, .085, .095], [-.3, -.005, -.005], dark);
+  rifleGroup.position.set(0, -.07, .24);
+  rifleGroup.rotation.y = -Math.PI / 2;
+  rifleGroup.userData.weaponForwardAxis = '+Z';
+  torso.add(rifleGroup);
+  const rifle = beveledBox(THREE, rifleGroup, 'rifle-receiver', [.48,.06,.075], [0,0,0], rifleMat, [0,0,0], .012);
+  rifle.userData.keepSeparateForCombat = true;
+  beveledBox(THREE, rifleGroup, 'rifle-stock', [.18,.085,.095], [-.3,-.005,-.005], dark, [0,0,0], .012);
+  box(THREE, rifleGroup, 'rifle-buttpad', [.035,.095,.105], [-.405,-.005,-.005], rubber);
+  beveledBox(THREE, rifleGroup, 'rifle-stock-cheek-rest', [.16,.035,.11], [-.31,.045,0], armor, [0,0,0], .008);
   beveledBox(THREE, rifleGroup, 'rifle-handguard', [.22,.085,.095], [.18,0,0], armor, [0,0,0], .012);
-  box(THREE,rifleGroup,'rifle-top-rail',[.42,.025,.035],[.04,.055,0],metal);
-  box(THREE,rifleGroup,'rifle-foregrip',[.065,.12,.07],[.19,-.085,.01],dark,[0,0,-.12]);
-  box(THREE,rifleGroup,'rifle-ejection-port',[.095,.025,.012],[.06,.018,.044],metal);
-  box(THREE,rifleGroup,'rifle-stock-cheek-rest',[.16,.035,.11],[-.31,.045,0],armor);
-  const barrel = cylinder(THREE, rifleGroup, 'rifle-barrel', .022, .022, .3, [.42, .005, 0], metal, 8);
+  box(THREE, rifleGroup, 'rifle-top-rail', [.42,.025,.035], [.04,.055,0], metal);
+  beveledBox(THREE, rifleGroup, 'rifle-pistol-grip', [.08,.14,.075], [0,-.10,-.095], dark, [0,0,.12], .01);
+  beveledBox(THREE, rifleGroup, 'rifle-foregrip', [.065,.12,.07], [.14,-.08,.095], dark, [0,0,-.12], .008);
+  box(THREE, rifleGroup, 'rifle-ejection-port', [.095,.025,.012], [.06,.018,.044], metal);
+  cylinder(THREE, rifleGroup, 'rifle-charging-handle', .012, .012, .055, [.105,.018,.052], metal, 8).rotation.z = Math.PI / 2;
+  cylinder(THREE, rifleGroup, 'rifle-selector-switch', .009, .009, .042, [-.075,-.018,-.05], metal, 8).rotation.x = Math.PI / 2;
+  box(THREE, rifleGroup, 'rifle-trigger', [.012,.045,.012], [.02,-.065,-.09], metal);
+  const triggerCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-.025,-.035,-.095), new THREE.Vector3(-.02,-.105,-.095),
+    new THREE.Vector3(.045,-.105,-.095), new THREE.Vector3(.055,-.035,-.095)
+  ]);
+  const triggerGuard = new THREE.Mesh(new THREE.TubeGeometry(triggerCurve, 10, .008, 6, false), metal);
+  triggerGuard.name = 'rifle-trigger-guard'; triggerGuard.castShadow = true; rifleGroup.add(triggerGuard);
+  for (let vent = 0; vent < 4; vent++) {
+    const x = .105 + vent * .045;
+    for (const side of [-1,1]) box(THREE, rifleGroup, 'rifle-handguard-vent', [.024,.022,.008], [x,.005,side*.052], dark);
+  }
+  const barrel = cylinder(THREE, rifleGroup, 'rifle-barrel', .022, .022, .3, [.42,.005,0], metal, 10);
   barrel.rotation.z = -Math.PI / 2;
-  cylinder(THREE, rifleGroup, 'rifle-muzzle', .032, .032, .055, [.58, .005, 0], dark, 8).rotation.z = -Math.PI / 2;
-  box(THREE, rifleGroup, 'rifle-optic', [.085, .07, .065], [.045, .075, 0], optic);
-  box(THREE, rifleGroup, 'rifle-magazine', [.09, .15, .065], [.02, -.095, .015], dark, [0, 0, -.12]);
+  cylinder(THREE, rifleGroup, 'rifle-muzzle', .032, .032, .055, [.58,.005,0], dark, 10).rotation.z = -Math.PI / 2;
+  const muzzleBrake = cylinder(THREE, rifleGroup, 'rifle-muzzle-brake', .038, .034, .065, [.635,.005,0], metal, 10);
+  muzzleBrake.rotation.z = -Math.PI / 2;
+  for (let port = 0; port < 3; port++) box(THREE, rifleGroup, 'rifle-muzzle-port', [.018,.018,.012], [.625,.005,(port-1)*.026], dark);
+  box(THREE, rifleGroup, 'rifle-front-sight', [.035,.07,.035], [.43,.065,0], dark);
+  box(THREE, rifleGroup, 'rifle-rear-sight', [.035,.06,.035], [-.15,.06,0], dark);
+  box(THREE, rifleGroup, 'rifle-optic', [.085,.07,.065], [.045,.075,0], optic);
+  sphere(THREE, rifleGroup, 'rifle-optic-lens', .027, [.045,.075,.036], lens, [1,.85,.35]);
+  sphere(THREE, rifleGroup, 'rifle-optic-lens', .027, [.045,.075,-.036], lens, [1,.85,.35]);
+  beveledBox(THREE, rifleGroup, 'rifle-magazine', [.09,.15,.065], [.02,-.12,.015], dark, [0,0,-.12], .01);
+  for (let rib = 0; rib < 3; rib++) box(THREE, rifleGroup, 'rifle-magazine-rib', [.07,.012,.009], [.02,-.075-rib*.032,.052], metal);
+  const slingCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-.37,.035,-.055), new THREE.Vector3(-.28,-.16,-.055),
+    new THREE.Vector3(.22,-.16,-.055), new THREE.Vector3(.34,.035,-.055)
+  ]);
+  const sling = new THREE.Mesh(new THREE.TubeGeometry(slingCurve, 20, .009, 6, false), cloth);
+  sling.name = 'rifle-sling'; sling.castShadow = true; rifleGroup.add(sling);
+  const rightGripSocket = new THREE.Object3D();
+  rightGripSocket.name = 'right-weapon-grip-socket';
+  rightGripSocket.position.set(0,0,-.095);
+  rifleGroup.add(rightGripSocket);
+  const leftGripSocket = new THREE.Object3D();
+  leftGripSocket.name = 'left-weapon-grip-socket';
+  leftGripSocket.position.set(.14,0,.095);
+  rifleGroup.add(leftGripSocket);
+  const muzzleFlash = createMuzzleFlash(THREE, { team: isRed ? 'red' : 'blue', scale: .55 });
+  muzzleFlash.name = 'infantry-rifle-muzzle-flash';
+  muzzleFlash.position.set(.69,.005,0);
+  muzzleFlash.visible = false;
+  muzzleFlash.userData.keepSeparateForCombat = true;
+  muzzleFlash.traverse(part => {
+    if (part.material && typeof part.material.opacity === 'number') {
+      part.userData.baseOpacity = part.material.opacity;
+      part.material.opacity = 0;
+    }
+  });
+  rifleGroup.add(muzzleFlash);
   addMarking(THREE, torso, .17, .12, .205, team);
-
   // Batch static geometry inside each rig pivot; never merge across moving joints.
   const renderOptimization = mergeInfantryStaticMeshes(THREE, g);
 
   const animationRig = {
+    pelvis,
     leftArm:leftArm.pivot, rightArm:rightArm.pivot,
     leftElbow:leftArm.elbow, rightElbow:rightArm.elbow,
+    leftHand:leftArm.hand, rightHand:rightArm.hand,
     leftLeg:leftLeg.pivot, rightLeg:rightLeg.pivot,
     leftKnee:leftLeg.knee, rightKnee:rightLeg.knee,
-    torso, head, phase:0, walkAmount:0
+    leftAnkle:leftLeg.ankle, rightAnkle:rightLeg.ankle,
+    torso, head, weaponRig:rifleGroup, phase:0, walkAmount:0
   };
   g.userData = {
     kind: 'infantry', role, team, factionProfile, weapon: rifle,
+    weaponRig: rifleGroup,
+    weaponGripSockets: { left: leftGripSocket, right: rightGripSocket },
+    weaponMuzzle: muzzleFlash,
+    flash: muzzleFlash,
     animationRig,
-    renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V3',
-    bodyGeometryProfile:'ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1',
-    animationJointProfile:'SHOULDER_ELBOW_HIP_KNEE_V1',
+    renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V4',
+    bodyGeometryProfile:'FIELD_INFANTRY_HUMAN_PROPORTIONS_V2',
+    helmetProfile:'LOW_PROFILE_BALLISTIC_HELMET_GOGGLES_V2',
+    faceProtectionProfile:'BALLISTIC_BALACLAVA_COMPACT_RESPIRATOR_V2',
+    uniformProfile:'MATTE_FIELD_UNIFORM_PLATE_CARRIER_V2',
+    animationJointProfile:'PELVIS_SHOULDER_ELBOW_HIP_KNEE_ANKLE_V2',
+    locomotionProfile:'PLANTED_FOOT_WEIGHT_SHIFT_V1',
     weaponGripProfile:'TWO_HAND_FORWARD_READY_V1',
+    weaponHoldProfile:'TORSO_LOCKED_TWO_HAND_READY_V1',
+    handGeometryProfile:'ANATOMICAL_GLOVE_WRAP_V1',
+    bootGeometryProfile:'SCULPTED_FIELD_BOOT_V1',
     armorDetailParts: renderOptimization.sourceMeshCount,
-    surfaceFinish: surfaceTextures ? 'FIELDWEAVE_CERAMIC_MICROSCUFF_V2' : 'UNTEXTURED_FALLBACK',
+    surfaceFinish: surfaceTextures ? 'MATTE_FIELDWEAVE_PLATE_CARRIER_V3' : 'UNTEXTURED_FALLBACK',
     surfaceTextureCount: surfaceTextures ? Object.values(surfaceTextures).filter(Boolean).length : 0,
     surfaceMaterialCount: surfaceTextures ? [uniform,cloth,armor,metal,rifleMat].filter(material => material.map && material.bumpMap && material.roughnessMap).length : 0,
-    headScale: .82,
+    headScale: .74,
     renderOptimization
   };
   g.scale.setScalar(scale);
@@ -820,16 +1040,41 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
   rig.phase = (rig.phase || 0) + dt * (intensity > .02 ? 11 : 2.2);
   const swing = Math.sin(rig.phase) * .32 * intensity;
   const idle = Math.sin(rig.phase * .5) * .018;
+  const leftLift = Math.max(0, Math.sin(rig.phase + .45)) * .026 * intensity;
+  const rightLift = Math.max(0, Math.sin(rig.phase + Math.PI + .45)) * .026 * intensity;
+  if (rig.pelvis) {
+    rig.pelvis.position.y = .75 + Math.abs(Math.sin(rig.phase * 2)) * .014 * intensity;
+    rig.pelvis.rotation.z = Math.sin(rig.phase * 2) * .016 * intensity;
+    rig.pelvis.rotation.x = -.018 * intensity + Math.cos(rig.phase * 2) * .008 * intensity;
+  }
   rig.leftLeg.rotation.x = swing + idle;
   rig.rightLeg.rotation.x = -swing + idle;
   rig.leftKnee.rotation.x = Math.max(0, Math.sin(rig.phase + .35)) * .46 * intensity;
   rig.rightKnee.rotation.x = Math.max(0, Math.sin(rig.phase + Math.PI + .35)) * .46 * intensity;
-  rig.leftArm.rotation.x = -swing * .24 - .04 + idle;
-  rig.rightArm.rotation.x = swing * .24 - .04 - idle;
-  rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.045*intensity;
-  rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.045*intensity;
-  rig.torso.rotation.z = idle * .55;
-  rig.head.rotation.x = idle * .25;
+  // Keep weapon-ready shoulders and elbows locked to the rifle while the
+  // pelvis/torso carry the upper-body gait. A sub-degree shared hold sway keeps
+  // the pose alive without pulling either glove off its explicit grip socket.
+  const weaponHoldSway = Math.sin(rig.phase * .5) * .003 * intensity;
+  rig.leftArm.rotation.x = -.04 + weaponHoldSway;
+  rig.rightArm.rotation.x = -.04 - weaponHoldSway;
+  rig.leftElbow.rotation.x = -.025;
+  rig.rightElbow.rotation.x = -.025;
+  if (rig.leftAnkle) {
+    rig.leftAnkle.position.y = -.28 + leftLift;
+    rig.leftAnkle.rotation.x = -rig.leftLeg.rotation.x * .42 + leftLift * 1.8;
+  }
+  if (rig.rightAnkle) {
+    rig.rightAnkle.position.y = -.28 + rightLift;
+    rig.rightAnkle.rotation.x = -rig.rightLeg.rotation.x * .42 + rightLift * 1.8;
+  }
+  if (rig.torso) {
+    rig.torso.rotation.z = (rig.pelvis?.rotation.z || 0) * .28;
+    rig.torso.rotation.x = (rig.pelvis?.rotation.x || 0) * .22;
+  }
+  if (rig.head) {
+    rig.head.rotation.z = -(rig.torso?.rotation.z || 0) * .55;
+    rig.head.rotation.x = -(rig.torso?.rotation.x || 0) * .35 + idle * .25;
+  }
   rig.walkAmount = intensity;
   return true;
 }
