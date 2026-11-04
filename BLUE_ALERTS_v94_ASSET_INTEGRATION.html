@@ -589,6 +589,14 @@ function terrainHeightAt(x, z) {
   const ridge = Math.exp(-Math.pow(ridgeAxis / 6, 2)) * 0.48;
   const swaleAxis = z - (-0.14 * x - 20);
   const swale = Math.exp(-Math.pow(swaleAxis / 5, 2)) * 0.20;
+  // Broad uplands give the battlefield a readable silhouette at RTS zoom;
+  // the eastern shoulder balances the northwest rise without touching clearances.
+  const northwestUpland = Math.exp(
+    -Math.pow((x + 78) / 30, 2) - Math.pow((z - 42) / 26, 2)
+  ) * 0.90;
+  const northeastShoulder = Math.exp(
+    -Math.pow((x - 82) / 34, 2) - Math.pow((z - 50) / 28, 2)
+  ) * 0.65;
   const outerBerm = terrainEase(65, 82, Math.max(Math.abs(x), Math.abs(z))) * 0.12;
   const roadFlat = 1 - terrainEase(BUILD_ZONE.roadHalfWidth, BUILD_ZONE.roadHalfWidth + 6, Math.abs(z));
   const buildX = terrainEase(BUILD_ZONE.minX - 8, BUILD_ZONE.minX, x) *
@@ -602,7 +610,9 @@ function terrainHeightAt(x, z) {
     zoneFlat = Math.max(zoneFlat, 1 - terrainEase(0, zone.feather, Math.hypot(dx, dz)));
   }
   const flatMask = Math.max(roadFlat, buildFlat, zoneFlat);
-  return Math.max(-0.85, Math.min(0.85, (broad + medium + fine + ridge - swale + outerBerm) * (1 - flatMask)));
+  return Math.max(-1.7, Math.min(1.7,
+    (broad + medium + fine + ridge - swale + northwestUpland + northeastShoulder + outerBerm) * (1 - flatMask)
+  ));
 }
 const terrainSegmentsX = isMobile ? 120 : 160;
 const terrainSegmentsZ = isMobile ? 96 : 128;
@@ -663,10 +673,10 @@ for (let row = 0; row <= terrainSegmentsZ; row++) {
 
     // Expose bedrock only where the authored landform actually rises or breaks;
     // this ties the vertex palette to the same relief that drives unit grounding.
-    const slopeExposure = terrainSmoothstep(0.035, 0.11, slope) * 0.72;
-    const elevationExposure = terrainSmoothstep(0.34, 0.72, Math.abs(terrainHeights[index])) * 0.24;
+    const slopeExposure = terrainSmoothstep(0.035, 0.11, slope) * 0.85;
+    const elevationExposure = terrainSmoothstep(0.34, 0.72, Math.abs(terrainHeights[index])) * 0.32;
     const exposure = Math.max(slopeExposure, elevationExposure);
-    const rockMix = Math.min(0.30, exposure * 0.34);
+    const rockMix = Math.min(0.40, exposure * 0.48);
     if (rockMix >= 0.035) terrainRockExposureVertices++;
     const color = new THREE.Color().fromArray(terrainColors, index * 3);
     color.lerp(terrainBedrockColor, rockMix);
@@ -678,8 +688,9 @@ terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3
 terrainGeometry.computeVertexNormals();
 terrainGeometry.computeBoundingBox();
 terrainGeometry.computeBoundingSphere();
-terrainGeometry.userData.heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1';
-terrainGeometry.userData.slopeMaterialProfile = 'SLOPE_EXPOSED_BEDROCK_V1';
+terrainGeometry.userData.heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V2';
+terrainGeometry.userData.landformProfile = 'TWO_UPLANDS_CENTRAL_SADDLE_V2';
+terrainGeometry.userData.slopeMaterialProfile = 'SLOPE_EXPOSED_BEDROCK_V2';
 terrainGeometry.userData.rockExposureVertices = terrainRockExposureVertices;
 terrainGeometry.userData.heightMin = terrainHeightMin;
 terrainGeometry.userData.heightMax = terrainHeightMax;
@@ -817,6 +828,7 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   textureChecksum: terrainSurfaceTextures.checksum,
   anisotropy: terrainSurfaceTextures.albedo.anisotropy,
   heightProfile: terrainGeometry.userData.heightProfile,
+  landformProfile: terrainGeometry.userData.landformProfile,
   segmentsX: terrainSegmentsX,
   segmentsZ: terrainSegmentsZ,
   heightMin: terrainHeightMin,
@@ -846,7 +858,7 @@ window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
   focusRelief() {
     const x = -78, z = 45, height = terrainHeightAt(x,z);
     camTarget.set(x, height + 0.95, z);
-    camYaw = 0.4; camPitch = 0.68; camDist = isMobile ? 12 : 16;
+    camYaw = 0.4; camPitch = 0.68; camDist = isMobile ? 18 : 24;
     camVelX = 0; camVelZ = 0;
     return { x, z, height, cameraDistance: camDist };
   },

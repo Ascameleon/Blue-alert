@@ -83,7 +83,10 @@ def main():
         "function terrainHash",
         "function terrainNoise",
         "function terrainHeightAt(x, z)",
-        "SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1",
+        "SCULPTED_BATTLEFIELD_HEIGHTFIELD_V2",
+        "TWO_UPLANDS_CENTRAL_SADDLE_V2",
+        "northwestUpland",
+        "northeastShoulder",
         "const terrainSegmentsX = isMobile ? 120 : 160",
         "const terrainSegmentsZ = isMobile ? 96 : 128",
         "createSeededTerrainRandom",
@@ -238,7 +241,7 @@ def main():
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
     if "terrainMaterial.normalMap = terrainSurfaceTextures.normal" not in terrain_section or "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
-    if "new THREE.PlaneGeometry(200, 160, terrainSegmentsX, terrainSegmentsZ)" not in terrain_section or "terrainPositions.setZ(i, height)" not in terrain_section or "terrainGeometry.computeVertexNormals()" not in terrain_section or "heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1'" not in terrain_section:
+    if "new THREE.PlaneGeometry(200, 160, terrainSegmentsX, terrainSegmentsZ)" not in terrain_section or "terrainPositions.setZ(i, height)" not in terrain_section or "terrainGeometry.computeVertexNormals()" not in terrain_section or "heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V2'" not in terrain_section:
         raise SystemExit("FAIL: terrain must use a deterministic sculpted heightfield with computed normals and a bounded geometry profile")
     if "terrainHeightAt(u.g.position.x,u.g.position.z) + 0.04" not in source or "treeDummy.position.set(x, terrainHeightAt(x,z), z)" not in source or "rockDummy.position.set(x, terrainHeightAt(x,z) + radius * verticalScale * 0.88, z)" not in source or "TERRAIN_FLAT_ZONES" not in terrain_section:
         raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
@@ -246,7 +249,7 @@ def main():
         raise SystemExit("FAIL: the live infantry gait probe must begin on the authored terrain and frame its actual elevation")
     if "unit.g.position.set(-78,terrainHeightAt(-78,45) + 0.04,45)" not in source:
         raise SystemExit("FAIL: the live terrain grounding probe must be placed at the sampled height, not below the sculpted surface")
-    if "SLOPE_EXPOSED_BEDROCK_V1" not in terrain_section or "terrainRockExposureVertices" not in terrain_section or "terrainSmoothstep(0.035, 0.11, slope)" not in terrain_section:
+    if "SLOPE_EXPOSED_BEDROCK_V2" not in terrain_section or "terrainRockExposureVertices" not in terrain_section or "terrainSmoothstep(0.035, 0.11, slope) * 0.85" not in terrain_section or "Math.min(0.40, exposure * 0.48)" not in terrain_section:
         raise SystemExit("FAIL: terrain vertex colours must expose deterministic slope-aware bedrock response")
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")

@@ -206,14 +206,15 @@ try {
     desktopMetrics.terrain.anisotropy <= 2 &&
     desktopMetrics.terrain.normalStrength >= 1.15,
     'desktop terrain must expose deterministic 512px PBR maps with bounded sampling and authored relief strength');
-  assert.ok(desktopMetrics.terrain?.heightProfile === 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1' &&
-    desktopMetrics.terrain.slopeMaterialProfile === 'SLOPE_EXPOSED_BEDROCK_V1' &&
-    desktopMetrics.terrain.rockExposureVertices >= 2500 &&
+  assert.ok(desktopMetrics.terrain?.heightProfile === 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V2' &&
+    desktopMetrics.terrain.landformProfile === 'TWO_UPLANDS_CENTRAL_SADDLE_V2' &&
+    desktopMetrics.terrain.slopeMaterialProfile === 'SLOPE_EXPOSED_BEDROCK_V2' &&
+    desktopMetrics.terrain.rockExposureVertices >= 5000 &&
     desktopMetrics.terrain.segmentsX === 160 && desktopMetrics.terrain.segmentsZ === 128 &&
-    desktopMetrics.terrain.heightRange >= 1.2 && desktopMetrics.terrain.maxSlope <= 0.24 &&
+    desktopMetrics.terrain.heightRange >= 2.2 && desktopMetrics.terrain.maxSlope <= 0.25 &&
     desktopMetrics.terrain.roadFlatness <= 0.001 && desktopMetrics.terrain.playerPadFlatness <= 0.001 &&
-    desktopMetrics.terrain.enemyBaseFlatness <= 0.001 && desktopMetrics.terrain.reliefProbeHeight >= 0.45,
-    'desktop terrain must have authored 3D relief while keeping roads, both bases and resource pads level');
+    desktopMetrics.terrain.enemyBaseFlatness <= 0.001 && desktopMetrics.terrain.reliefProbeHeight >= 1.45,
+    'desktop terrain must expose two broad uplands and slope-linked bedrock while keeping roads, both bases and resource pads level');
   const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
   assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
   assert.equal(missionInitial.deliveredOre, 0, 'starting credits and ore in the field must not count as delivered resources');
@@ -754,15 +755,16 @@ try {
     mobileMetrics.terrain.anisotropy <= 2 &&
     mobileMetrics.terrain.normalStrength >= 1.15,
     'mobile terrain must use deterministic 256px albedo, normal and roughness maps with capped anisotropy and authored relief strength');
-  assert.ok(mobileMetrics.terrain?.heightProfile === 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1' &&
-    mobileMetrics.terrain.slopeMaterialProfile === 'SLOPE_EXPOSED_BEDROCK_V1' &&
-    mobileMetrics.terrain.rockExposureVertices >= 1300 &&
+  assert.ok(mobileMetrics.terrain?.heightProfile === 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V2' &&
+    mobileMetrics.terrain.landformProfile === 'TWO_UPLANDS_CENTRAL_SADDLE_V2' &&
+    mobileMetrics.terrain.slopeMaterialProfile === 'SLOPE_EXPOSED_BEDROCK_V2' &&
+    mobileMetrics.terrain.rockExposureVertices >= 2800 &&
     mobileMetrics.terrain.segmentsX === 120 && mobileMetrics.terrain.segmentsZ === 96 &&
-    mobileMetrics.terrain.vertexCount >= 11000 && mobileMetrics.terrain.heightRange >= 1.2 &&
-    mobileMetrics.terrain.maxSlope <= 0.24 && mobileMetrics.terrain.roadFlatness <= 0.001 &&
+    mobileMetrics.terrain.vertexCount >= 11000 && mobileMetrics.terrain.heightRange >= 2.2 &&
+    mobileMetrics.terrain.maxSlope <= 0.25 && mobileMetrics.terrain.roadFlatness <= 0.001 &&
     mobileMetrics.terrain.playerPadFlatness <= 0.001 && mobileMetrics.terrain.enemyBaseFlatness <= 0.001 &&
-    mobileMetrics.terrain.reliefProbeHeight >= 0.45,
-    'mobile terrain must preserve the sculpted heightfield and level gameplay surfaces within its geometry budget');
+    mobileMetrics.terrain.reliefProbeHeight >= 1.45,
+    'mobile terrain must preserve the two-upland landform and level gameplay surfaces within its geometry budget');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&
