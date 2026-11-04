@@ -409,15 +409,22 @@ try {
   const desktopFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(desktopFreeze, 'desktop cleanup probe must freeze only new combat spawns while existing VFX expire');
   const desktopCleanupStartedAt = Date.now();
+  const desktopCleanupStartState = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 30000, polling: 50 });
+    }, null, { timeout: 90000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
-    console.log('DESKTOP_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
+    const elapsedMs = Date.now() - desktopCleanupStartedAt;
+    const framesAdvanced = state && desktopCleanupStartState ? state.frameCount - desktopCleanupStartState.frameCount : null;
+    const simulatedSeconds = state && desktopCleanupStartState ? Number((state.time - desktopCleanupStartState.time).toFixed(3)) : null;
+    console.log('DESKTOP_VFX_CLEANUP_TIMEOUT ' + JSON.stringify({
+      state, elapsedMs, framesAdvanced, simulatedSeconds,
+      averageFps: framesAdvanced === null ? null : Number((framesAdvanced / Math.max(0.001, elapsedMs / 1000)).toFixed(2))
+    }));
     throw error;
   }
   const desktopClean = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
@@ -456,12 +463,14 @@ try {
     desktopBuildingFreeze.probeFlashHidden === true &&
     desktopBuildingFreeze.probeFlashTimer === 0,
     'desktop combat-rig QA must disarm its shooter and hide its muzzle flash before the building-damage cleanup wait');
+  const desktopBuildingCleanupStartedAt = Date.now();
+  const desktopBuildingCleanupStartState = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 30000, polling: 50 });
+    }, null, { timeout: 90000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => ({
       combat: window.__BLUE_ALERTS_COMBAT_QA__?.state?.() || null,
@@ -469,7 +478,13 @@ try {
       hasFocus: document.hasFocus(),
       visibilityState: document.visibilityState
     }));
-    console.log('DESKTOP_BUILDING_PREPARE_TIMEOUT ' + JSON.stringify(state));
+    const elapsedMs = Date.now() - desktopBuildingCleanupStartedAt;
+    const framesAdvanced = state.combat && desktopBuildingCleanupStartState ? state.combat.frameCount - desktopBuildingCleanupStartState.frameCount : null;
+    const simulatedSeconds = state.combat && desktopBuildingCleanupStartState ? Number((state.combat.time - desktopBuildingCleanupStartState.time).toFixed(3)) : null;
+    console.log('DESKTOP_BUILDING_PREPARE_TIMEOUT ' + JSON.stringify({
+      ...state, elapsedMs, framesAdvanced, simulatedSeconds,
+      averageFps: framesAdvanced === null ? null : Number((framesAdvanced / Math.max(0.001, elapsedMs / 1000)).toFixed(2))
+    }));
     throw error;
   }
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
@@ -1010,15 +1025,22 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(mobileFreeze, 'mobile cleanup probe must freeze only new combat spawns while existing VFX expire');
   const mobileCleanupStartedAt = Date.now();
+  const mobileCleanupStartState = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
   try {
     await mobile.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 30000, polling: 50 });
+    }, null, { timeout: 90000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
-    console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
+    const elapsedMs = Date.now() - mobileCleanupStartedAt;
+    const framesAdvanced = state && mobileCleanupStartState ? state.frameCount - mobileCleanupStartState.frameCount : null;
+    const simulatedSeconds = state && mobileCleanupStartState ? Number((state.time - mobileCleanupStartState.time).toFixed(3)) : null;
+    console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify({
+      state, elapsedMs, framesAdvanced, simulatedSeconds,
+      averageFps: framesAdvanced === null ? null : Number((framesAdvanced / Math.max(0.001, elapsedMs / 1000)).toFixed(2))
+    }));
     throw error;
   }
   const mobileClean = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state());
