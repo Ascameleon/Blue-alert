@@ -235,10 +235,16 @@ def main():
         "branchArms",
         "needleClusters",
         "new THREE.Quaternion()",
-        "new THREE.ConeGeometry(radius, height, segments, 1)",
+        "const bezierPoint = (a, b, c, d, t) =>",
+        "const appendTaperedBranch = (p0, p1, p2, p3, baseRadius, tone)",
         "const appendNeedleCluster = (",
         "new THREE.DodecahedronGeometry(1, 0)",
         "needleSpraysPerArm: needleSprays.length",
+        "needleClustersPerArm: needleSprays.length * 2",
+        "branchTubeSegments: 6",
+        "branchRadialSegments: 4",
+        "canopyProfile: 'CURVED_BRAIDED_CONIFER_V3'",
+        "coreConeCount: 0",
         "geometry.userData",
         "function createLegacyLayeredTreeFoliageGeometry()",
     )
@@ -253,6 +259,10 @@ def main():
         raise SystemExit("FAIL: deterministic evergreen visual focus must track an accepted placed tree")
     required_tree_qa = (
         "setLegacy(enabled)",
+        "treeTrunks.geometry = legacyTreeTrunkGeometry",
+        "treeTrunks.material = legacyTreeTrunkMaterial",
+        "treeTrunks.geometry = treeTrunkGeometry",
+        "treeTrunks.material = treeTrunkMaterial",
         "treeFoliage.geometry = legacyTreeFoliageGeometry",
         "treeFoliage.geometry = treeFoliageGeometry",
     )
