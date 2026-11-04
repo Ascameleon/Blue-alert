@@ -143,6 +143,25 @@ try {
     desktopMetrics.engine.projection === 'perspective' && desktopMetrics.engine.webgl2 === desktopMetrics.webgl &&
     desktopMetrics.engine.maxTextureSize >= 1024,
     'desktop must expose the live bundled Three.js r160 perspective WebGL engine');
+  assert.ok(desktopMetrics.terrain?.vertexTintProfile === 'DOMAIN_WARPED_FIELD_STRATA_V1' &&
+    desktopMetrics.terrain.fieldCoverage?.dry >= 0.15 &&
+    desktopMetrics.terrain.fieldCoverage?.soil >= 0.06 &&
+    desktopMetrics.terrain.fieldCoverage?.stone >= 0.002 &&
+    desktopMetrics.terrain.baselineColorChecksum !== desktopMetrics.terrain.fieldColorChecksum,
+    'desktop terrain must expose broad deterministic grass, soil and stone strata at the normal RTS camera');
+  const desktopFieldBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(false));
+  assert.ok(desktopFieldBaseline && !desktopFieldBaseline.enabled &&
+    desktopFieldBaseline.mode === 'accepted-v94-baseline',
+    'desktop field A/B baseline must restore the accepted V94 terrain palette');
+  await captureViewport(desktop, output + '/desktop-v94-gameplay-field-baseline.png');
+  const desktopFieldDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(true));
+  assert.ok(desktopFieldDetail?.enabled &&
+    desktopFieldDetail.mode === 'domain-warped-field-strata' &&
+    desktopFieldDetail.colorChecksum !== desktopFieldBaseline?.colorChecksum,
+    'desktop field A/B detail must apply the authored domain-warped terrain strata');
+  assert.deepEqual(desktopFieldDetail?.camera, desktopFieldBaseline?.camera,
+    'desktop field A/B must preserve the exact same gameplay camera pose');
+  await captureViewport(desktop, output + '/desktop-v94-gameplay-field-detail.png');
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.equal(desktopMetrics.camera?.defaultDistance, 38, 'desktop opening camera must use the closer tactical framing');
@@ -682,6 +701,25 @@ try {
     mobileMetrics.engine.projection === 'perspective' && mobileMetrics.engine.webgl2 === mobileMetrics.webgl &&
     mobileMetrics.engine.maxTextureSize >= 1024,
     'mobile must expose the live bundled Three.js r160 perspective WebGL engine');
+  assert.ok(mobileMetrics.terrain?.vertexTintProfile === 'DOMAIN_WARPED_FIELD_STRATA_V1' &&
+    mobileMetrics.terrain.fieldCoverage?.dry >= 0.12 &&
+    mobileMetrics.terrain.fieldCoverage?.soil >= 0.05 &&
+    mobileMetrics.terrain.fieldCoverage?.stone >= 0.0015 &&
+    mobileMetrics.terrain.baselineColorChecksum !== mobileMetrics.terrain.fieldColorChecksum,
+    'mobile terrain must expose broad deterministic grass, soil and stone strata at the normal RTS camera');
+  const mobileFieldBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(false));
+  assert.ok(mobileFieldBaseline && !mobileFieldBaseline.enabled &&
+    mobileFieldBaseline.mode === 'accepted-v94-baseline',
+    'mobile field A/B baseline must restore the accepted V94 terrain palette');
+  await captureViewport(mobile, output + '/mobile-v94-gameplay-field-baseline-390x844.png');
+  const mobileFieldDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.setFieldStrata(true));
+  assert.ok(mobileFieldDetail?.enabled &&
+    mobileFieldDetail.mode === 'domain-warped-field-strata' &&
+    mobileFieldDetail.colorChecksum !== mobileFieldBaseline?.colorChecksum,
+    'mobile field A/B detail must apply the authored domain-warped terrain strata');
+  assert.deepEqual(mobileFieldDetail?.camera, mobileFieldBaseline?.camera,
+    'mobile field A/B must preserve the exact same gameplay camera pose');
+  await captureViewport(mobile, output + '/mobile-v94-gameplay-field-detail-390x844.png');
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must use the authored 256px surface');
   assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalStrength >= 1.15,
@@ -1169,7 +1207,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await captureViewport(mobile, output + '/mobile-v94-headquarters-focus-390x844.png');
 
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
-  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-tank-armor-closeup.png', 'mobile-v94-tank-armor-closeup-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-terrain-microrelief-baseline.png', 'desktop-v94-terrain-microrelief-detail.png', 'mobile-v94-terrain-microrelief-baseline-390x844.png', 'mobile-v94-terrain-microrelief-detail-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png', 'desktop-v94-headquarters-focus.png', 'mobile-v94-headquarters-focus-390x844.png', 'desktop-v94-headquarters-surface-baseline.png', 'desktop-v94-headquarters-surface-detail.png', 'mobile-v94-headquarters-surface-baseline-390x844.png', 'mobile-v94-headquarters-surface-detail-390x844.png']) {
+  for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-gameplay-field-baseline.png', 'desktop-v94-gameplay-field-detail.png', 'mobile-v94-gameplay-field-baseline-390x844.png', 'mobile-v94-gameplay-field-detail-390x844.png', 'desktop-v94-tank-armor-closeup.png', 'mobile-v94-tank-armor-closeup-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-terrain-microrelief-baseline.png', 'desktop-v94-terrain-microrelief-detail.png', 'mobile-v94-terrain-microrelief-baseline-390x844.png', 'mobile-v94-terrain-microrelief-detail-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png', 'desktop-v94-headquarters-focus.png', 'mobile-v94-headquarters-focus-390x844.png', 'desktop-v94-headquarters-surface-baseline.png', 'desktop-v94-headquarters-surface-detail.png', 'mobile-v94-headquarters-surface-baseline-390x844.png', 'mobile-v94-headquarters-surface-detail-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
   }
   assert.ok(Number(((mobileClean.frameCount - mobileKill.frameCount) / Math.max(0.001, mobileCleanupElapsedMs / 1000)).toFixed(1)) >= 8,
@@ -1187,7 +1225,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       desktop: { baseline: desktopCameraBaseline, improved: desktopCameraCloser },
       mobile: { baseline: mobileCameraBaseline, improved: mobileCameraCloser }
     },
-    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-tank-armor-closeup.png', 'mobile-v94-tank-armor-closeup-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-headquarters-focus.png', 'mobile-v94-headquarters-focus-390x844.png', 'desktop-v94-headquarters-surface-baseline.png', 'desktop-v94-headquarters-surface-detail.png', 'mobile-v94-headquarters-surface-baseline-390x844.png', 'mobile-v94-headquarters-surface-detail-390x844.png']
+    screenshots: ['desktop-v94-camera-baseline-48.png', 'desktop-v94-tactical-camera-framing.png', 'mobile-v94-camera-baseline-48-390x844.png', 'mobile-v94-tactical-camera-framing-390x844.png', 'desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-gameplay-field-baseline.png', 'desktop-v94-gameplay-field-detail.png', 'mobile-v94-gameplay-field-baseline-390x844.png', 'mobile-v94-gameplay-field-detail-390x844.png', 'desktop-v94-tank-armor-closeup.png', 'mobile-v94-tank-armor-closeup-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-headquarters-focus.png', 'mobile-v94-headquarters-focus-390x844.png', 'desktop-v94-headquarters-surface-baseline.png', 'desktop-v94-headquarters-surface-detail.png', 'mobile-v94-headquarters-surface-baseline-390x844.png', 'mobile-v94-headquarters-surface-detail-390x844.png']
   }, null, 2));
 } catch (error) {
   console.error(error);

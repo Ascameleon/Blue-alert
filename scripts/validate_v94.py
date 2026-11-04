@@ -100,6 +100,12 @@ def main():
         "surfaceMode: 'procedural-albedo-normal-roughness'",
         "terrainMaterial.normalMap = terrainSurfaceTextures.normal",
         "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness",
+        "DOMAIN_WARPED_FIELD_STRATA_V1",
+        "terrainBaselineColors",
+        "terrainFieldColors",
+        "terrainZoneWeight",
+        "terrainFieldCoverage",
+        "setFieldStrata(enabled)",
         "setMicroRelief(enabled)",
         "function createLayeredTreeFoliageGeometry",
         "CURVED_BRAIDED_CONIFER_V3",
@@ -255,6 +261,15 @@ def main():
         "terrainSmoothstep(0.55, 1.45, terrainHeights[index]) * 0.72" not in terrain_section or
         "Math.min(0.62, exposure * 0.72)" not in terrain_section):
         raise SystemExit("FAIL: V3 terrain must expose deterministic slope- and elevation-stratified bedrock")
+    if ("DOMAIN_WARPED_FIELD_STRATA_V1" not in terrain_section or
+        "terrainBaselineColors" not in terrain_section or
+        "terrainFieldColors" not in terrain_section or
+        "terrainZoneWeight" not in terrain_section or
+        "TERRAIN_FLAT_ZONES" not in terrain_section or
+        "BUILD_ZONE.roadHalfWidth" not in terrain_section or
+        "terrainFieldCoverage" not in terrain_section or
+        "setFieldStrata(enabled)" not in terrain_section):
+        raise SystemExit("FAIL: terrain must expose deterministic domain-warped field strata while protecting roads and flat gameplay pads")
     if ("Math.pow((x + 84) / 36, 2)" not in terrain_section or
         "Math.pow((z - 68) / 32, 2)" not in terrain_section or
         "Math.pow((x - 84) / 38, 2)" not in terrain_section or
@@ -434,6 +449,14 @@ def main():
         "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
         "desktop-v94-industrial-yard.png",
         "desktop-v94-terrain-surface.png",
+        "setFieldStrata(false)",
+        "setFieldStrata(true)",
+        "desktop-v94-gameplay-field-baseline.png",
+        "desktop-v94-gameplay-field-detail.png",
+        "mobile-v94-gameplay-field-baseline-390x844.png",
+        "mobile-v94-gameplay-field-detail-390x844.png",
+        "desktopFieldDetail?.colorChecksum !== desktopFieldBaseline?.colorChecksum",
+        "mobileFieldDetail?.colorChecksum !== mobileFieldBaseline?.colorChecksum",
         "focusHeadquarters",
         "desktop-v94-headquarters-focus.png",
         "mobile-v94-headquarters-focus-390x844.png",

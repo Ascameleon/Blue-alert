@@ -631,3 +631,13 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - The failed workflow stopped before the separate OpenRTS build, native graphical launch and native input checks. Those results are unknown, not passed. Mobile screenshots are browser emulation, not a physical Samsung capture. Exact screenshot files are preserved in the workflow artifact; no generic or generated imagery was used.
 - Changed files in this correction: `scripts/validate_v94_browser.mjs` and `docs/EVOLUTION_LOG.md`. Next gate: run the complete workflow on the resulting exact head, inspect its job logs and fresh desktop/mobile captures, then evaluate OpenRTS separately. No merge, game version or release. No paid assets, APIs or services; budget remains 0 €.
 
+
+
+## Domain-warped V94 battlefield field strata candidate (2026-11-04)
+
+- Working branch: `art/v94-terrain-pbr-relief-20261103`; parent head: `b3d0cc758e8b143c72bfb70d3746f69ca5eb85bb`; PR #50 remains the sole terrain integration candidate.
+- Replaced the low-contrast, uniform terrain vertex palette with deterministic domain-warped dry-grass, compacted-soil and exposed-stone strata. The existing V3 heightfield, slope-linked bedrock, PBR normal/roughness maps, unit grounding and gameplay contracts are preserved.
+- The field palette fades out across the central supply road and all `TERRAIN_FLAT_ZONES`, keeping the authored build pads and industrial clearances visually restrained. It changes terrain colour only; no movement, collision, placement, unit or combat logic is changed.
+- Added live runtime coverage/checksum diagnostics and desktop 1440×900 plus mobile 390×844 A/B screenshots at the normal gameplay camera. Each pair restores the accepted baseline and applies the field strata without changing camera pose.
+- Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, and this log. No external assets, paid APIs, credits or services; budget remains 0 €.
+- Status: exact-head validation and screenshot inspection are pending. This is a candidate visual improvement, not an accepted release, not a new game version, and not evidence of commercial-grade quality. The exact commit SHA and artifact paths will be appended only after the final-head workflow has completed and its captures have been inspected.
