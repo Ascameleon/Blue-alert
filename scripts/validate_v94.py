@@ -83,8 +83,8 @@ def main():
         "function terrainHash",
         "function terrainNoise",
         "function terrainHeightAt(x, z)",
-        "SCULPTED_BATTLEFIELD_HEIGHTFIELD_V2",
-        "TWO_UPLANDS_CENTRAL_SADDLE_V2",
+        "SCULPTED_BATTLEFIELD_HEIGHTFIELD_V3",
+        "TWO_UPLANDS_CENTRAL_SADDLE_V3",
         "northwestUpland",
         "northeastShoulder",
         "const terrainSegmentsX = isMobile ? 120 : 160",
@@ -247,10 +247,22 @@ def main():
         raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
     if "unit.g.position.set(-70, terrainHeightAt(-70,50) + 0.04, 50)" not in source or "camTarget.set(-70, terrainHeightAt(-70,50) + 0.95, 50)" not in source:
         raise SystemExit("FAIL: the live infantry gait probe must begin on the authored terrain and frame its actual elevation")
-    if "unit.g.position.set(-78,terrainHeightAt(-78,45) + 0.04,45)" not in source:
-        raise SystemExit("FAIL: the live terrain grounding probe must be placed at the sampled height, not below the sculpted surface")
-    if "SLOPE_EXPOSED_BEDROCK_V2" not in terrain_section or "terrainRockExposureVertices" not in terrain_section or "terrainSmoothstep(0.035, 0.11, slope) * 0.85" not in terrain_section or "Math.min(0.40, exposure * 0.48)" not in terrain_section:
-        raise SystemExit("FAIL: terrain vertex colours must expose deterministic slope-aware bedrock response")
+    if "unit.g.position.set(-70,terrainHeightAt(-70,55) + 0.04,55)" not in source:
+        raise SystemExit("FAIL: the live terrain grounding probe must be placed on the north-west ridge at its sampled height")
+    if ("STRATIFIED_BEDROCK_SHOULDERS_V3" not in terrain_section or
+        "terrainRockExposureVertices" not in terrain_section or
+        "terrainSmoothstep(0.045, 0.13, slope) * 0.94" not in terrain_section or
+        "terrainSmoothstep(0.55, 1.45, terrainHeights[index]) * 0.72" not in terrain_section or
+        "Math.min(0.62, exposure * 0.72)" not in terrain_section):
+        raise SystemExit("FAIL: V3 terrain must expose deterministic slope- and elevation-stratified bedrock")
+    if ("Math.pow((x + 84) / 36, 2)" not in terrain_section or
+        "Math.pow((z - 68) / 32, 2)" not in terrain_section or
+        "Math.pow((x - 84) / 38, 2)" not in terrain_section or
+        "Math.pow((z - 68) / 34, 2)" not in terrain_section or
+        "Math.max(-3.6, Math.min(3.6," not in terrain_section):
+        raise SystemExit("FAIL: V3 twin northern uplands must use the authored bounded macro heightfield")
+    if "camYaw = 2.35; camPitch = 0.42; camDist = isMobile ? 22 : 30;" not in source:
+        raise SystemExit("FAIL: terrain evidence camera must approach the ridge face from the south-east")
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
     browser_source = BROWSER_TEST.read_text(encoding="utf-8")
