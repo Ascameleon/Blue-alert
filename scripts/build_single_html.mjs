@@ -28,7 +28,7 @@ assert.notEqual(bundledHtml, html, 'model import must be replaced');
 
 const threeLoaderPattern = /const THREE = await \(async \(\) => \{[\s\S]*?\n\}\)\(\);/;
 assert.match(bundledHtml, threeLoaderPattern, 'expected the multi-CDN Three.js loader');
-bundledHtml = bundledHtml.replace(threeLoaderPattern, "const THREE = await import('three');");
+bundledHtml = bundledHtml.replace(threeLoaderPattern, "import * as THREE from 'three';");
 
 const modulePattern = /<script type="module">([\s\S]*?)<\/script>/;
 const moduleMatch = bundledHtml.match(modulePattern);
@@ -56,6 +56,10 @@ assert.ok(runtimeBundle.includes('WebGLRenderer'), 'bundled runtime must include
 assert.ok(runtimeBundle.includes('PerspectiveCamera'), 'bundled runtime must include perspective camera support');
 assert.ok(!/https?:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)\/.*three/i.test(runtimeBundle),
   'standalone runtime must not retain external Three.js CDN imports');
+assert.doesNotMatch(runtimeBundle, /^\\s*import\\s/m,
+  'standalone runtime must not retain unresolved static module imports');
+assert.doesNotMatch(runtimeBundle, /\\bimport\\s*\\(/,
+  'standalone runtime must not retain unresolved dynamic module imports');
 bundledHtml = bundledHtml.replace(moduleMatch[0], '<script type="module">\n' + runtimeBundle + '\n</script>');
 assert.ok(!bundledHtml.includes('./game-data/models/blue-alert-models.js?v='), 'bundle must not require a separate model file');
 assert.ok(!bundledHtml.includes('https://cdn.jsdelivr.net/npm/three@0.160.0'), 'bundle must not require the Three.js CDN');

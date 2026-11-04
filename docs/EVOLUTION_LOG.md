@@ -599,3 +599,11 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/build_single_html.mjs`, `scripts/validate_v94_bundle_browser.mjs` (new), `.github/workflows/openrts-build.yml`, and this log.
 - Evidence boundary: this is an engine-delivery/runtime dependency correction, not yet proof of commercial-grade graphics or a complete native OpenRTS port. Exact-head build, offline WebGL browser screenshots, existing V94 gameplay tests and separate OpenRTS checks are pending.
 - No merge, release or version created. No paid assets/APIs/services. Budget remains 0 €.
+
+
+## Standalone V94 WebGL module-resolution hardening (2026-11-04)
+
+- Exact-head workflow [41812469057](https://github.com/Ascameleon/Blue-alert/actions/runs/41812469057) on `ab748c2159f6fb72b928ce0fe5ae374b68377a46` built the 1.63 MB single-file HTML, but the offline browser gate timed out before `window.__BLUE_ALERTS_ENGINE__` and the WebGL canvas appeared. The run produced no desktop/mobile standalone screenshots; no offline-runtime or visual acceptance is claimed.
+- The preceding exact-head browser gate did not preserve page errors, failed requests or the startup panel text, so the timeout did not establish whether module resolution or WebGL initialization was the immediate cause.
+- Correction prepared: replace the standalone bundle's dynamic Three.js import with a static module import for esbuild resolution; fail the build if unresolved static/dynamic imports remain. The browser gate now waits for either successful renderer initialization or the runtime error panel, and records console errors, page errors, failed requests, blocked external requests, startup diagnostics and a failure screenshot.
+- This is a standalone-delivery and test-diagnostics correction, not a claim of improved battlefield graphics. Exact-head revalidation remains required. No merge, version or release. Budget remains 0 €.

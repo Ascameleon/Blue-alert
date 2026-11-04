@@ -23,11 +23,21 @@ const url = 'http://127.0.0.1:' + address.port + '/game.html';
 let browser;
 const externalRequests = [];
 const pageErrors = [];
+const runtimeDiagnostics = [];
 try {
   browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader'] });
   for (const viewport of [{name:'desktop',width:1365,height:768},{name:'mobile',width:390,height:844}]) {
     const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1, isMobile: viewport.name === 'mobile', hasTouch: viewport.name === 'mobile' });
-    page.on('pageerror', error => pageErrors.push(viewport.name + ': ' + error.message));
+    page.on('pageerror', error => {
+      pageErrors.push(viewport.name + ': ' + error.message);
+      runtimeDiagnostics.push(viewport.name + ': pageerror: ' + error.message);
+    });
+    page.on('console', message => {
+      if (message.type() === 'error') runtimeDiagnostics.push(viewport.name + ': console: ' + message.text());
+    });
+    page.on('requestfailed', request => {
+      runtimeDiagnostics.push(viewport.name + ': requestfailed: ' + request.url() + ' (' + (request.failure()?.errorText || 'unknown') + ')');
+    });
     await page.route('**/*', route => {
       const requestUrl = route.request().url();
       if (requestUrl.startsWith('http://127.0.0.1:') || requestUrl.startsWith('data:') || requestUrl.startsWith('blob:')) return route.continue();
@@ -39,8 +49,27 @@ try {
     await page.waitForFunction(() => {
       const engine = window.__BLUE_ALERTS_ENGINE__;
       const canvas = document.querySelector('#viewport canvas');
-      return engine && canvas && canvas.width > 0 && canvas.height > 0;
-    }, null, { timeout: 30000 });
+      const startupFailure = document.getElementById('blueRuntimeError') || document.getElementById('blueStartupError');
+      return (engine && canvas && canvas.width > 0 && canvas.height > 0) || !!startupFailure;
+    }, null, { timeout: 30000 }).catch(async error => {
+      const state = await page.evaluate(() => ({
+        engine: window.__BLUE_ALERTS_ENGINE__ || null,
+        canvas: !!document.querySelector('#viewport canvas'),
+        viewportText: document.querySelector('#viewport')?.innerText?.slice(0, 1000) || null,
+        runtimeError: document.getElementById('blueRuntimeError')?.innerText || null,
+        startupError: document.getElementById('blueStartupError')?.innerText || null,
+        fallback2D: !!document.getElementById('blue2dFallback'),
+        externalResources: performance.getEntriesByType('resource').map(entry => entry.name)
+          .filter(name => /^https?:/.test(name) && !name.startsWith(location.origin))
+      }));
+      await page.screenshot({
+        path: output + '/' + viewport.name + '-startup-failure.png',
+        fullPage: false,
+        timeout: 60000
+      }).catch(() => {});
+      throw new Error(viewport.name + ' standalone WebGL startup timed out: ' +
+        JSON.stringify({ state, runtimeDiagnostics, externalRequests }) + '; ' + error.message);
+    });
     const engine = await page.evaluate(() => {
       const canvas = document.querySelector('#viewport canvas');
       const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
@@ -50,9 +79,15 @@ try {
         canvasWidth: canvas?.width || 0,
         canvasHeight: canvas?.height || 0,
         webglContext: !!gl,
-        fallback2D: !!document.getElementById('blue2dFallback')
+        fallback2D: !!document.getElementById('blue2dFallback'),
+        runtimeError: document.getElementById('blueRuntimeError')?.innerText || null,
+        startupError: document.getElementById('blueStartupError')?.innerText || null
       };
     });
+    assert.ok(engine.diagnostics && engine.canvas && engine.canvasWidth > 0 && engine.canvasHeight > 0 &&
+      engine.webglContext && !engine.fallback2D,
+      viewport.name + ' must initialize standalone WebGL: ' +
+      JSON.stringify({ engine, runtimeDiagnostics, externalRequests }));
     assert.equal(engine.diagnostics.renderer, 'WebGLRenderer', viewport.name + ' must use Three.js WebGLRenderer');
     assert.equal(engine.diagnostics.camera, 'PerspectiveCamera', viewport.name + ' must use a perspective 3D camera');
     assert.equal(engine.diagnostics.threeRevision, '160', viewport.name + ' must run bundled Three.js r160');
