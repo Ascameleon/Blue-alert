@@ -866,7 +866,7 @@ window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
     unit.dest = null; unit.path = null; unit.pathIdx = 0; unit.atkTarget = null;
     unit.attackMove = false; unit.combatRouteGoal = null; unit.savedAttackMoveRoute = null;
     const height = terrainHeightAt(-78,45);
-    unit.g.position.set(-78,height + 0.04,45);
+    unit.g.position.set(-78,terrainHeightAt(-78,45) + 0.04,45);
     unit.g.rotation.y = 0.4;
     unit.stuckTime = 0;
     return { x: -78, z: 45, height, expectedY: height + 0.04 };
