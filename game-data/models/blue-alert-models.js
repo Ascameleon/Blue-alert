@@ -1119,7 +1119,13 @@ export function createInfantry(THREE, options={}) {
     forearm.position.set(0,0,.065); forearm.rotation.x=-.86;
     forearm.castShadow=true; forearm.receiveShadow=true; elbow.add(forearm);
     beveledBox(THREE, elbow, label + '-wrist-guard', [.125,.065,.13], [0,-.13,.16], armor, [0,0,0], .012);
-    const palm = detailSphere(elbow, label + '-glove-palm', .057, [0,-.16,.19], rubber, [.92,.72,1.18]);
+    // Keep a non-rendering hand anchor outside static-mesh batching so QA and the
+    // weapon grip retain a live world-space reference after draw-call optimization.
+    const palm = new THREE.Group();
+    palm.name = label + '-glove-palm-anchor';
+    palm.position.set(0,-.16,.19);
+    elbow.add(palm);
+    detailSphere(palm, label + '-glove-palm', .057, [0,0,0], rubber, [.92,.72,1.18]);
     for(let finger=0;finger<4;finger++) {
       detailSphere(elbow, label + '-glove-finger', .021,
         [(finger-1.5)*.025,-.198,.235], rubber, [.82,1.25,.78]);

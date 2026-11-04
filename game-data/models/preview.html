@@ -126,6 +126,10 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
       forwardAlignment:weaponForward.dot(expectedForward),
       leftGripError:leftHandWorld.distanceTo(leftGripWorld),
       rightGripError:rightHandWorld.distanceTo(rightGripWorld),
+      leftHandPosition:[leftHandWorld.x,leftHandWorld.y,leftHandWorld.z],
+      leftGripPosition:[leftGripWorld.x,leftGripWorld.y,leftGripWorld.z],
+      rightHandPosition:[rightHandWorld.x,rightHandWorld.y,rightHandWorld.z],
+      rightGripPosition:[rightGripWorld.x,rightGripWorld.y,rightGripWorld.z],
       torsoParented:infantryRig.leftArm.parent===infantryRig.torso && infantryRig.rightArm.parent===infantryRig.torso &&
         infantryRig.leftLeg.parent===infantryRig.torso && infantryRig.rightLeg.parent===infantryRig.torso && infantryRig.weapon.parent===infantryRig.torso
     };

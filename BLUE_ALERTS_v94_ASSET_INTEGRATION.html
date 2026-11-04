@@ -4559,6 +4559,10 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       weaponForwardAlignment: weaponForward ? weaponForward.dot(unitForward) : null,
       leftGripError: rig?.leftHand && rig?.leftGrip ? leftHandWorld.distanceTo(leftGripWorld) : null,
       rightGripError: rig?.rightHand && rig?.rightGrip ? rightHandWorld.distanceTo(rightGripWorld) : null,
+      leftHandPosition: [leftHandWorld.x, leftHandWorld.y, leftHandWorld.z],
+      leftGripPosition: [leftGripWorld.x, leftGripWorld.y, leftGripWorld.z],
+      rightHandPosition: [rightHandWorld.x, rightHandWorld.y, rightHandWorld.z],
+      rightGripPosition: [rightGripWorld.x, rightGripWorld.y, rightGripWorld.z],
       weaponForwardAxis: rig?.weapon?.userData?.weaponForwardAxis || null
     };
   };

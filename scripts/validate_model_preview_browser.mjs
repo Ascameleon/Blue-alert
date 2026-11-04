@@ -185,6 +185,7 @@ try {
     blueInfantry.namedParts.includes('left-upper-arm-loft') && blueInfantry.namedParts.includes('right-forearm-loft') &&
     blueInfantry.namedParts.includes('left-thigh-loft') && blueInfantry.namedParts.includes('right-calf-loft') &&
     blueInfantry.namedParts.includes('left-glove-palm') && blueInfantry.namedParts.includes('right-glove-palm') &&
+    blueInfantry.namedParts.includes('left-glove-palm-anchor') && blueInfantry.namedParts.includes('right-glove-palm-anchor') &&
     blueInfantry.namedParts.includes('left-elbow-pivot') && blueInfantry.namedParts.includes('right-elbow-pivot') &&
     blueInfantry.namedParts.includes('left-knee-pivot') && blueInfantry.namedParts.includes('right-knee-pivot'),
     'blue infantry must render its anatomical torso, tapered limbs, hands and four articulated joints');

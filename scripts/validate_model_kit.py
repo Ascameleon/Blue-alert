@@ -78,7 +78,7 @@ def main():
         "TWO_HAND_FORWARD_READY_V2", "POSITIVE_Z", "rifle-trigger-grip", "rifle-support-grip",
         "torso.add(pivot)", "torso.add(rifleGroup)", "supportReach = side < 0 ? .19 : 0", "-elbow-pivot", "-knee-pivot",
         "-upper-arm-loft", "-forearm-loft", "-thigh-loft", "-calf-loft",
-        "-glove-palm", "leftKnee.rotation.x", "rightKnee.rotation.x",
+        "-glove-palm", "-glove-palm-anchor", "leftKnee.rotation.x", "rightKnee.rotation.x",
     )
     missing = [name for name in REQUIRED_ANATOMY if name not in model]
     if missing:
