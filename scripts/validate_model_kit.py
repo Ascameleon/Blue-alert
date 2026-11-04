@@ -9,7 +9,7 @@ PREVIEW = Path("game-data/models/preview.html")
 GAME = Path("BLUE_ALERTS_v94_ASSET_INTEGRATION.html")
 REQUIRED_EXPORTS = (
     "createTank", "createInfantry", "updateInfantryAnimation", "createBuilding", "createLandscape",
-    "createTree", "createRock", "createAircraft", "createHelicopter",
+    "createTree", "createRock", "createAircraft", "createHelicopter", "setBuildingSurfaceDetail",
     "createDrone", "createProjectile", "createExplosion", "createMuzzleFlash",
     "createHarvester", "createCitadel", "createRelay", "createOreNode",
 )
@@ -18,7 +18,7 @@ REQUIRED_MODEL = (
     "infantry-assault-rifle", "infantry-torso-rig", "makeArm", "makeLeg",
 )
 REQUIRED_PREVIEW = (
-    "updateInfantryAnimation",
+    "updateInfantryAnimation", "setBuildingSurfaceDetail", "__BLUE_ALERTS_PREVIEW_QA__", "setHqSurfaceDetail",
     "Avion d’attaque", "Hélicoptère d’assaut", "Drone de reconnaissance",
     "Projectile", "Explosion", "Flash de bouche", "createMuzzleFlash", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion",
@@ -55,22 +55,30 @@ def main():
     if missing:
         raise SystemExit("FAIL: faction infantry model is missing: " + ", ".join(missing))
     REQUIRED_HERO_PARTS = (
-        "SENTINEL_BASTION_FIELD_SOLDIER_V3", "faceted-helmet-shell", "gas-mask-faceplate",
+        "SENTINEL_BASTION_FIELD_SOLDIER_V4", "faceted-helmet-shell", "gas-mask-faceplate",
         "gas-mask-optic-lens", "respirator-filter-housing", "respirator-filter-cap",
         "respirator-filter-vent", "respirator-breathing-hose", "gas-mask-chin-guard",
         "angular-pauldron", "articulated-knee-guard", "rifle-top-rail", "rifle-ejection-port",
         "createInfantrySurfaceTextures", "FIELDWEAVE_CERAMIC_MICROSCUFF_V2", "fabricBump", "armorBump", "metalBump",
+        "createBuildingSurfaceTextures", "CAST_CONCRETE_PAINT_MICROWEAR_V1", "surfaceMaterialBindings", "surfaceTextureResolution", "resolutionCache", "surfaceMaterialBindingsActive",
         "head.scale.setScalar(.82)", "helmet shell above is the sole crown surface",
     )
     missing = [name for name in REQUIRED_HERO_PARTS if name not in model]
     if missing:
         raise SystemExit("FAIL: hero infantry sculpt is missing: " + ", ".join(missing))
     REQUIRED_ANATOMY = (
-        "createInfantryLoftGeometry", "ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1",
-        "anatomical-torso-loft", "SHOULDER_ELBOW_HIP_KNEE_V1",
-        "TWO_HAND_FORWARD_READY_V1", "-elbow-pivot", "-knee-pivot",
+        "createInfantryLoftGeometry", "infEntryProfile = true",
+        "anatomical-torso-loft", "ANATOMICAL_HARDSHELL_FIELDWEAVE_V2",
+        "CONVEX_COMPOSITE_CERAMIC_V2", "REINFORCED_TREAD_AND_TOE_CAP_V2",
+        "curvedPlate", "curvedArmorPlateCount", "-boot-tread-sole", "-boot-toe-cap",
+        "new THREE.SphereGeometry(radius, 12, 8)", "new THREE.SphereGeometry(1, 12, 8)",
+        "new THREE.SphereGeometry(.17, 24, 16)", "new THREE.SphereGeometry(radius, 8, 6)",
+        "MOBILE_RTS_SOLDIER_GEOMETRY_V2",
+        "TORSO_PARENTED_SHOULDER_ELBOW_HIP_KNEE_V2",
+        "TWO_HAND_FORWARD_READY_V2", "POSITIVE_Z", "rifle-trigger-grip", "rifle-support-grip",
+        "torso.add(pivot)", "torso.add(rifleGroup)", "supportReach = side < 0 ? .19 : 0", "-elbow-pivot", "-knee-pivot",
         "-upper-arm-loft", "-forearm-loft", "-thigh-loft", "-calf-loft",
-        "-glove-palm", "leftKnee.rotation.x", "rightKnee.rotation.x",
+        "-glove-palm", "-glove-palm-anchor", "leftKnee.rotation.x", "rightKnee.rotation.x",
     )
     missing = [name for name in REQUIRED_ANATOMY if name not in model]
     if missing:
@@ -81,13 +89,20 @@ def main():
         raise SystemExit("FAIL: infantry render batching contract missing: " + ", ".join(missing))
     if "surfaceFinish" not in preview or "surfaceTextureCount" not in preview or "surfaceMaterialCount" not in preview:
         raise SystemExit("FAIL: preview must expose real infantry PBR surface-map diagnostics")
+    if "weaponGripDiagnostics" not in preview or "weaponForwardAxis" not in preview:
+        raise SystemExit("FAIL: model preview must expose forward rifle axis and both physical hand-grip checks")
     if "mergedPartNames" not in preview or "renderOptimization" not in preview:
         raise SystemExit("FAIL: preview must retain source part names and render-batching diagnostics")
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]
     if missing:
         raise SystemExit("FAIL: preview does not expose: " + ", ".join(missing))
     required_tank_features = (
-        "factionProfile", "BLUE_SENTINEL", "RED_BASTION", "front-glacis",
+        "factionProfile", "BLUE_SENTINEL", "RED_BASTION", "cast-hull-shell", "front-glacis",
+        "createCastHullGeometry", "createArmoredProfileGeometry", "createArmoredProfileMesh", "createTrackLoopGeometry",
+        "CAST_MULTI_STATION_HULL_V2", "hullStationCount", "CLOSED_STADIUM_TREAD_LOOP_V1",
+        "createCastTurretGeometry", "CAST_TURRET_STATIONS_V2", "turretStationCount", "MULTI_STATION_CAST_TURRET_V2",
+        "applyCreasedNormals", "CREASED_HARD_SURFACE_V1", "hullNormalProfile", "turretNormalProfile", "normalCreaseAngle",
+        "track-belt-loop-left", "track-belt-loop-right", "trackLinkCount",
         "engine-deck-grilles-instanced", "reactive-armor-tiles-instanced",
         "return-rollers-instanced", "road-wheels-instanced", "wheel-hubs-instanced",
         "wheel-hub-caps-instanced", "track-shoe-instanced", "wheel-bolts-instanced",
@@ -101,12 +116,34 @@ def main():
     if missing:
         raise SystemExit("FAIL: faction tank signatures missing: " + ", ".join(missing))
 
+    required_defense_turret_features = (
+        "DEFENSE_CUPOLA_LOFT_V2", "defenseTurretGeometryProfile",
+        "defenseTurretStationCount", "createCastTurretGeometry",
+        "cupolaStations", "armored-cupola",
+    )
+    missing = [feature for feature in required_defense_turret_features if feature not in model]
+    if missing:
+        raise SystemExit("FAIL: cast defensive turret sculpt missing: " + ", ".join(missing))
+
+    required_command_hq_features = (
+        "ARMORED_BASTION_COMMAND_CORE_V3", "createCommandBunkerGeometry",
+        "commandCoreGeometryProfile", "commandCoreProfileVertexCount", "commandCoreStationCount",
+        "commandCoreStations", "geometry.userData.castCommandBunker", "command-core-cast-shell",
+        "command-window-recess", "command-glass-pane-", "command-entry-frame",
+        "command-entry-door", "command-buttress-left", "command-buttress-right",
+        "command-roof-parapet", "command-annex-vent-louver", "CAST_CONCRETE_PAINT_MICROWEAR_V1",
+        "createBuildingSurfaceTextures", "surfaceTextureCount", "surfaceMaterialCount", "setBuildingSurfaceDetail",
+    )
+    missing = [feature for feature in required_command_hq_features if feature not in model]
+    if missing:
+        raise SystemExit("FAIL: cast command-HQ architecture missing: " + ", ".join(missing))
+
     if "camera.position.set(a==='landscape'?22:a==='infantry'?2.75:8" not in preview or "infantryArmorParts" not in preview:
         raise SystemExit("FAIL: infantry preview must use close framing and expose actual armor mesh diagnostics")
 
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=10", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=15", "defenseTurretGeometryProfile", "defenseTurretStationCount", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")

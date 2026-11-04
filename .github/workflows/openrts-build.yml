@@ -81,10 +81,12 @@ jobs:
           node-version: "22"
       - name: Install Playwright Chromium
         run: |
-          npm install --no-save --no-package-lock playwright
+          npm install --no-save --no-package-lock playwright three@0.160.0 esbuild
           npx playwright install --with-deps chromium
       - name: Build standalone playable V94 HTML
         run: node scripts/build_single_html.mjs
+      - name: Verify standalone offline Three.js WebGL runtime
+        run: node scripts/validate_v94_bundle_browser.mjs
       - name: Render 3D model preview at desktop and mobile sizes
         run: node scripts/validate_model_preview_browser.mjs
       - name: Render playable v94 game at desktop and mobile sizes
