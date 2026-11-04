@@ -261,6 +261,9 @@ try {
   assert.ok(desktopMetrics.terrainDressing?.scrubInstances >= 160 && desktopMetrics.terrainDressing.roadMarkers === 26,
     'desktop battlefield must include instanced scrub and reflective supply-road markers');
   assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
+    desktopMetrics.vegetation.treeCapacity === 128 &&
+    desktopMetrics.vegetation.instancedFoliageTriangleBudget === desktopMetrics.vegetation.foliageInstances * desktopMetrics.vegetation.foliageTriangles &&
+    desktopMetrics.vegetation.instancedFoliageTriangleBudget <= 900000 &&
     desktopMetrics.vegetation.trunkInstances === desktopMetrics.vegetation.treeCount &&
     desktopMetrics.vegetation.foliageInstances === desktopMetrics.vegetation.treeCount &&
     desktopMetrics.vegetation.foliageTiers === 5 &&
@@ -601,6 +604,9 @@ try {
   assert.ok(desktopTreeDetail?.canopyProfile === 'DROOPED_SPRUCE_CROWN_V5' &&
     desktopTreeDetail.coreConeCount === 0 && desktopTreeDetail.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     desktopTreeDetail.trunkHeight >= 2.6 && desktopTreeDetail.branchWhorls === 5 &&
+    desktopTreeDetail.treeCapacity === 128 &&
+    desktopTreeDetail.instancedFoliageTriangleBudget === desktopTreeDetail.foliageInstances * desktopTreeDetail.foliageTriangles &&
+    desktopTreeDetail.instancedFoliageTriangleBudget <= 900000 &&
     desktopTreeDetail.lowestBranchHeight === 0.56 && desktopTreeDetail.lowerBranchDrop === 0.42 &&
     desktopTreeDetail.needleBaseRadiusRatio === 0.1 && desktopTreeDetail.leaderSprayLevels === 4 &&
     desktopTreeDetail.leaderDirectionsPerLevel === 4 &&
@@ -860,6 +866,9 @@ try {
     mobileMetrics.terrain.reliefProbeHeight >= 1.75,
     'mobile terrain must preserve the two-upland landform and level gameplay surfaces within its geometry budget');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
+    mobileMetrics.vegetation.treeCapacity === 80 &&
+    mobileMetrics.vegetation.instancedFoliageTriangleBudget === mobileMetrics.vegetation.foliageInstances * mobileMetrics.vegetation.foliageTriangles &&
+    mobileMetrics.vegetation.instancedFoliageTriangleBudget <= 560000 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageTiers === 5 &&
@@ -1211,6 +1220,9 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileTreeDetail?.canopyProfile === 'DROOPED_SPRUCE_CROWN_V5' &&
     mobileTreeDetail.coreConeCount === 0 && mobileTreeDetail.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     mobileTreeDetail.trunkHeight >= 2.6 && mobileTreeDetail.branchWhorls === 5 &&
+    mobileTreeDetail.treeCapacity === 80 &&
+    mobileTreeDetail.instancedFoliageTriangleBudget === mobileTreeDetail.foliageInstances * mobileTreeDetail.foliageTriangles &&
+    mobileTreeDetail.instancedFoliageTriangleBudget <= 560000 &&
     mobileTreeDetail.lowestBranchHeight === 0.56 && mobileTreeDetail.lowerBranchDrop === 0.42 &&
     mobileTreeDetail.needleBaseRadiusRatio === 0.1 && mobileTreeDetail.leaderSprayLevels === 4 &&
     mobileTreeDetail.leaderDirectionsPerLevel === 4 &&

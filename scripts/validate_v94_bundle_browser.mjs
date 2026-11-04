@@ -105,6 +105,7 @@ try {
       const state = await page.evaluate(() => ({
         combatQaAvailable: !!window.__BLUE_ALERTS_COMBAT_QA__,
         combatState: window.__BLUE_ALERTS_COMBAT_QA__?.state?.() || null,
+        vegetation: window.__BLUE_ALERTS_VEGETATION || null,
         overlayHidden: document.getElementById('startOverlay')?.classList.contains('hidden') || false,
         engine: window.__BLUE_ALERTS_ENGINE__ || null,
         canvas: !!document.querySelector('#viewport canvas'),
@@ -115,7 +116,7 @@ try {
         path: output + '/' + viewport.name + '-start-failure.png',
         fullPage: false,
         timeout: 60000
-      }).catch(() => {});
+      }).catch(screenshotError => console.error('START_FAILURE_SCREENSHOT_ERROR ' + screenshotError.message));
       throw new Error(viewport.name + ' standalone mission clock did not advance after start: ' +
         JSON.stringify({ state, runtimeDiagnostics, pageErrors, externalRequests }) + '; ' + error.message);
     });

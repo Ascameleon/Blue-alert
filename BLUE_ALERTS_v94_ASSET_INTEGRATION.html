@@ -1786,10 +1786,10 @@ function createLayeredTreeFoliageGeometry() {
         .addScaledVector(bladeSide, -radius * .8660254);
       const variation = .88 + Math.sin(twist * 2.1 + bladeIndex * 1.73) * .07;
       // A three-sided tapered needle has a real base section and a pointed tip, not a broad leaf card.
-      appendNeedleTriangle(baseA, baseB, tip, tone, variation);
-      appendNeedleTriangle(baseB, baseC, tip, tone, variation * .985);
-      appendNeedleTriangle(baseC, baseA, tip, tone, variation * 1.015);
-      appendNeedleTriangle(baseA, baseC, baseB, tone, variation * .82);
+      appendNeedleTriangle(baseA, tip, baseB, tone, variation);
+      appendNeedleTriangle(baseB, tip, baseC, tone, variation * .985);
+      appendNeedleTriangle(baseC, tip, baseA, tone, variation * 1.015);
+      appendNeedleTriangle(baseA, baseB, baseC, tone, variation * .82);
       needleBladeCount++;
     }
     needleClusters++;
@@ -1919,7 +1919,7 @@ function createLegacyLayeredTreeFoliageGeometry() {
   return geometry;
 }
 
-const treeCapacity = isMobile ? 100 : 160;
+const treeCapacity = isMobile ? 80 : 128;
 function createEvergreenTrunkGeometry() {
   const geometry = new THREE.CylinderGeometry(.075, .22, 2.65, 10, 8);
   geometry.translate(0, 1.325, 0);
@@ -2023,6 +2023,8 @@ scene.add(battlefieldRocks);
 window.__BLUE_ALERTS_VEGETATION = Object.freeze({
   seed: 0x424c5545,
   treeCount: placedTreeCount,
+  treeCapacity,
+  instancedFoliageTriangleBudget: treeFoliage.count * treeFoliageGeometry.userData.triangleCount,
   trunkInstances: treeTrunks.count,
   foliageInstances: treeFoliage.count,
   foliageTiers: treeFoliageGeometry.userData.branchWhorls,
