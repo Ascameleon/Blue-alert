@@ -579,3 +579,11 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Regression gates: desktop/mobile height range at least 2.7, peak height at least 2.4, low saddle no higher than -0.30, maximum sampled slope no greater than 0.245, live ridge probe at least 1.75, bedrock-exposed vertex counts at least 4300 desktop / 2400 mobile, and zero drift for every checked live unit. Existing combat, pathfinding, collision, construction, animation, mission and native OpenRTS contracts remain unchanged.
 - Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, `docs/EVOLUTION_LOG.md`.
 - Fresh exact-head screenshot targets: `artifacts/v94-browser/desktop-v94-gameplay.png`, `artifacts/v94-browser/mobile-v94-gameplay-390x844.png`, `artifacts/v94-browser/desktop-v94-sculpted-terrain.png`, and `artifacts/v94-browser/mobile-v94-sculpted-terrain-390x844.png`. These paths are expected outputs, not proof until the artifact is downloaded and each desktop/mobile capture is inspected. Visual acceptance remains pending. No version/release, merge or commercial-grade claim. Budget: 0 €.
+
+
+## Validation correction — V3 terrain static profile assertion (2026-11-04)
+
+- Candidate exact head `8f8889e37e0ddfef27777152400541b9c726455d` was checked by workflow [#41808357113](https://github.com/Ascameleon/Blue-alert/actions/runs/41808357113). The run failed immediately in `scripts/validate_v94.py`: one static assertion still expected the V2 `heightProfile` literal after the runtime and browser gates had moved to V3. Prototype JavaScript parsing passed; the V94 static validator stopped before WebGL rendering, so this run produced no fresh gameplay screenshots and provides no visual acceptance.
+- Correction: update that final stale static assertion to require `SCULPTED_BATTLEFIELD_HEIGHTFIELD_V3`. No runtime code was changed in this correction. The exact-head workflow must rerun before the V3 terrain can be judged.
+- No branch write was made until workflow #41808357113 had completed. No merge, version/release or paid service. Budget remains 0 €.
+- Static validator correction commit: `8c5c9618fd54a0395f99d82aa1483ae2343eb23c`.
