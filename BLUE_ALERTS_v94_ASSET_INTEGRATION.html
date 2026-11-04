@@ -4646,6 +4646,28 @@ if (new URLSearchParams(location.search).get('combat-rig') === '1' || new URLSea
       probeTarget.atkTarget = null;
       return { shooterId: probeShooter.id, targetId: probeTarget.id };
     },
+    disarm() {
+      qaSuppressCombat = true;
+      if (probeShooter) {
+        probeShooter.atkTarget = null;
+        probeShooter.combatRouteGoal = null;
+        probeShooter.path = null;
+        probeShooter.pathIdx = 0;
+        probeShooter.dest = null;
+        probeShooter.flashT = 0;
+        const flash = probeShooter.g?.userData?.flash || null;
+        if (flash) setMuzzleFlashIntensity(flash, 0);
+      }
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state?.() || {};
+      return {
+        ...state,
+        probeDisarmed: !!probeShooter && probeShooter.atkTarget === null,
+        probeFlashHidden: !probeShooter?.g?.userData?.flash?.visible,
+        probeFlashTimer: probeShooter?.flashT ?? null,
+        probeShooterDead: !!probeShooter?.dead,
+        combatSuppressed: qaSuppressCombat
+      };
+    },
     snapshot() {
       if (!probeShooter || !probeTarget) return null;
       probeShooter.g.updateMatrixWorld(true);

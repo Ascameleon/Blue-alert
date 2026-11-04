@@ -356,6 +356,22 @@ def main():
     if missing:
         raise SystemExit("FAIL: combat QA must track the exact death explosion and isolated combat state: " + ", ".join(missing))
 
+    combat_rig_start = source.index("if (new URLSearchParams(location.search).get('combat-rig') === '1'")
+    combat_rig_end = source.index("if (new URLSearchParams(location.search).get('qa') === '1')", combat_rig_start)
+    combat_rig_section = source[combat_rig_start:combat_rig_end]
+    required_combat_rig = (
+        "disarm()",
+        "qaSuppressCombat = true;",
+        "probeShooter.atkTarget = null;",
+        "probeShooter.flashT = 0;",
+        "setMuzzleFlashIntensity(flash, 0);",
+        "probeDisarmed:",
+        "probeFlashHidden:",
+    )
+    missing = [token for token in required_combat_rig if token not in combat_rig_section]
+    if missing:
+        raise SystemExit("FAIL: combat-rig QA must disarm its persistent target and hide its muzzle flash: " + ", ".join(missing))
+
     building_qa_start = source.index("window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__")
     building_qa_end = source.index("window.__BLUE_ALERTS_MISSION_QA__", building_qa_start)
     building_qa_section = source[building_qa_start:building_qa_end]
@@ -380,6 +396,10 @@ def main():
         "spawnedExplosionLife",
         "freezeNewCombat",
         "resumeCombat",
+        "window.__BLUE_ALERTS_COMBAT_QA?.disarm()",
+        "probeDisarmed",
+        "probeFlashHidden",
+        "DESKTOP_BUILDING_PREPARE_TIMEOUT",
         "desktopBuildingFreeze?.combatSuppressed === true",
         "mobileClean.combatSuppressed === true",
         "shooterKind",

@@ -450,14 +450,28 @@ try {
   assert.ok(muzzleError < 0.05,
     'projectile must originate at the detailed tank muzzle, error=' + muzzleError.toFixed(4));
 
-  const desktopBuildingFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
-  assert.ok(desktopBuildingFreeze?.combatSuppressed === true,
-    'desktop building-damage QA must freeze unrelated combat before its controlled projectile burst');
-  await desktop.waitForFunction(() => {
-    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-    return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-      state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-  }, null, { timeout: 30000, polling: 50 });
+  const desktopBuildingFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA?.disarm());
+  assert.ok(desktopBuildingFreeze?.combatSuppressed === true &&
+    desktopBuildingFreeze.probeDisarmed === true &&
+    desktopBuildingFreeze.probeFlashHidden === true &&
+    desktopBuildingFreeze.probeFlashTimer === 0,
+    'desktop combat-rig QA must disarm its shooter and hide its muzzle flash before the building-damage cleanup wait');
+  try {
+    await desktop.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
+    }, null, { timeout: 30000, polling: 50 });
+  } catch (error) {
+    const state = await desktop.evaluate(() => ({
+      combat: window.__BLUE_ALERTS_COMBAT_QA__?.state?.() || null,
+      probe: window.__BLUE_ALERTS_COMBAT_QA?.snapshot?.() || null,
+      hasFocus: document.hasFocus(),
+      visibilityState: document.visibilityState
+    }));
+    console.log('DESKTOP_BUILDING_PREPARE_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(desktopBuildingStart?.shooterKind,
     'desktop building-damage QA must use a live blue combat unit');
