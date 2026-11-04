@@ -549,6 +549,14 @@ try {
   await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
 
 
+  const desktopHeadquartersFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusHeadquarters());
+  assert.equal(desktopHeadquartersFocus?.modelProfile, 'ARMORED_BASTION_COMMAND_CORE_V2',
+    'desktop live V94 HQ camera must target the new cast command shell');
+  assert.equal(desktopHeadquartersFocus?.profileVertexCount, 12,
+    'desktop live V94 HQ must expose its complete stepped cast profile');
+  await desktop.waitForTimeout(500);
+  await desktop.screenshot({ path: output + '/desktop-v94-headquarters-focus.png', fullPage: true });
+
   // Release the desktop WebGL context before opening the mobile viewport. This
   // keeps the mobile assertion independent of concurrent GPU/context pressure.
   await desktop.close();
@@ -986,14 +994,6 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     'mobile A/B comparison must restore the detailed branch-and-needle geometry on the same instanced mesh');
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-detail-390x844.png', fullPage: true });
-
-  const desktopHeadquartersFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusHeadquarters());
-  assert.equal(desktopHeadquartersFocus?.modelProfile, 'ARMORED_BASTION_COMMAND_CORE_V2',
-    'desktop live V94 HQ camera must target the new cast command shell');
-  assert.equal(desktopHeadquartersFocus?.profileVertexCount, 12,
-    'desktop live V94 HQ must expose its complete stepped cast profile');
-  await desktop.waitForTimeout(500);
-  await desktop.screenshot({ path: output + '/desktop-v94-headquarters-focus.png', fullPage: true });
 
   const mobileHeadquartersFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusHeadquarters());
   assert.equal(mobileHeadquartersFocus?.modelProfile, 'ARMORED_BASTION_COMMAND_CORE_V2',
