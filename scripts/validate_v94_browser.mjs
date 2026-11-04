@@ -294,7 +294,9 @@ try {
   // Real mouse input: place a power station on the pad, then prove invalid ground
   // clicks do not spend credits or create structures.
   const buildPoint = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILD_QA.projectWorld(-24, -12));
-  assert.ok(buildPoint.visible, 'valid construction test point must be visible on desktop');
+  assert.ok(Number.isFinite(buildPoint.worldY) && buildPoint.ndc?.every(Number.isFinite),
+    'construction QA must project a finite point on the live terrain surface: ' + JSON.stringify(buildPoint));
+  assert.ok(buildPoint.visible, 'valid construction test point must be visible on desktop: ' + JSON.stringify(buildPoint));
   await desktop.locator('#cards .card').first().click();
   await desktop.mouse.move(buildPoint.x, buildPoint.y);
   await desktop.mouse.click(buildPoint.x, buildPoint.y);

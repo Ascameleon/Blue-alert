@@ -2870,13 +2870,28 @@ if (new URLSearchParams(location.search).get('build-zone') === '1') {
       };
     },
     projectWorld(x, z) {
+      // Synchronize the camera from its controller state before projecting. QA camera
+      // probes can restore camTarget/camYaw/camPitch/camDist between animation frames.
+      const horizontalDistance = Math.cos(camPitch) * camDist;
+      const verticalDistance = Math.sin(camPitch) * camDist;
+      camera.position.set(
+        camTarget.x + Math.sin(camYaw) * horizontalDistance,
+        camTarget.y + verticalDistance,
+        camTarget.z + Math.cos(camYaw) * horizontalDistance
+      );
+      camera.lookAt(camTarget);
       camera.updateMatrixWorld(true);
       scene.updateMatrixWorld(true);
-      const point = new THREE.Vector3(x, 0, z).project(camera);
+      // Project the actual heightfield surface, not the old flat y=0 plane.
+      const worldY = terrainHeightAt(x, z);
+      const point = new THREE.Vector3(x, worldY, z).project(camera);
       const rect = viewport.getBoundingClientRect();
       return {
         x: rect.left + (point.x * 0.5 + 0.5) * rect.width,
         y: rect.top + (-point.y * 0.5 + 0.5) * rect.height,
+        worldY,
+        ndc: [point.x, point.y, point.z],
+        cameraDistance: camDist,
         visible: point.z > -1 && point.z < 1 &&
           point.x >= -1 && point.x <= 1 && point.y >= -1 && point.y <= 1
       };
