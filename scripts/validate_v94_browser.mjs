@@ -32,7 +32,6 @@ const output = resolve(root, 'artifacts/v94-browser');
 await mkdir(output, { recursive: true });
 let browser;
 const failures = [];
-const successfulThree = [];
 function watch(page) {
   page.on('pageerror', error => failures.push('pageerror: ' + error.message));
   page.on('console', message => {
@@ -41,12 +40,6 @@ function watch(page) {
   page.on('requestfailed', request => {
     if (request.url().includes('three.module.js')) {
       failures.push('requestfailed: ' + request.url() + ' ' + (request.failure()?.errorText || 'unknown'));
-    }
-  });
-  page.on('response', response => {
-    if (response.url().includes('three.module.js')) {
-      if (response.status() >= 200 && response.status() < 300) successfulThree.push(response.url());
-      else failures.push('CDN response ' + response.status() + ': ' + response.url());
     }
   });
 }
@@ -126,7 +119,8 @@ async function metrics(page) {
       vegetation: window.__BLUE_ALERTS_VEGETATION || null,
       environment: window.__BLUE_ALERTS_ENVIRONMENT || null,
       battlefieldWear: window.__BLUE_ALERTS_BATTLEFIELD_WEAR || null,
-      camera: window.__BLUE_ALERTS_CAMERA_QA__?.snapshot() || null
+      camera: window.__BLUE_ALERTS_CAMERA_QA__?.snapshot() || null,
+      engine: window.__BLUE_ALERTS_ENGINE__ || null
     };
   });
 }
@@ -144,6 +138,11 @@ try {
   await loadGame(desktop, { combatRig: true, combatVfx: true, buildQa: true, environment: true });
   const desktopMetrics = await metrics(desktop);
   assert.ok(desktopMetrics.webgl && !desktopMetrics.contextLost, 'desktop must render with a live WebGL context');
+  assert.ok(desktopMetrics.engine?.engine === 'Three.js' && desktopMetrics.engine.threeRevision === '160' &&
+    desktopMetrics.engine.renderer === 'WebGLRenderer' && desktopMetrics.engine.camera === 'PerspectiveCamera' &&
+    desktopMetrics.engine.projection === 'perspective' && desktopMetrics.engine.webgl2 === desktopMetrics.webgl &&
+    desktopMetrics.engine.maxTextureSize >= 1024,
+    'desktop must expose the live bundled Three.js r160 perspective WebGL engine');
   assert.ok(desktopMetrics.canvasRect.width >= 1100 && desktopMetrics.canvasRect.height >= 650, 'desktop battlefield canvas must be visible at usable size');
   assert.ok(desktopMetrics.startOverlayHidden && !desktopMetrics.fallback && !desktopMetrics.runtimeError && !desktopMetrics.startupError, 'desktop game must start in the 3D runtime without fallback/errors');
   assert.equal(desktopMetrics.camera?.defaultDistance, 38, 'desktop opening camera must use the closer tactical framing');
@@ -678,6 +677,11 @@ try {
     if (toast) { toast.style.opacity = '0'; toast.textContent = ''; }
   });
   const mobileMetrics = await metrics(mobile);
+  assert.ok(mobileMetrics.engine?.engine === 'Three.js' && mobileMetrics.engine.threeRevision === '160' &&
+    mobileMetrics.engine.renderer === 'WebGLRenderer' && mobileMetrics.engine.camera === 'PerspectiveCamera' &&
+    mobileMetrics.engine.projection === 'perspective' && mobileMetrics.engine.webgl2 === mobileMetrics.webgl &&
+    mobileMetrics.engine.maxTextureSize >= 1024,
+    'mobile must expose the live bundled Three.js r160 perspective WebGL engine');
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must use the authored 256px surface');
   assert.ok(mobileTerrainFocus?.normalMap && mobileTerrainFocus?.roughnessMap && mobileTerrainFocus.normalStrength >= 1.15,
@@ -1164,7 +1168,6 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.waitForTimeout(300);await captureViewport(mobile, output+'/mobile-v94-headquarters-surface-detail-390x844.png');
   await captureViewport(mobile, output + '/mobile-v94-headquarters-focus-390x844.png');
 
-  assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
   for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-tank-armor-closeup.png', 'mobile-v94-tank-armor-closeup-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-terrain-microrelief-baseline.png', 'desktop-v94-terrain-microrelief-detail.png', 'mobile-v94-terrain-microrelief-baseline-390x844.png', 'mobile-v94-terrain-microrelief-detail-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png', 'desktop-v94-headquarters-focus.png', 'mobile-v94-headquarters-focus-390x844.png', 'desktop-v94-headquarters-surface-baseline.png', 'desktop-v94-headquarters-surface-detail.png', 'mobile-v94-headquarters-surface-baseline-390x844.png', 'mobile-v94-headquarters-surface-detail-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
@@ -1179,7 +1182,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     mobileCommands,
     combatRig,
     muzzleError,
-    successfulThree,
+    engineDiagnostics: { desktop: desktopMetrics.engine, mobile: mobileMetrics.engine },
     cameraAB: {
       desktop: { baseline: desktopCameraBaseline, improved: desktopCameraCloser },
       mobile: { baseline: mobileCameraBaseline, improved: mobileCameraCloser }
