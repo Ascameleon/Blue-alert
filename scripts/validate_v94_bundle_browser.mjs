@@ -93,7 +93,26 @@ try {
     assert.equal(engine.diagnostics.threeRevision, '160', viewport.name + ' must run bundled Three.js r160');
     assert.ok(engine.webglContext && engine.canvas && !engine.fallback2D, viewport.name + ' must render WebGL without 2D fallback: ' + JSON.stringify(engine));
     await page.locator('#btnStart').click();
-    await page.waitForFunction(() => window.__BLUE_ALERTS_COMBAT_QA__?.state()?.time > 0.5, null, { timeout: 10000 });
+    await page.waitForFunction(() =>
+      document.getElementById('startOverlay')?.classList.contains('hidden'), null, { timeout: 5000 });
+    await page.waitForFunction(() => window.__BLUE_ALERTS_COMBAT_QA__?.state()?.time > 0.5, null, { timeout: 10000 }).catch(async error => {
+      const state = await page.evaluate(() => ({
+        combatQaAvailable: !!window.__BLUE_ALERTS_COMBAT_QA__,
+        combatState: window.__BLUE_ALERTS_COMBAT_QA__?.state?.() || null,
+        overlayHidden: document.getElementById('startOverlay')?.classList.contains('hidden') || false,
+        engine: window.__BLUE_ALERTS_ENGINE__ || null,
+        canvas: !!document.querySelector('#viewport canvas'),
+        runtimeError: document.getElementById('blueRuntimeError')?.innerText || null,
+        startupError: document.getElementById('blueStartupError')?.innerText || null
+      }));
+      await page.screenshot({
+        path: output + '/' + viewport.name + '-start-failure.png',
+        fullPage: false,
+        timeout: 60000
+      }).catch(() => {});
+      throw new Error(viewport.name + ' standalone mission clock did not advance after start: ' +
+        JSON.stringify({ state, runtimeDiagnostics, pageErrors, externalRequests }) + '; ' + error.message);
+    });
     await page.screenshot({ path: output + '/' + viewport.name + '-standalone-webgl.png', fullPage: false, animations: 'disabled', timeout: 60000 });
     console.log(viewport.name.toUpperCase() + '_OFFLINE_3D ' + JSON.stringify(engine));
     await page.close();
