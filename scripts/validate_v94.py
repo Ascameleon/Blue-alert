@@ -236,6 +236,10 @@ def main():
         raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
     if "unit.g.position.set(-70, terrainHeightAt(-70,50) + 0.04, 50)" not in source or "camTarget.set(-70, terrainHeightAt(-70,50) + 0.95, 50)" not in source:
         raise SystemExit("FAIL: the live infantry gait probe must begin on the authored terrain and frame its actual elevation")
+    if "unit.g.position.set(-78,terrainHeightAt(-78,45) + 0.04,45)" not in source:
+        raise SystemExit("FAIL: the live terrain grounding probe must be placed at the sampled height, not below the sculpted surface")
+    if "SLOPE_EXPOSED_BEDROCK_V1" not in terrain_section or "terrainRockExposureVertices" not in terrain_section or "terrainSmoothstep(0.035, 0.11, slope)" not in terrain_section:
+        raise SystemExit("FAIL: terrain vertex colours must expose deterministic slope-aware bedrock response")
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
     browser_source = BROWSER_TEST.read_text(encoding="utf-8")

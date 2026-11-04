@@ -614,6 +614,7 @@ const grassColor = new THREE.Color(0x3d5635);
 const dryColor = new THREE.Color(0x746b43);
 const shadedColor = new THREE.Color(0x29422f);
 const soilColor = new THREE.Color(0x62513d);
+const terrainBedrockColor = new THREE.Color(0x827d70);
 const terrainSmoothstep = (a, b, value) => {
   const t = Math.max(0, Math.min(1, (value - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -641,24 +642,45 @@ for (let i = 0; i < terrainPositions.count; i++) {
   color.multiplyScalar(0.94 + fine * 0.12);
   color.toArray(terrainColors, i * 3);
 }
-terrainPositions.needsUpdate = true;
 const terrainGridWidth = terrainSegmentsX + 1;
 const terrainStepX = 200 / terrainSegmentsX;
 const terrainStepZ = 160 / terrainSegmentsZ;
 let terrainMaxSlope = 0;
-for (let row = 0; row < terrainSegmentsZ; row++) {
-  for (let col = 0; col < terrainSegmentsX; col++) {
+let terrainRockExposureVertices = 0;
+for (let row = 0; row <= terrainSegmentsZ; row++) {
+  for (let col = 0; col <= terrainSegmentsX; col++) {
     const index = row * terrainGridWidth + col;
-    const slopeX = (terrainHeights[index + 1] - terrainHeights[index]) / terrainStepX;
-    const slopeZ = (terrainHeights[index + terrainGridWidth] - terrainHeights[index]) / terrainStepZ;
-    terrainMaxSlope = Math.max(terrainMaxSlope, Math.hypot(slopeX, slopeZ));
+    const leftCol = Math.max(0, col - 1);
+    const rightCol = Math.min(terrainSegmentsX, col + 1);
+    const upperRow = Math.max(0, row - 1);
+    const lowerRow = Math.min(terrainSegmentsZ, row + 1);
+    const slopeX = (terrainHeights[row * terrainGridWidth + rightCol] -
+      terrainHeights[row * terrainGridWidth + leftCol]) / ((rightCol - leftCol) * terrainStepX || terrainStepX);
+    const slopeZ = (terrainHeights[lowerRow * terrainGridWidth + col] -
+      terrainHeights[upperRow * terrainGridWidth + col]) / ((lowerRow - upperRow) * terrainStepZ || terrainStepZ);
+    const slope = Math.hypot(slopeX, slopeZ);
+    terrainMaxSlope = Math.max(terrainMaxSlope, slope);
+
+    // Expose bedrock only where the authored landform actually rises or breaks;
+    // this ties the vertex palette to the same relief that drives unit grounding.
+    const slopeExposure = terrainSmoothstep(0.035, 0.11, slope) * 0.72;
+    const elevationExposure = terrainSmoothstep(0.34, 0.72, Math.abs(terrainHeights[index])) * 0.24;
+    const exposure = Math.max(slopeExposure, elevationExposure);
+    const rockMix = Math.min(0.30, exposure * 0.34);
+    if (rockMix >= 0.035) terrainRockExposureVertices++;
+    const color = new THREE.Color().fromArray(terrainColors, index * 3);
+    color.lerp(terrainBedrockColor, rockMix);
+    color.toArray(terrainColors, index * 3);
   }
 }
+terrainPositions.needsUpdate = true;
 terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
 terrainGeometry.computeVertexNormals();
 terrainGeometry.computeBoundingBox();
 terrainGeometry.computeBoundingSphere();
 terrainGeometry.userData.heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1';
+terrainGeometry.userData.slopeMaterialProfile = 'SLOPE_EXPOSED_BEDROCK_V1';
+terrainGeometry.userData.rockExposureVertices = terrainRockExposureVertices;
 terrainGeometry.userData.heightMin = terrainHeightMin;
 terrainGeometry.userData.heightMax = terrainHeightMax;
 terrainGeometry.userData.heightRange = terrainHeightMax - terrainHeightMin;
@@ -801,6 +823,8 @@ window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   heightMax: terrainHeightMax,
   heightRange: terrainHeightMax - terrainHeightMin,
   maxSlope: terrainMaxSlope,
+  slopeMaterialProfile: terrainGeometry.userData.slopeMaterialProfile,
+  rockExposureVertices: terrainRockExposureVertices,
   roadFlatness: terrainRoadFlatness,
   playerPadFlatness: terrainPlayerPadFlatness,
   enemyBaseFlatness: terrainEnemyBaseFlatness,
@@ -841,10 +865,11 @@ window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
     };
     unit.dest = null; unit.path = null; unit.pathIdx = 0; unit.atkTarget = null;
     unit.attackMove = false; unit.combatRouteGoal = null; unit.savedAttackMoveRoute = null;
-    unit.g.position.set(-78,0.04,45);
+    const height = terrainHeightAt(-78,45);
+    unit.g.position.set(-78,height + 0.04,45);
     unit.g.rotation.y = 0.4;
     unit.stuckTime = 0;
-    return { x: -78, z: 45, height: terrainHeightAt(-78,45), expectedY: terrainHeightAt(-78,45) + 0.04 };
+    return { x: -78, z: 45, height, expectedY: height + 0.04 };
   },
   unitGrounding() {
     const live = units.filter(unit => !unit.dead && unit.g);

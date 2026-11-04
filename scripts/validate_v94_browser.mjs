@@ -207,6 +207,8 @@ try {
     desktopMetrics.terrain.normalStrength >= 1.15,
     'desktop terrain must expose deterministic 512px PBR maps with bounded sampling and authored relief strength');
   assert.ok(desktopMetrics.terrain?.heightProfile === 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1' &&
+    desktopMetrics.terrain.slopeMaterialProfile === 'SLOPE_EXPOSED_BEDROCK_V1' &&
+    desktopMetrics.terrain.rockExposureVertices >= 2500 &&
     desktopMetrics.terrain.segmentsX === 160 && desktopMetrics.terrain.segmentsZ === 128 &&
     desktopMetrics.terrain.heightRange >= 1.2 && desktopMetrics.terrain.maxSlope <= 0.24 &&
     desktopMetrics.terrain.roadFlatness <= 0.001 && desktopMetrics.terrain.playerPadFlatness <= 0.001 &&
@@ -587,6 +589,7 @@ try {
   assert.ok(desktopReliefProbe?.height >= 0.45, 'desktop live infantry probe must be placed on a real terrain rise');
   await desktop.waitForTimeout(100);
   const desktopGrounding = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.unitGrounding());
+  console.log('DESKTOP_TERRAIN_GROUNDING ' + JSON.stringify(desktopGrounding));
   assert.ok(desktopGrounding?.checkedCount >= 6 && desktopGrounding.probeHeight >= 0.45 &&
     desktopGrounding.probeError <= 0.002 && desktopGrounding.maxError <= 0.002,
     'desktop live units must follow the sculpted terrain without vertical drift');
@@ -651,6 +654,7 @@ try {
   assert.ok(mobileReliefProbe?.height >= 0.45, 'mobile live infantry probe must be placed on a real terrain rise');
   await mobile.waitForTimeout(100);
   const mobileGrounding = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.unitGrounding());
+  console.log('MOBILE_TERRAIN_GROUNDING ' + JSON.stringify(mobileGrounding));
   assert.ok(mobileGrounding?.checkedCount >= 6 && mobileGrounding.probeHeight >= 0.45 &&
     mobileGrounding.probeError <= 0.002 && mobileGrounding.maxError <= 0.002,
     'mobile live units must follow the sculpted terrain without vertical drift');
@@ -739,6 +743,8 @@ try {
     mobileMetrics.terrain.normalStrength >= 1.15,
     'mobile terrain must use deterministic 256px albedo, normal and roughness maps with capped anisotropy and authored relief strength');
   assert.ok(mobileMetrics.terrain?.heightProfile === 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1' &&
+    mobileMetrics.terrain.slopeMaterialProfile === 'SLOPE_EXPOSED_BEDROCK_V1' &&
+    mobileMetrics.terrain.rockExposureVertices >= 1300 &&
     mobileMetrics.terrain.segmentsX === 120 && mobileMetrics.terrain.segmentsZ === 96 &&
     mobileMetrics.terrain.vertexCount >= 11000 && mobileMetrics.terrain.heightRange >= 1.2 &&
     mobileMetrics.terrain.maxSlope <= 0.24 && mobileMetrics.terrain.roadFlatness <= 0.001 &&
