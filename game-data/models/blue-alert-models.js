@@ -1270,10 +1270,10 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
   rig.rightKnee.rotation.x = Math.max(0, Math.sin(rig.phase + Math.PI + .35)) * .46 * intensity;
   // A rifleman keeps both hands on the forward weapon while the legs carry the gait.
   // Small counter-swing preserves life in the upper body without breaking the grip.
-  rig.leftArm.rotation.x = -swing * .12 - .04 + idle;
-  rig.rightArm.rotation.x = swing * .12 - .04 - idle;
-  rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.018*intensity;
-  rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.018*intensity;
+  rig.leftArm.rotation.x = -swing * .08 - .02 + idle;
+  rig.rightArm.rotation.x = swing * .08 - .02 - idle;
+  rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.012*intensity;
+  rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.012*intensity;
   rig.torso.rotation.z = idle * .55;
   rig.head.rotation.x = idle * .25;
   rig.walkAmount = intensity;
