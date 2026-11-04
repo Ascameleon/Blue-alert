@@ -1676,9 +1676,9 @@ function createLayeredTreeFoliageGeometry() {
     { y: 2.28, branches: 4, branchLength: .45, branchRise: .15, branchDrop: .07, branchRadius: .035, tone: 1.05 }
   ];
   const needleSprays = [
-    { at: .38, length: .34, width: .19, radialOffset: .025, sideOffset: .060, heightOffset: .012, tone: .94 },
-    { at: .70, length: .31, width: .175, radialOffset: .035, sideOffset: .055, heightOffset: .022, tone: 1.00 },
-    { at: .94, length: .25, width: .145, radialOffset: .020, sideOffset: .045, heightOffset: .030, tone: 1.07 }
+    { at: .34, length: .22, width: .115, radialOffset: .020, sideOffset: .055, heightOffset: .008, tone: .94 },
+    { at: .70, length: .20, width: .105, radialOffset: .028, sideOffset: .050, heightOffset: .016, tone: 1.00 },
+    { at: .94, length: .17, width: .090, radialOffset: .018, sideOffset: .042, heightOffset: .024, tone: 1.07 }
   ];
   const positions = [], normals = [], colors = [];
   let branchArms = 0;
@@ -1743,7 +1743,7 @@ function createLayeredTreeFoliageGeometry() {
     }
   };
   let needleBladeCount = 0;
-  const needleBladeCountPerCluster = 4;
+  const needleBladeCountPerCluster = 6;
   const needleBladeTrianglesPerCluster = needleBladeCountPerCluster * 8;
   const appendNeedleTriangle = (a, b, c, tone, variation) => {
     const faceNormal = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
@@ -1763,23 +1763,24 @@ function createLayeredTreeFoliageGeometry() {
       const angle = twist + bladeIndex / needleBladeCountPerCluster * Math.PI * 2;
       const spread = fanSide.clone().multiplyScalar(Math.cos(angle))
         .addScaledVector(fanNormal, Math.sin(angle)).normalize();
+      const verticalBias = ((bladeIndex % 3) - 1) * .075;
       const bladeDirection = axis.clone()
-        .addScaledVector(spread, .24 + (bladeIndex % 2) * .035)
-        .addScaledVector(up, bladeIndex % 2 ? .018 : -.012).normalize();
+        .addScaledVector(spread, .34 + (bladeIndex % 2) * .06)
+        .addScaledVector(up, verticalBias).normalize();
       const bladeReference = Math.abs(bladeDirection.y) > .92 ? new THREE.Vector3(1, 0, 0) : up;
       const bladeSide = bladeDirection.clone().cross(bladeReference).normalize();
       const bladeNormal = bladeDirection.clone().cross(bladeSide).normalize();
       const start = center.clone()
-        .addScaledVector(spread, width * .07)
-        .addScaledVector(bladeDirection, -length * .08);
-      const shoulder = start.clone().addScaledVector(bladeDirection, length * .54);
+        .addScaledVector(spread, width * .14)
+        .addScaledVector(bladeDirection, -length * .10);
+      const shoulder = start.clone().addScaledVector(bladeDirection, length * .48);
       const tip = start.clone().addScaledVector(bladeDirection, length);
-      const halfWidth = width * (.16 + (bladeIndex % 3) * .012);
+      const halfWidth = width * (.22 + (bladeIndex % 3) * .018);
       const left = shoulder.clone().addScaledVector(bladeSide, halfWidth);
       const right = shoulder.clone().addScaledVector(bladeSide, -halfWidth);
-      const ridge = shoulder.clone().addScaledVector(bladeNormal, halfWidth * .22);
+      const ridge = shoulder.clone().addScaledVector(bladeNormal, halfWidth * .28);
       const variation = .91 + Math.sin(twist * 2.1 + bladeIndex * 1.73) * .06;
-      // Paired front/back facets form a thin 3D ridge instead of a flat, camera-dependent card.
+      // Short six-way sprays overlap along each bough; paired facets retain volume from every RTS camera angle.
       appendNeedleTriangle(start, left, ridge, tone, variation);
       appendNeedleTriangle(start, ridge, right, tone, variation * .985);
       appendNeedleTriangle(left, tip, ridge, tone, variation * .97);
@@ -1827,6 +1828,24 @@ function createLayeredTreeFoliageGeometry() {
     }
   }
 
+  // A tapered central leader closes the canopy apex and prevents the branch whorls reading as palm fronds.
+  const leaderBase = new THREE.Vector3(0, 1.96, 0);
+  const leaderP1 = new THREE.Vector3(.014, 2.34, -.008);
+  const leaderP2 = new THREE.Vector3(-.010, 2.76, .010);
+  const leaderTip = new THREE.Vector3(0, 3.20, 0);
+  appendTaperedBranch(leaderBase, leaderP1, leaderP2, leaderTip, .043, 1.02);
+  const leaderSprays = [
+    { y: 2.22, length: .20, width: .110, tone: .99 },
+    { y: 2.53, length: .17, width: .100, tone: 1.04 },
+    { y: 2.82, length: .14, width: .085, tone: 1.08 }
+  ];
+  for (let index = 0; index < leaderSprays.length; index++) {
+    const spray = leaderSprays[index];
+    const center = new THREE.Vector3(0, spray.y, 0);
+    const direction = new THREE.Vector3(0, 1, 0);
+    appendNeedleCluster(spray.length, spray.width, center, direction, spray.tone, index * .41);
+  }
+
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
@@ -1840,10 +1859,13 @@ function createLayeredTreeFoliageGeometry() {
     needleBladeCount,
     needleBladeCountPerCluster,
     needleBladeTrianglesPerCluster,
-    needleProfile: 'TAPERED_3D_NEEDLE_FAN_V2',
+    needleProfile: 'DENSE_LAYERED_CONIFER_SPRAYS_V3',
+    leaderStemCount: 1,
+    leaderSprayClusters: leaderSprays.length,
+    leaderProfile: 'CENTRAL_TERMINAL_LEADER_V1',
     branchTubeSegments: 6,
     branchRadialSegments: 4,
-    canopyProfile: 'CURVED_BRAIDED_CONIFER_V3',
+    canopyProfile: 'DENSE_LAYERED_CONIFER_V4',
     coreConeCount: 0,
     triangleCount: positions.length / 9
   };
@@ -2000,6 +2022,9 @@ window.__BLUE_ALERTS_VEGETATION = Object.freeze({
   needleBladeCountPerCluster: treeFoliageGeometry.userData.needleBladeCountPerCluster,
   needleBladeTrianglesPerCluster: treeFoliageGeometry.userData.needleBladeTrianglesPerCluster,
   needleProfile: treeFoliageGeometry.userData.needleProfile,
+  leaderStemCount: treeFoliageGeometry.userData.leaderStemCount,
+  leaderSprayClusters: treeFoliageGeometry.userData.leaderSprayClusters,
+  leaderProfile: treeFoliageGeometry.userData.leaderProfile,
   branchTubeSegments: treeFoliageGeometry.userData.branchTubeSegments,
   branchRadialSegments: treeFoliageGeometry.userData.branchRadialSegments,
   canopyProfile: treeFoliageGeometry.userData.canopyProfile,
