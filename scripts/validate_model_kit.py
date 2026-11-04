@@ -9,7 +9,7 @@ PREVIEW = Path("game-data/models/preview.html")
 GAME = Path("BLUE_ALERTS_v94_ASSET_INTEGRATION.html")
 REQUIRED_EXPORTS = (
     "createTank", "createInfantry", "updateInfantryAnimation", "createBuilding", "createLandscape",
-    "createTree", "createRock", "createAircraft", "createHelicopter",
+    "createTree", "createRock", "createAircraft", "createHelicopter", "setBuildingSurfaceDetail",
     "createDrone", "createProjectile", "createExplosion", "createMuzzleFlash",
     "createHarvester", "createCitadel", "createRelay", "createOreNode",
 )
@@ -18,7 +18,7 @@ REQUIRED_MODEL = (
     "infantry-assault-rifle", "infantry-torso-rig", "makeArm", "makeLeg",
 )
 REQUIRED_PREVIEW = (
-    "updateInfantryAnimation",
+    "updateInfantryAnimation", "setBuildingSurfaceDetail", "__BLUE_ALERTS_PREVIEW_QA__", "setHqSurfaceDetail",
     "Avion d’attaque", "Hélicoptère d’assaut", "Drone de reconnaissance",
     "Projectile", "Explosion", "Flash de bouche", "createMuzzleFlash", "createAircraft", "createHelicopter",
     "createDrone", "createProjectile", "createExplosion",
@@ -60,6 +60,7 @@ def main():
         "respirator-filter-vent", "respirator-breathing-hose", "gas-mask-chin-guard",
         "angular-pauldron", "articulated-knee-guard", "rifle-top-rail", "rifle-ejection-port",
         "createInfantrySurfaceTextures", "FIELDWEAVE_CERAMIC_MICROSCUFF_V2", "fabricBump", "armorBump", "metalBump",
+        "createBuildingSurfaceTextures", "CAST_CONCRETE_PAINT_MICROWEAR_V1", "surfaceMaterialBindings", "surfaceTextureResolution",
         "head.scale.setScalar(.82)", "helmet shell above is the sole crown surface",
     )
     missing = [name for name in REQUIRED_HERO_PARTS if name not in model]
@@ -126,7 +127,8 @@ def main():
         "commandCoreStations", "geometry.userData.castCommandBunker", "command-core-cast-shell",
         "command-window-recess", "command-glass-pane-", "command-entry-frame",
         "command-entry-door", "command-buttress-left", "command-buttress-right",
-        "command-roof-parapet", "command-annex-vent-louver",
+        "command-roof-parapet", "command-annex-vent-louver", "CAST_CONCRETE_PAINT_MICROWEAR_V1",
+        "createBuildingSurfaceTextures", "surfaceTextureCount", "surfaceMaterialCount", "setBuildingSurfaceDetail",
     )
     missing = [feature for feature in required_command_hq_features if feature not in model]
     if missing:
@@ -137,7 +139,7 @@ def main():
 
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=13", "defenseTurretGeometryProfile", "defenseTurretStationCount", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=14", "defenseTurretGeometryProfile", "defenseTurretStationCount", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")

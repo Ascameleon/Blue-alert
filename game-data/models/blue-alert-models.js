@@ -19,6 +19,74 @@ const mat = (THREE, color, roughness=0.82, metalness=0.12) =>
     reflectivity: 0.62,
     envMapIntensity: metalness > 0.35 ? 1.25 : 0.8
   });
+
+const BUILDING_SURFACE_TEXTURE_CACHE = new WeakMap();
+const createBuildingSurfaceTextures = THREE => {
+  if (typeof document === 'undefined') return null;
+  let cached = BUILDING_SURFACE_TEXTURE_CACHE.get(THREE);
+  if (cached) return cached;
+  const resolution = typeof window !== 'undefined' && window.innerWidth < 700 ? 256 : 512;
+  let seed = 0xB17D1A5;
+  const random = () => { seed = (Math.imul(seed,1664525)+1013904223)>>>0; return seed/4294967296; };
+  const makeTexture = (name,paint,colorMap=false,repeat=1.35) => {
+    const canvas=document.createElement('canvas'); canvas.width=canvas.height=resolution;
+    const context=canvas.getContext('2d'); if(!context) return null;
+    paint(context,resolution,random);
+    const texture=new THREE.CanvasTexture(canvas); texture.name=name;
+    texture.wrapS=texture.wrapT=THREE.RepeatWrapping; texture.repeat.set(repeat,repeat);
+    texture.anisotropy=2;
+    if(colorMap&&THREE.SRGBColorSpace) texture.colorSpace=THREE.SRGBColorSpace;
+    texture.generateMipmaps=true; texture.minFilter=THREE.LinearMipmapLinearFilter;
+    texture.magFilter=THREE.LinearFilter; texture.needsUpdate=true; return texture;
+  };
+  const concreteMap=makeTexture('blue-alert-hq-cast-concrete-albedo',(ctx,size,rand)=>{
+    ctx.fillStyle='#eeeeea';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<1900;i++){const v=Math.round(218+rand()*31);ctx.globalAlpha=.035+rand()*.085;ctx.fillStyle='rgb('+v+','+v+','+Math.max(0,v-2)+')';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,.45+rand()*2.8,.4+rand()*2.1,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<110;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.035+rand()*.07;ctx.strokeStyle=rand()>.5?'#6e716c':'#ffffff';ctx.lineWidth=.35+rand()*.7;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*28,y+(rand()-.5)*5);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },true,1.25);
+  const concreteBumpMap=makeTexture('blue-alert-hq-cast-concrete-pore-relief',(ctx,size,rand)=>{
+    ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<4200;i++){const v=Math.round(104+rand()*55);ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.globalAlpha=.18+rand()*.34;ctx.fillRect(rand()*size,rand()*size,.55+rand()*1.8,.55+rand()*1.5);}
+    for(let i=0;i<150;i++){ctx.globalAlpha=.16+rand()*.18;ctx.strokeStyle=rand()>.5?'#b2b2b2':'#555555';ctx.lineWidth=.4+rand()*.8;const x=rand()*size,y=rand()*size;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*18,y+(rand()-.5)*3);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },false,1.25);
+  const paintMap=makeTexture('blue-alert-hq-painted-armor-wear',(ctx,size,rand)=>{
+    ctx.fillStyle='#eeeeee';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<125;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.12+rand()*.20;ctx.strokeStyle=rand()>.5?'#777777':'#ffffff';ctx.lineWidth=.45+rand()*1.05;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*22,y+(rand()-.5)*4);ctx.stroke();}
+    for(let i=0;i<32;i++){ctx.globalAlpha=.12+rand()*.16;ctx.fillStyle='#7b807b';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,.8+rand()*2.8,.5+rand()*1.8,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;
+  },true,1.45);
+  const paintBumpMap=makeTexture('blue-alert-hq-painted-armor-microrelief',(ctx,size,rand)=>{
+    ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<180;i++){ctx.globalAlpha=.18+rand()*.2;ctx.strokeStyle=rand()>.5?'#b9b9b9':'#555555';ctx.lineWidth=.4+rand()*.9;const x=rand()*size,y=rand()*size;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*16,y+(rand()-.5)*3);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },false,1.45);
+  const metalMap=makeTexture('blue-alert-hq-brushed-metal-albedo',(ctx,size,rand)=>{
+    ctx.fillStyle='#eeeeee';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<420;i++){const y=rand()*size;ctx.globalAlpha=.06+rand()*.12;ctx.strokeStyle=rand()>.5?'#777777':'#ffffff';ctx.lineWidth=.3+rand()*.65;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y+(rand()-.5)*4);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },true,1.2);
+  const metalBumpMap=makeTexture('blue-alert-hq-brushed-metal-relief',(ctx,size,rand)=>{
+    ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<620;i++){const y=rand()*size;ctx.globalAlpha=.10+rand()*.16;ctx.strokeStyle=rand()>.5?'#b5b5b5':'#565656';ctx.lineWidth=.3+rand()*.55;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y+(rand()-.5)*2);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },false,1.2);
+  const roughnessMap=makeTexture('blue-alert-hq-material-roughness',(ctx,size,rand)=>{
+    ctx.fillStyle='#dddddd';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<5200;i++){const v=Math.round(166+rand()*82);ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.globalAlpha=.18+rand()*.3;ctx.fillRect(rand()*size,rand()*size,.7+rand()*1.8,.7+rand()*1.6);}
+    ctx.globalAlpha=1;
+  },false,1.25);
+  cached={concreteMap,concreteBumpMap,paintMap,paintBumpMap,metalMap,metalBumpMap,roughnessMap,resolution};
+  BUILDING_SURFACE_TEXTURE_CACHE.set(THREE,cached);return cached;
+};
+export function setBuildingSurfaceDetail(building,enabled=true){
+  const bindings=building?.userData?.surfaceMaterialBindings||[];if(!bindings.length)return false;
+  const active=Boolean(enabled);
+  for(const binding of bindings){binding.material.map=active?binding.map:null;binding.material.bumpMap=active?binding.bumpMap:null;binding.material.roughnessMap=active?binding.roughnessMap:null;binding.material.bumpScale=active?binding.bumpScale:0;binding.material.needsUpdate=true;}
+  building.userData.surfaceDetailEnabled=active;return true;
+}
+
 const box = (THREE, parent, name, size, position, material, rotation) => {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
   mesh.name = name; mesh.position.set(...position);
@@ -1163,13 +1231,23 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
 }
 
 export function createBuilding(THREE, type='barracks', options={}) {
-  const {team='blue',scale=1}=options, g=new THREE.Group(); g.name='BA_Building_'+type;
+  const {team='blue',scale=1,surfaceDetail=true}=options, g=new THREE.Group(); g.name='BA_Building_'+type;
   let rotatingGun = null, defenseTurretGeometryProfile = null, defenseTurretStationCount = 0;
   let commandCoreGeometryProfile = null, commandCoreProfileVertexCount = 0, commandCoreStationCount = 0;
+  let surfaceTextures = null;
+  const surfaceMaterialBindings = [];
   const faction=teamColor(THREE,team), concrete=mat(THREE,PALETTE.concrete), dark=mat(THREE,PALETTE.dark), glass=mat(THREE,PALETTE.glass), roof=mat(THREE,0x454d49);
   const metal=mat(THREE,PALETTE.metal,0.38,0.72);
   box(THREE,g,'foundation',[3.5,.22,2.8],[0,.11,0],dark);
   if(type==='headquarters') {
+    surfaceTextures=createBuildingSurfaceTextures(THREE);
+    if(surfaceTextures){
+      const bindSurface=(material,map,bumpMap,bumpScale)=>{if(map&&bumpMap&&surfaceTextures.roughnessMap)surfaceMaterialBindings.push({material,map,bumpMap,roughnessMap:surfaceTextures.roughnessMap,bumpScale});};
+      bindSurface(concrete,surfaceTextures.concreteMap,surfaceTextures.concreteBumpMap,.012);
+      bindSurface(roof,surfaceTextures.paintMap,surfaceTextures.paintBumpMap,.006);
+      bindSurface(faction,surfaceTextures.paintMap,surfaceTextures.paintBumpMap,.006);
+      bindSurface(metal,surfaceTextures.metalMap,surfaceTextures.metalBumpMap,.0025);
+    }
     // One continuous depth-lofted cast shell creates a real 3D shoulder break:
     // nose and rear taper in plan, while the roof shoulders descend toward both
     // armored end caps. The original foundation footprint, root transform,
@@ -1343,7 +1421,13 @@ export function createBuilding(THREE, type='barracks', options={}) {
       for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
     }
   }
-  g.userData={kind:'building',buildingType:type,team,rotatingGun,defenseTurretGeometryProfile,defenseTurretStationCount,commandCoreGeometryProfile,commandCoreProfileVertexCount,commandCoreStationCount}; g.scale.setScalar(scale); return g;
+  const surfaceTextureCount=surfaceTextures?Object.values(surfaceTextures).filter(texture=>texture?.isTexture).length:0;
+  g.userData={kind:'building',buildingType:type,team,rotatingGun,defenseTurretGeometryProfile,defenseTurretStationCount,commandCoreGeometryProfile,commandCoreProfileVertexCount,commandCoreStationCount,
+    surfaceFinish:surfaceTextureCount?'CAST_CONCRETE_PAINT_MICROWEAR_V1':'UNTEXTURED_FALLBACK',surfaceTextureCount,
+    surfaceTextureResolution:surfaceTextures?.resolution||0,surfaceMaterialCount:surfaceMaterialBindings.length,
+    surfaceMaterialBindings,surfaceDetailEnabled:false};
+  if(surfaceDetail)setBuildingSurfaceDetail(g,true);
+  g.scale.setScalar(scale); return g;
 }
 
 export function createTree(THREE, options={}) {

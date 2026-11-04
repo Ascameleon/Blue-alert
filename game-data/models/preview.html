@@ -29,7 +29,7 @@ header{padding:12px;gap:8px;align-items:flex-start}
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-import {createTank,createInfantry,updateInfantryAnimation,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode} from './blue-alert-models.js';
+import {createTank,createInfantry,updateInfantryAnimation,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode,setBuildingSurfaceDetail} from './blue-alert-models.js';
 const host=document.querySelector('#view'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9aa9a4);scene.fog=new THREE.Fog(0x9aa9a4,45,125);
 const camera=new THREE.PerspectiveCamera(42,1,.1,300);camera.position.set(9,8,12);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
@@ -39,7 +39,7 @@ scene.add(new THREE.HemisphereLight(0xeaf2f0,0x4b5544,2));
 const sun=new THREE.DirectionalLight(0xfff0d5,3);sun.position.set(8,14,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
 const grid=new THREE.GridHelper(80,80,0x53655e,0x718078);grid.position.y=-.12;scene.add(grid);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0x56684f,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.16;ground.receiveShadow=true;scene.add(ground);
-let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
+let current;let hqSurfaceDetail=true;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
 const desc={
 tank:['Char de combat','Coque monobloc moulée en sept stations, glacis intégré, flancs inclinés, tourelle profilée et chenilles fermées à maillons.'],
 infantry:['Fantassin','Fantassin V4 : volumes anatomiques lissés, plaques composites convexes, casque haute définition, respirateur scellé, bottes à semelles crantées, équipement dorsal et fusil détaillé. Rig d’épaules, coudes, hanches et genoux conservé.'],
@@ -74,7 +74,7 @@ else if(a==='harvester')current=createHarvester(THREE,{team:t});
 else if(a==='citadel')current=createCitadel(THREE,{team:t});
 else if(a==='relay')current=createRelay(THREE,{team:t});
 else if(a==='ore')current=createOreNode(THREE);
-else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
+else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t,surfaceDetail:hqSurfaceDetail});
 scene.add(current);
 const profileTitle=a==='tank'?(t==='red'?'Char RED BASTION':'Char BLUE SENTINEL'):desc[a][0];
 document.querySelector('#title').textContent=profileTitle;
@@ -148,6 +148,8 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     surfaceFinish:current?.userData?.surfaceFinish||null,
     surfaceTextureCount:current?.userData?.surfaceTextureCount||0,
     surfaceMaterialCount:current?.userData?.surfaceMaterialCount||0,
+    surfaceTextureResolution:current?.userData?.surfaceTextureResolution||0,
+    surfaceDetailEnabled:current?.userData?.surfaceDetailEnabled??null,
     headScale:current?.userData?.headScale??null,
     bodyGeometryProfile:current?.userData?.bodyGeometryProfile||null,
     armorGeometryProfile:current?.userData?.armorGeometryProfile||null,
@@ -175,5 +177,6 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     canvasHeight:renderer.domElement.height
   };
 };
+window.__BLUE_ALERTS_PREVIEW_QA__=Object.freeze({setHqSurfaceDetail(enabled){if(document.querySelector('#asset').value!=='hq')throw new Error('HQ surface QA requires the headquarters model.');hqSurfaceDetail=Boolean(enabled);if(!setBuildingSurfaceDetail(current,hqSurfaceDetail))throw new Error('HQ surface material bindings are unavailable.');return window.__BLUE_ALERTS_PREVIEW__();}});
 let previewClock=0;renderer.setAnimationLoop(()=>{previewClock+=.016;if(current?.userData?.animationRig)updateInfantryAnimation(current.userData.animationRig,.016,.85);if(current?.userData?.rotatingGun)current.userData.rotatingGun.rotation.y+=.006;if(current?.userData?.rotatingGun?.name==='rotating-radar')current.userData.rotatingGun.rotation.y+=.018;current?.traverse(o=>{if(o.userData?.emissivePulse&&o.material?.emissiveIntensity!==undefined)o.material.emissiveIntensity=.55+Math.sin(previewClock*3.2)*.45;});if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;if(current?.userData?.collectionDrum)current.userData.collectionDrum.rotation.x+=.08;if(current?.userData?.reactorRing)current.userData.reactorRing.rotation.z+=.008;if(current?.userData?.core)current.userData.core.rotation.y+=.012;if(current?.userData?.captureHalo)current.userData.captureHalo.rotation.z+=.008;controls.update();renderer.render(scene,camera);});
 </script></body></html>

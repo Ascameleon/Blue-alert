@@ -324,7 +324,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 <script type="module">
 let BLUE_MODELS = null;
 try {
-  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=13');
+  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=14');
 } catch (assetError) {
   console.warn('BLUE ALERTS: bibliothèque de modèles indisponible, géométries natives conservées.', assetError);
 }
@@ -4421,12 +4421,28 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       camDist = 16;
       camVelX = 0;
       camVelZ = 0;
+      const headquartersLabel = scene.getObjectByName('player-hq-label');
+      if (headquartersLabel) headquartersLabel.visible = false;
+      const mobileBadge = document.getElementById('mobileHQBadge');
+      if (mobileBadge) mobileBadge.style.display = 'none';
       return {
         ...cameraQaSnapshot(),
         modelProfile: model.userData.commandCoreGeometryProfile || null,
         profileVertexCount: model.userData.commandCoreProfileVertexCount || 0,
-        stationCount: model.userData.commandCoreStationCount || 0
+        stationCount: model.userData.commandCoreStationCount || 0,
+        surfaceFinish: model.userData.surfaceFinish || null,
+        surfaceTextureCount: model.userData.surfaceTextureCount || 0,
+        surfaceTextureResolution: model.userData.surfaceTextureResolution || 0,
+        surfaceMaterialCount: model.userData.surfaceMaterialCount || 0,
+        surfaceDetailEnabled: model.userData.surfaceDetailEnabled === true
       };
+    },
+    setHeadquartersSurfaceDetail(enabled) {
+      const model = playerHQ?.g?.children?.find(child => child.userData?.buildingType === 'headquarters');
+      if (!model) throw new Error('The live player headquarters model is not available.');
+      const applied = BLUE_MODELS?.setBuildingSurfaceDetail?.(model, Boolean(enabled));
+      if (!applied) throw new Error('The live headquarters surface maps are unavailable.');
+      return {surfaceDetailEnabled:model.userData.surfaceDetailEnabled===true,surfaceTextureCount:model.userData.surfaceTextureCount||0,surfaceTextureResolution:model.userData.surfaceTextureResolution||0,surfaceMaterialCount:model.userData.surfaceMaterialCount||0};
     }
   });
   const infantryProbe = () => {

@@ -280,6 +280,12 @@ try {
   assert.ok(commandHq.physicalMaterialCount>0 && commandHq.drawCalls<=70 && commandHq.triangleCount<6000,
     'HQ cast architecture must remain PBR-lit and within the browser geometry budget');
   await page.screenshot({path:output+'/desktop-hq.png',fullPage:true});
+  const hqSurfaceBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setHqSurfaceDetail(false));
+  assert.equal(hqSurfaceBaseline?.surfaceDetailEnabled,false);assert.equal(hqSurfaceBaseline?.surfaceTextureCount,7);assert.equal(hqSurfaceBaseline?.surfaceMaterialCount,4);assert.equal(hqSurfaceBaseline?.surfaceTextureResolution,512);
+  await page.waitForTimeout(350);await page.screenshot({path:output+'/desktop-hq-surface-baseline.png',fullPage:true});
+  const hqSurfaceDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setHqSurfaceDetail(true));
+  assert.equal(hqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(hqSurfaceDetail?.surfaceTextureResolution,512);
+  await page.waitForTimeout(350);await page.screenshot({path:output+'/desktop-hq-surface-detail.png',fullPage:true});
 
   await page.selectOption('#asset','controlTower');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='controlTower' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=30,null,{timeout:10000});
@@ -345,6 +351,12 @@ try {
     mobileCommandHq.commandCoreProfileVertexCount===12 && mobileCommandHq.commandCoreStationCount===6 && mobileCommandHq.drawCalls<=70,
     'mobile HQ must render the same cast bunker inside the mobile preview budget');
   await page.screenshot({path:output+'/mobile-hq-390x844.png',fullPage:true});
+  const mobileHqSurfaceBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setHqSurfaceDetail(false));
+  assert.equal(mobileHqSurfaceBaseline?.surfaceDetailEnabled,false);assert.equal(mobileHqSurfaceBaseline?.surfaceTextureCount,7);assert.equal(mobileHqSurfaceBaseline?.surfaceTextureResolution,256);
+  await page.waitForTimeout(300);await page.screenshot({path:output+'/mobile-hq-surface-baseline-390x844.png',fullPage:true});
+  const mobileHqSurfaceDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setHqSurfaceDetail(true));
+  assert.equal(mobileHqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(mobileHqSurfaceDetail?.surfaceTextureResolution,256);
+  await page.waitForTimeout(300);await page.screenshot({path:output+'/mobile-hq-surface-detail-390x844.png',fullPage:true});
   console.log('MOBILE_LAYOUT '+JSON.stringify(mobile));
   console.log('VISUAL_BASELINE '+JSON.stringify(baselineMetrics));
   assert.ok(mobile.documentWidth<=mobile.viewportWidth+1,'mobile preview must not overflow horizontally');
@@ -353,7 +365,7 @@ try {
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
-  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','baseline-hq-desktop.png','baseline-hq-mobile-390x844.png','baseline-tank-desktop.png','baseline-tank-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-hq.png','desktop-control-tower.png','mobile-hq-390x844.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
+  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','baseline-hq-desktop.png','baseline-hq-mobile-390x844.png','baseline-tank-desktop.png','baseline-tank-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-hq.png','desktop-hq-surface-baseline.png','desktop-hq-surface-detail.png','desktop-control-tower.png','mobile-hq-390x844.png','mobile-hq-surface-baseline-390x844.png','mobile-hq-surface-detail-390x844.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
   for(const file of files) assert.ok((await stat(output+'/'+file)).size>10000,'screenshot must contain rendered evidence: '+file);
   console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files,baselineHqMetrics,commandHq},null,2));
 } catch(error) {
