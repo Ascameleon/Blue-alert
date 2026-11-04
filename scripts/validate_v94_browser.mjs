@@ -598,10 +598,18 @@ try {
     desktopTreeDetail.trunkHeight >= 2.6 && desktopTreeDetail.branchWhorls === 4 &&
     desktopTreeDetail.branchArms === 21 && desktopTreeDetail.needleSpraysPerArm === 3 &&
     desktopTreeDetail.needleClustersPerArm === 6 &&
-    desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 6 &&
-    desktopTreeDetail.needleClusters === 129 && desktopTreeDetail.branchTubeSegments === 6 &&
+    desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 6 + desktopTreeDetail.leaderSprayClusters &&
+    desktopTreeDetail.needleClusters === 129 &&
+    desktopTreeDetail.needleBladeCount === 774 &&
+    desktopTreeDetail.needleBladeCountPerCluster === 6 &&
+    desktopTreeDetail.needleBladeTrianglesPerCluster === 48 &&
+    desktopTreeDetail.needleProfile === 'DENSE_LAYERED_CONIFER_SPRAYS_V3' &&
+    desktopTreeDetail.leaderStemCount === 1 &&
+    desktopTreeDetail.leaderSprayClusters === 3 &&
+    desktopTreeDetail.leaderProfile === 'CENTRAL_TERMINAL_LEADER_V1' &&
+    desktopTreeDetail.branchTubeSegments === 6 &&
     desktopTreeDetail.branchRadialSegments === 4 &&
-    desktopTreeDetail.foliageTriangles >= 3200 && desktopTreeDetail.foliageTriangles <= 6000,
+    desktopTreeDetail.foliageTriangles === 7248,
     'desktop live V94 must render the curved four-whorl conifer, flared bark trunk and bounded instanced geometry');
   console.log('DESKTOP_CONIFER_V3 ' + JSON.stringify(desktopTreeDetail));
   const desktopTreeBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
@@ -1191,10 +1199,18 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     mobileTreeDetail.trunkHeight >= 2.6 && mobileTreeDetail.branchWhorls === 4 &&
     mobileTreeDetail.branchArms === 21 && mobileTreeDetail.needleSpraysPerArm === 3 &&
     mobileTreeDetail.needleClustersPerArm === 6 &&
-    mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 6 &&
-    mobileTreeDetail.needleClusters === 129 && mobileTreeDetail.branchTubeSegments === 6 &&
+    mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 6 + mobileTreeDetail.leaderSprayClusters &&
+    mobileTreeDetail.needleClusters === 129 &&
+    mobileTreeDetail.needleBladeCount === 774 &&
+    mobileTreeDetail.needleBladeCountPerCluster === 6 &&
+    mobileTreeDetail.needleBladeTrianglesPerCluster === 48 &&
+    mobileTreeDetail.needleProfile === 'DENSE_LAYERED_CONIFER_SPRAYS_V3' &&
+    mobileTreeDetail.leaderStemCount === 1 &&
+    mobileTreeDetail.leaderSprayClusters === 3 &&
+    mobileTreeDetail.leaderProfile === 'CENTRAL_TERMINAL_LEADER_V1' &&
+    mobileTreeDetail.branchTubeSegments === 6 &&
     mobileTreeDetail.branchRadialSegments === 4 &&
-    mobileTreeDetail.foliageTriangles >= 3200 && mobileTreeDetail.foliageTriangles <= 6000,
+    mobileTreeDetail.foliageTriangles === 7248,
     'mobile V94 must render the same curved four-whorl conifer within the instanced geometry budget');
   console.log('MOBILE_CONIFER_V3 ' + JSON.stringify(mobileTreeDetail));
   const mobileTreeBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
