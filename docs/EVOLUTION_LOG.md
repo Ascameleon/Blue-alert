@@ -587,3 +587,15 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Correction: update that final stale static assertion to require `SCULPTED_BATTLEFIELD_HEIGHTFIELD_V3`. No runtime code was changed in this correction. The exact-head workflow must rerun before the V3 terrain can be judged.
 - No branch write was made until workflow #41808357113 had completed. No merge, version/release or paid service. Budget remains 0 €.
 - Static validator correction commit: `8c5c9618fd54a0395f99d82aa1483ae2343eb23c`.
+
+
+## Engine delivery correction — self-contained V94 WebGL runtime (2026-11-04)
+
+- Preflight: branch `art/v94-terrain-pbr-relief-20261103` was at `88c87551ebe816f9a29c94442c93c023453dabe4`; all workflows listed for this branch had completed. PR #50 remains open/draft against unchanged `main` `462b6d448c810485b597effcf3e60c708dbbd48e`. No concurrent branch run was active.
+- Root cause confirmed in source: the standalone HTML embedded the model kit but left Three.js loaded from jsDelivr/unpkg/cdnjs. When all CDN imports failed, the runtime deliberately replaced the viewport with a simplified 2D fallback. This made the distributed “single-file” game network-dependent and could present as a 2D game on a disconnected or restricted mobile browser.
+- Change: the standalone builder now uses esbuild to bundle Three.js 0.160.0 and the existing procedural model kit directly into the single HTML artifact. The standalone manifest records zero external runtime dependencies and `offline_3d_runtime: true`. The normal source page retains its CDN fallback strategy; the standalone game no longer needs it.
+- Added runtime diagnostics for the actual Three.js revision, WebGLRenderer, PerspectiveCamera, perspective projection and WebGL capability. Added a dedicated offline browser gate that blocks all non-local network requests, verifies the real WebGL context and perspective camera, starts the mission, and captures desktop and 390×844 mobile gameplay screenshots.
+- Workflow now installs the pinned Three.js version and esbuild before building, then runs the offline 3D browser gate before the existing desktop/mobile gameplay suite.
+- Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/build_single_html.mjs`, `scripts/validate_v94_bundle_browser.mjs` (new), `.github/workflows/openrts-build.yml`, and this log.
+- Evidence boundary: this is an engine-delivery/runtime dependency correction, not yet proof of commercial-grade graphics or a complete native OpenRTS port. Exact-head build, offline WebGL browser screenshots, existing V94 gameplay tests and separate OpenRTS checks are pending.
+- No merge, release or version created. No paid assets/APIs/services. Budget remains 0 €.

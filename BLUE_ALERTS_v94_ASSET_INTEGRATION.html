@@ -463,6 +463,16 @@ studioEnvironment.colorSpace = THREE.SRGBColorSpace;
 studioEnvironment.needsUpdate = true;
 scene.environment = studioEnvironment;
 viewport.appendChild(renderer.domElement);
+window.__BLUE_ALERTS_ENGINE__ = Object.freeze({
+  engine: 'Three.js',
+  threeRevision: THREE.REVISION,
+  renderer: 'WebGLRenderer',
+  camera: 'PerspectiveCamera',
+  projection: 'perspective',
+  webgl2: renderer.capabilities.isWebGL2,
+  maxTextureSize: renderer.capabilities.maxTextureSize,
+  pixelRatio: renderer.getPixelRatio()
+});
 renderer.domElement.addEventListener('webglcontextlost', event => {
   event.preventDefault();
   const existing = document.getElementById('blueRuntimeError');
