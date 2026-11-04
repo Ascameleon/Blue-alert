@@ -610,3 +610,12 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - This is a standalone-delivery and test-diagnostics correction, not a claim of improved battlefield graphics. Exact-head revalidation remains required. No merge, version or release. Budget remains 0 €.
 
 - The post-start diagnostic patch is committed as `b4dd2cbde5341a8845df3599f271a9443336b695` in `scripts/validate_v94_bundle_browser.mjs`. It explicitly verifies that the start overlay closes, captures the combat QA state, engine diagnostics, page errors, and a desktop/mobile failure screenshot if simulation time does not advance. This commit is part of the final candidate head; exact-head CI has not yet run on it.
+
+
+## Exact-head offline WebGL evidence — 2026-11-04
+
+- Candidate head `f7517ec700bc979e30126b318f7dabb35d7fa810` ran as workflow [41813749521](https://github.com/Ascameleon/Blue-alert/actions/runs/41813749521). Prototype, V94 static checks, model-kit checks, scenario preparation and standalone HTML bundling passed.
+- The offline browser initialized bundled Three.js r160, `WebGLRenderer`, `PerspectiveCamera`, WebGL2, and a live canvas. No external requests, page errors or console errors were recorded. After the start click, the mission state was `started=true`, `frameCount=29`, `time=0.4749`, with the document visible and focused. The gate failed only because it required `time>0.5` within 10 seconds; the actual state was just below that threshold.
+- Fresh desktop capture from this exact head: artifact `13313262978`, `v94-bundle/desktop-start-failure.png`. It is a real current-engine gameplay frame and was inspected against the accepted main baseline. It shows a closer opening camera and visible road/terrain wear and more defined tank surfaces, but the scene remains low-poly/stylized; this single desktop frame is not sufficient to accept a material overall visual upgrade or the V3 ridge. No mobile capture exists for this run.
+- Calibration: the offline gate now requires the game to be started, at least 20 animation frames, and at least 0.4 seconds of simulation time. It still verifies live gameplay progression while avoiding a false failure from the slow software-WebGL frame cadence. This does not change game runtime visuals.
+- Changed test file: `scripts/validate_v94_bundle_browser.mjs`. Exact-head rerun, mobile evidence and full gameplay/OpenRTS checks remain pending. No merge, release or version. Budget remains 0 €.

@@ -95,7 +95,10 @@ try {
     await page.locator('#btnStart').click();
     await page.waitForFunction(() =>
       document.getElementById('startOverlay')?.classList.contains('hidden'), null, { timeout: 5000 });
-    await page.waitForFunction(() => window.__BLUE_ALERTS_COMBAT_QA__?.state()?.time > 0.5, null, { timeout: 10000 }).catch(async error => {
+    await page.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state?.started && state?.frameCount >= 20 && state?.time > 0.4;
+    }, null, { timeout: 10000 }).catch(async error => {
       const state = await page.evaluate(() => ({
         combatQaAvailable: !!window.__BLUE_ALERTS_COMBAT_QA__,
         combatState: window.__BLUE_ALERTS_COMBAT_QA__?.state?.() || null,
@@ -114,7 +117,8 @@ try {
         JSON.stringify({ state, runtimeDiagnostics, pageErrors, externalRequests }) + '; ' + error.message);
     });
     await page.screenshot({ path: output + '/' + viewport.name + '-standalone-webgl.png', fullPage: false, animations: 'disabled', timeout: 60000 });
-    console.log(viewport.name.toUpperCase() + '_OFFLINE_3D ' + JSON.stringify(engine));
+    const gameplayState = await page.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state() || null);
+    console.log(viewport.name.toUpperCase() + '_OFFLINE_3D ' + JSON.stringify({ engine, gameplayState }));
     await page.close();
   }
   assert.deepEqual(externalRequests, [], 'standalone V94 runtime must not request any external network resource: ' + JSON.stringify(externalRequests));
