@@ -649,3 +649,11 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Exact-head workflow [41838318598](https://github.com/Ascameleon/Blue-alert/actions/runs/41838318598) stopped in `scripts/validate_v94.py` before browser rendering. The static validator expected optional chaining on the A/B detail variable, while the browser test correctly used a direct property after asserting the object exists. No screenshot artifact was produced; the browser, standalone gameplay and OpenRTS stages were skipped, not passed.
 - Corrected the two validator tokens to match the actual desktop/mobile A/B assertions and made the failure message describe the missing browser contract generically. No runtime or model code changed in this correction.
 - Exact final-head validation and fresh desktop/mobile screenshot inspection are still required. The field-strata candidate remains unaccepted; no version or release.
+
+
+## Field-strata runtime initialization correction (2026-11-04)
+
+- Exact-head workflow [41838947496](https://github.com/Ascameleon/Blue-alert/actions/runs/41838947496) passed the prototype, V94 static validation, model kit, skirmish preparation and standalone HTML build, then failed in the offline bundled-WebGL browser gate before mission start. The runtime error overlay intercepted the start button; the only uploaded artifact, [13326004699](https://github.com/Ascameleon/Blue-alert/actions/runs/41838947496/artifacts/13326004699), was a 594-byte empty smoke-test ZIP, not screenshot evidence.
+- Root cause: the terrain geometry's color BufferAttribute referenced `terrainFieldColors` before the array was initialized. The new field palette had been inserted after the existing geometry setup. Moved the color-attribute binding to immediately after the field array and its diagnostics are created.
+- Added a short post-initialization settle and explicit runtime/startup overlay assertions to the offline browser gate, so any future startup exception is reported with its actual message instead of a 30-second click-interception timeout.
+- No screenshots, gameplay assertions or OpenRTS/native stages were completed on this head. The field-strata candidate remains unaccepted; no version or release.

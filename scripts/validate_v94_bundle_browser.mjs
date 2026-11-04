@@ -70,6 +70,7 @@ try {
       throw new Error(viewport.name + ' standalone WebGL startup timed out: ' +
         JSON.stringify({ state, runtimeDiagnostics, externalRequests }) + '; ' + error.message);
     });
+    await page.waitForTimeout(250);
     const engine = await page.evaluate(() => {
       const canvas = document.querySelector('#viewport canvas');
       const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
@@ -92,6 +93,8 @@ try {
     assert.equal(engine.diagnostics.camera, 'PerspectiveCamera', viewport.name + ' must use a perspective 3D camera');
     assert.equal(engine.diagnostics.threeRevision, '160', viewport.name + ' must run bundled Three.js r160');
     assert.ok(engine.webglContext && engine.canvas && !engine.fallback2D, viewport.name + ' must render WebGL without 2D fallback: ' + JSON.stringify(engine));
+    assert.equal(engine.runtimeError, null, viewport.name + ' must not show a runtime error before mission start: ' + engine.runtimeError);
+    assert.equal(engine.startupError, null, viewport.name + ' must not show a startup error before mission start: ' + engine.startupError);
     await page.locator('#btnStart').click();
     await page.waitForFunction(() =>
       document.getElementById('startOverlay')?.classList.contains('hidden'), null, { timeout: 5000 });

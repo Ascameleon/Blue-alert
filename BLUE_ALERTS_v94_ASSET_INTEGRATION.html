@@ -698,7 +698,6 @@ for (let row = 0; row <= terrainSegmentsZ; row++) {
   }
 }
 terrainPositions.needsUpdate = true;
-terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainFieldColors, 3));
 terrainGeometry.computeVertexNormals();
 terrainGeometry.computeBoundingBox();
 terrainGeometry.computeBoundingSphere();
@@ -770,6 +769,7 @@ const terrainBaselineColorChecksum = terrainColorChecksum(terrainBaselineColors)
 const terrainFieldColorChecksum = terrainColorChecksum(terrainFieldColors);
 terrainGeometry.userData.vertexTintProfile = 'DOMAIN_WARPED_FIELD_STRATA_V1';
 terrainGeometry.userData.fieldCoverage = terrainFieldCoverage;
+terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainFieldColors, 3));
 terrainGeometry.userData.segmentsX = terrainSegmentsX;
 terrainGeometry.userData.segmentsZ = terrainSegmentsZ;
 function createTerrainSurfaceTextures(size) {
