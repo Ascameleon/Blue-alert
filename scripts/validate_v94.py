@@ -171,7 +171,7 @@ def main():
         "instanced-hazard-barrels",
         "window.__BLUE_ALERTS_ENVIRONMENT",
         "function insideIndustrialSet(",
-        "exclusionZones:[",
+        "exclusionZones: INDUSTRIAL_CLEARANCE_ZONES,",
         "clearanceZones:industrialYard.exclusionZones.length",
         "runtimeIntegrated:true",
         "blocksMovement:false",
@@ -233,6 +233,10 @@ def main():
     if "new THREE.PlaneGeometry(200, 160, terrainSegmentsX, terrainSegmentsZ)" not in terrain_section or "terrainPositions.setZ(i, height)" not in terrain_section or "terrainGeometry.computeVertexNormals()" not in terrain_section or "heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1'" not in terrain_section:
         raise SystemExit("FAIL: terrain must use a deterministic sculpted heightfield with computed normals and a bounded geometry profile")
     if "terrainHeightAt(u.g.position.x,u.g.position.z) + 0.04" not in source or "treeDummy.position.set(x, terrainHeightAt(x,z), z)" not in source or "rockDummy.position.set(x, terrainHeightAt(x,z) + radius * verticalScale * 0.88, z)" not in source or "TERRAIN_FLAT_ZONES" not in terrain_section:
+        raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
+    if "unit.g.position.set(-70, terrainHeightAt(-70,50) + 0.04, 50)" not in source or "camTarget.set(-70, terrainHeightAt(-70,50) + 0.95, 50)" not in source:
+        raise SystemExit("FAIL: the live infantry gait probe must begin on the authored terrain and frame its actual elevation")
+    if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
     browser_source = BROWSER_TEST.read_text(encoding="utf-8")
     if "async function captureViewport(page, path)" not in browser_source or "png.readUInt32BE(16)" not in browser_source or "png.readUInt32BE(20)" not in browser_source or "mobile-v94-sculpted-terrain-390x844.png" not in browser_source:

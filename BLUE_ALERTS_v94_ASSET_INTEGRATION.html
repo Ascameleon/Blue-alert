@@ -4714,7 +4714,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     walkProbe() {
       const unit = infantryProbe();
       if (!unit) throw new Error('A live blue infantry model with an animation rig is required.');
-      unit.g.position.set(-70, 0.04, 50);
+      unit.g.position.set(-70, terrainHeightAt(-70,50) + 0.04, 50);
       unit.g.rotation.y = 0;
       unit.speed = 2.9;
       unit.dmg = 0;
@@ -4725,7 +4725,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       unit.combatRouteGoal = null;
       unit.stuckTime = 0;
       unit.dest = { x: -64, z: 50 };
-      camTarget.set(-70, 0, 50);
+      camTarget.set(-70, terrainHeightAt(-70,50) + 0.95, 50);
       camDist = 15;
       return infantrySnapshot();
     }

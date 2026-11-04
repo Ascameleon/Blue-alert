@@ -523,7 +523,10 @@ try {
     Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04 &&
     desktopInfantryGait.weaponForwardAlignment>.995 && desktopInfantryGait.leftGripError<.055 && desktopInfantryGait.rightGripError<.055,
     'desktop V94 infantry must animate while retaining the forward rifle and both hand grips');
-  console.log('DESKTOP_INFANTRY_GAIT ' + JSON.stringify({ start: infantryWalkStart, state: desktopInfantryGait }));
+  const desktopGaitGrounding = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.unitGrounding());
+  assert.ok(desktopGaitGrounding?.maxError <= 0.002,
+    'desktop infantry gait must remain grounded while traversing the sculpted terrain');
+  console.log('DESKTOP_INFANTRY_GAIT ' + JSON.stringify({ start: infantryWalkStart, state: desktopInfantryGait, grounding: desktopGaitGrounding }));
   await captureViewport(desktop, output + '/desktop-v94-infantry-gait.png');
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
   assert.ok(desktopTreeDetail?.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
@@ -1063,7 +1066,10 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     Math.abs(mobileInfantryGait.leftArm - mobileInfantryGait.rightArm) > 0.035 &&
     mobileInfantryGait.weaponForwardAlignment>.995 && mobileInfantryGait.leftGripError<.06 && mobileInfantryGait.rightGripError<.06,
     'mobile V94 infantry must animate while retaining the forward rifle and both hand grips');
-  console.log('MOBILE_INFANTRY_GAIT ' + JSON.stringify({ start: mobileInfantryWalkStart, state: mobileInfantryGait }));
+  const mobileGaitGrounding = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.unitGrounding());
+  assert.ok(mobileGaitGrounding?.maxError <= 0.002,
+    'mobile infantry gait must remain grounded while traversing the sculpted terrain');
+  console.log('MOBILE_INFANTRY_GAIT ' + JSON.stringify({ start: mobileInfantryWalkStart, state: mobileInfantryGait, grounding: mobileGaitGrounding }));
   await captureViewport(mobile, output + '/mobile-v94-infantry-gait-390x844.png');
   await captureViewport(mobile, output + '/mobile-v94-terrain-surface-390x844.png');
 
