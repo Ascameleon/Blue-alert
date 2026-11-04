@@ -455,8 +455,8 @@ def main():
         "desktop-v94-gameplay-field-detail.png",
         "mobile-v94-gameplay-field-baseline-390x844.png",
         "mobile-v94-gameplay-field-detail-390x844.png",
-        "desktopFieldDetail?.colorChecksum !== desktopFieldBaseline?.colorChecksum",
-        "mobileFieldDetail?.colorChecksum !== mobileFieldBaseline?.colorChecksum",
+        "desktopFieldDetail.colorChecksum !== desktopFieldBaseline?.colorChecksum",
+        "mobileFieldDetail.colorChecksum !== mobileFieldBaseline?.colorChecksum",
         "focusHeadquarters",
         "desktop-v94-headquarters-focus.png",
         "mobile-v94-headquarters-focus-390x844.png",
@@ -485,7 +485,7 @@ def main():
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
-        raise SystemExit("FAIL: desktop/mobile browser acceptance must verify a target-specific death explosion: " + ", ".join(missing))
+        raise SystemExit("FAIL: desktop/mobile browser acceptance is missing required assertions or screenshot evidence: " + ", ".join(missing))
     if browser_test.count("{ timeout: 90000, polling: 50 }") != 3:
         raise SystemExit("FAIL: desktop, isolated building and mobile VFX cleanup waits must allow slow software-WebGL frame cadence without changing the zero-effect acceptance condition")
 

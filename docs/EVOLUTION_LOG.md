@@ -641,3 +641,11 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Added live runtime coverage/checksum diagnostics and desktop 1440×900 plus mobile 390×844 A/B screenshots at the normal gameplay camera. Each pair restores the accepted baseline and applies the field strata without changing camera pose.
 - Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, and this log. No external assets, paid APIs, credits or services; budget remains 0 €.
 - Status: exact-head validation and screenshot inspection are pending. This is a candidate visual improvement, not an accepted release, not a new game version, and not evidence of commercial-grade quality. The exact commit SHA and artifact paths will be appended only after the final-head workflow has completed and its captures have been inspected.
+
+
+## Field-strata validation correction (2026-11-04)
+
+- Implementation commit: `82deeba4ce3d4098672325ab0e1a34e627917628` on `art/v94-terrain-pbr-relief-20261103`.
+- Exact-head workflow [41838318598](https://github.com/Ascameleon/Blue-alert/actions/runs/41838318598) stopped in `scripts/validate_v94.py` before browser rendering. The static validator expected optional chaining on the A/B detail variable, while the browser test correctly used a direct property after asserting the object exists. No screenshot artifact was produced; the browser, standalone gameplay and OpenRTS stages were skipped, not passed.
+- Corrected the two validator tokens to match the actual desktop/mobile A/B assertions and made the failure message describe the missing browser contract generically. No runtime or model code changed in this correction.
+- Exact final-head validation and fresh desktop/mobile screenshot inspection are still required. The field-strata candidate remains unaccepted; no version or release.
