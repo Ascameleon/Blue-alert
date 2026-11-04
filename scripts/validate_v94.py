@@ -132,7 +132,7 @@ def main():
     if missing:
         raise SystemExit("FAIL: 3D combat rig integration missing: " + ", ".join(missing))
     required_infantry_grip = ("weaponForwardAlignment", "leftGripError", "rightGripError", "weaponForwardAxis")
-    missing = [name for name in required_infantry_grip if name not in game]
+    missing = [name for name in required_infantry_grip if name not in source]
     if missing:
         raise SystemExit("FAIL: live V94 infantry forward weapon grip diagnostics missing: " + ", ".join(missing))
 
