@@ -136,7 +136,10 @@ def main():
     missing = [feature for feature in required_combat_features if feature not in source]
     if missing:
         raise SystemExit("FAIL: 3D combat rig integration missing: " + ", ".join(missing))
-    required_tank_armor = ("hullNormalProfile", "turretNormalProfile", "CREASED_HARD_SURFACE_V1", "camTarget.copy(tankCameraRestore.target)", "camDist=isMobile?7.5:8.5")
+    required_tank_armor = ("hullNormalProfile", "turretNormalProfile", "liveTankModel", "camTarget.copy(tankCameraRestore.target)", "camDist=isMobile?7.5:8.5")
+    model_source = MODEL_LIBRARY.read_text(encoding="utf-8")
+    if "CREASED_HARD_SURFACE_V1" not in model_source:
+        raise SystemExit("FAIL: V94 tank model library must contain crease-aware hard-surface normals")
     missing = [feature for feature in required_tank_armor if feature not in source]
     if missing:
         raise SystemExit("FAIL: live V94 tank armor crease-normal QA missing: " + ", ".join(missing))

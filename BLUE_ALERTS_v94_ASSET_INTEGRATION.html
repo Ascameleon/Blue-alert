@@ -4770,9 +4770,10 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     return count;
   };
   let tankCameraRestore = null;
+  const liveTankModel = unit => unit?.g?.children?.find(child => child.userData?.hullNormalProfile) || null;
   const tankArmorSnapshot = () => {
-    const unit = units.find(candidate => !candidate.dead && candidate.g?.userData?.hullNormalProfile);
-    const model = unit?.g?.userData;
+    const unit = units.find(candidate => !candidate.dead && liveTankModel(candidate));
+    const model = liveTankModel(unit)?.userData;
     if (!model) return null;
     return {
       factionProfile:model.factionProfile,
@@ -4791,8 +4792,8 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
   window.__BLUE_ALERTS_TANK_QA__ = Object.freeze({
     snapshot:tankArmorSnapshot,
     focus() {
-      const unit = units.find(candidate => !candidate.dead && candidate.g?.userData?.hullNormalProfile);
-      if (!unit) return null;
+      const unit = units.find(candidate => !candidate.dead && liveTankModel(candidate));
+      if (!unit || !liveTankModel(unit)) return null;
       tankCameraRestore={target:camTarget.clone(),yaw:camYaw,pitch:camPitch,distance:camDist};
       camTarget.set(unit.g.position.x,unit.g.position.y+0.65,unit.g.position.z);
       camYaw=0.62; camPitch=0.88; camDist=isMobile?7.5:8.5;
