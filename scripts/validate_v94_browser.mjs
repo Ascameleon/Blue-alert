@@ -225,16 +225,22 @@ try {
   assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
     desktopMetrics.vegetation.trunkInstances === desktopMetrics.vegetation.treeCount &&
     desktopMetrics.vegetation.foliageInstances === desktopMetrics.vegetation.treeCount &&
-    desktopMetrics.vegetation.foliageTiers === 3 &&
-    desktopMetrics.vegetation.branchWhorls === 3 &&
-    desktopMetrics.vegetation.branchArms >= 17 &&
+    desktopMetrics.vegetation.foliageTiers === 4 &&
+    desktopMetrics.vegetation.branchWhorls === 4 &&
+    desktopMetrics.vegetation.branchArms === 21 &&
     desktopMetrics.vegetation.needleSpraysPerArm === 3 &&
-    desktopMetrics.vegetation.needleClusters === desktopMetrics.vegetation.branchArms * 3 &&
-    desktopMetrics.vegetation.needleClusters >= 51 &&
-    desktopMetrics.vegetation.foliageTriangles >= 1500 &&
+    desktopMetrics.vegetation.needleClustersPerArm === 6 &&
+    desktopMetrics.vegetation.needleClusters === 126 &&
+    desktopMetrics.vegetation.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
+    desktopMetrics.vegetation.coreConeCount === 0 &&
+    desktopMetrics.vegetation.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
+    desktopMetrics.vegetation.trunkHeight >= 2.6 &&
+    desktopMetrics.vegetation.branchTubeSegments === 6 &&
+    desktopMetrics.vegetation.branchRadialSegments === 4 &&
+    desktopMetrics.vegetation.foliageTriangles >= 3200 && desktopMetrics.vegetation.foliageTriangles <= 6000 &&
     desktopMetrics.vegetation.rockInstances >= 30 &&
     desktopMetrics.vegetation.renderGroups === 3 && desktopMetrics.vegetation.blocksMovement === false,
-    'desktop vegetation must render detailed instanced evergreen branch whorls and needle clusters without adding draw groups');
+    'desktop vegetation must expose the V3 curved branch canopy, detailed bark trunk and bounded instanced geometry');
   assert.ok(desktopMetrics.environment?.runtimeIntegrated &&
     desktopMetrics.environment.clusterCount === 4 &&
     desktopMetrics.environment.cargoCrates === 18 &&
@@ -683,9 +689,18 @@ try {
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&
-    mobileMetrics.vegetation.foliageTiers === 3 && mobileMetrics.vegetation.rockInstances >= 15 &&
+    mobileMetrics.vegetation.foliageTiers === 4 &&
+    mobileMetrics.vegetation.branchWhorls === 4 && mobileMetrics.vegetation.branchArms === 21 &&
+    mobileMetrics.vegetation.needleClustersPerArm === 6 && mobileMetrics.vegetation.needleClusters === 126 &&
+    mobileMetrics.vegetation.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
+    mobileMetrics.vegetation.coreConeCount === 0 &&
+    mobileMetrics.vegetation.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
+    mobileMetrics.vegetation.trunkHeight >= 2.6 &&
+    mobileMetrics.vegetation.branchTubeSegments === 6 && mobileMetrics.vegetation.branchRadialSegments === 4 &&
+    mobileMetrics.vegetation.foliageTriangles >= 3200 && mobileMetrics.vegetation.foliageTriangles <= 6000 &&
+    mobileMetrics.vegetation.rockInstances >= 15 &&
     mobileMetrics.vegetation.renderGroups === 3 && mobileMetrics.vegetation.blocksMovement === false,
-    'mobile vegetation must preserve layered trees and instanced rocks without blocking gameplay');
+    'mobile vegetation must preserve the V3 curved conifer, instanced rocks and non-blocking gameplay lanes');
   assert.ok(mobileMetrics.environment?.runtimeIntegrated &&
     mobileMetrics.environment.clusterCount === 4 &&
     mobileMetrics.environment.cargoCrates === 18 &&
