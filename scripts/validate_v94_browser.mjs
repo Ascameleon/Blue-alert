@@ -268,17 +268,21 @@ try {
     desktopMetrics.vegetation.branchArms === 21 &&
     desktopMetrics.vegetation.needleSpraysPerArm === 3 &&
     desktopMetrics.vegetation.needleClustersPerArm === 6 &&
-    desktopMetrics.vegetation.needleClusters === 126 &&
-    desktopMetrics.vegetation.needleBladeCount === 504 &&
-    desktopMetrics.vegetation.needleBladeTrianglesPerCluster === 32 &&
-    desktopMetrics.vegetation.needleProfile === 'TAPERED_3D_NEEDLE_FAN_V2' &&
-    desktopMetrics.vegetation.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
+    desktopMetrics.vegetation.needleClusters === 129 &&
+    desktopMetrics.vegetation.needleBladeCount === 774 &&
+    desktopMetrics.vegetation.needleBladeCountPerCluster === 6 &&
+    desktopMetrics.vegetation.needleBladeTrianglesPerCluster === 48 &&
+    desktopMetrics.vegetation.needleProfile === 'DENSE_LAYERED_CONIFER_SPRAYS_V3' &&
+    desktopMetrics.vegetation.canopyProfile === 'DENSE_LAYERED_CONIFER_V4' &&
+    desktopMetrics.vegetation.leaderStemCount === 1 &&
+    desktopMetrics.vegetation.leaderSprayClusters === 3 &&
+    desktopMetrics.vegetation.leaderProfile === 'CENTRAL_TERMINAL_LEADER_V1' &&
     desktopMetrics.vegetation.coreConeCount === 0 &&
     desktopMetrics.vegetation.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     desktopMetrics.vegetation.trunkHeight >= 2.6 &&
     desktopMetrics.vegetation.branchTubeSegments === 6 &&
     desktopMetrics.vegetation.branchRadialSegments === 4 &&
-    desktopMetrics.vegetation.foliageTriangles >= 3200 && desktopMetrics.vegetation.foliageTriangles <= 5200 &&
+    desktopMetrics.vegetation.foliageTriangles === 7248 &&
     desktopMetrics.vegetation.rockInstances >= 30 &&
     desktopMetrics.vegetation.renderGroups === 3 && desktopMetrics.vegetation.blocksMovement === false,
     'desktop vegetation must expose the V3 curved branch canopy, detailed bark trunk and bounded instanced geometry');
@@ -589,13 +593,13 @@ try {
   console.log('DESKTOP_INFANTRY_GAIT ' + JSON.stringify({ start: infantryWalkStart, state: desktopInfantryGait, grounding: desktopGaitGrounding }));
   await captureViewport(desktop, output + '/desktop-v94-infantry-gait.png');
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
-  assert.ok(desktopTreeDetail?.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
+  assert.ok(desktopTreeDetail?.canopyProfile === 'DENSE_LAYERED_CONIFER_V4' &&
     desktopTreeDetail.coreConeCount === 0 && desktopTreeDetail.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     desktopTreeDetail.trunkHeight >= 2.6 && desktopTreeDetail.branchWhorls === 4 &&
     desktopTreeDetail.branchArms === 21 && desktopTreeDetail.needleSpraysPerArm === 3 &&
     desktopTreeDetail.needleClustersPerArm === 6 &&
     desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 6 &&
-    desktopTreeDetail.needleClusters === 126 && desktopTreeDetail.branchTubeSegments === 6 &&
+    desktopTreeDetail.needleClusters === 129 && desktopTreeDetail.branchTubeSegments === 6 &&
     desktopTreeDetail.branchRadialSegments === 4 &&
     desktopTreeDetail.foliageTriangles >= 3200 && desktopTreeDetail.foliageTriangles <= 6000,
     'desktop live V94 must render the curved four-whorl conifer, flared bark trunk and bounded instanced geometry');
@@ -844,16 +848,20 @@ try {
     mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageTiers === 4 &&
     mobileMetrics.vegetation.branchWhorls === 4 && mobileMetrics.vegetation.branchArms === 21 &&
-    mobileMetrics.vegetation.needleClustersPerArm === 6 && mobileMetrics.vegetation.needleClusters === 126 &&
-    mobileMetrics.vegetation.needleBladeCount === 504 &&
-    mobileMetrics.vegetation.needleBladeTrianglesPerCluster === 32 &&
-    mobileMetrics.vegetation.needleProfile === 'TAPERED_3D_NEEDLE_FAN_V2' &&
-    mobileMetrics.vegetation.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
+    mobileMetrics.vegetation.needleClustersPerArm === 6 && mobileMetrics.vegetation.needleClusters === 129 &&
+    mobileMetrics.vegetation.needleBladeCount === 774 &&
+    mobileMetrics.vegetation.needleBladeCountPerCluster === 6 &&
+    mobileMetrics.vegetation.needleBladeTrianglesPerCluster === 48 &&
+    mobileMetrics.vegetation.needleProfile === 'DENSE_LAYERED_CONIFER_SPRAYS_V3' &&
+    mobileMetrics.vegetation.canopyProfile === 'DENSE_LAYERED_CONIFER_V4' &&
+    mobileMetrics.vegetation.leaderStemCount === 1 &&
+    mobileMetrics.vegetation.leaderSprayClusters === 3 &&
+    mobileMetrics.vegetation.leaderProfile === 'CENTRAL_TERMINAL_LEADER_V1' &&
     mobileMetrics.vegetation.coreConeCount === 0 &&
     mobileMetrics.vegetation.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     mobileMetrics.vegetation.trunkHeight >= 2.6 &&
     mobileMetrics.vegetation.branchTubeSegments === 6 && mobileMetrics.vegetation.branchRadialSegments === 4 &&
-    mobileMetrics.vegetation.foliageTriangles >= 3200 && mobileMetrics.vegetation.foliageTriangles <= 5200 &&
+    mobileMetrics.vegetation.foliageTriangles === 7248 &&
     mobileMetrics.vegetation.rockInstances >= 15 &&
     mobileMetrics.vegetation.renderGroups === 3 && mobileMetrics.vegetation.blocksMovement === false,
     'mobile vegetation must preserve the V3 curved conifer, instanced rocks and non-blocking gameplay lanes');
@@ -1178,13 +1186,13 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await captureViewport(mobile, output + '/mobile-v94-terrain-surface-390x844.png');
 
   const mobileTreeDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
-  assert.ok(mobileTreeDetail?.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
+  assert.ok(mobileTreeDetail?.canopyProfile === 'DENSE_LAYERED_CONIFER_V4' &&
     mobileTreeDetail.coreConeCount === 0 && mobileTreeDetail.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     mobileTreeDetail.trunkHeight >= 2.6 && mobileTreeDetail.branchWhorls === 4 &&
     mobileTreeDetail.branchArms === 21 && mobileTreeDetail.needleSpraysPerArm === 3 &&
     mobileTreeDetail.needleClustersPerArm === 6 &&
     mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 6 &&
-    mobileTreeDetail.needleClusters === 126 && mobileTreeDetail.branchTubeSegments === 6 &&
+    mobileTreeDetail.needleClusters === 129 && mobileTreeDetail.branchTubeSegments === 6 &&
     mobileTreeDetail.branchRadialSegments === 4 &&
     mobileTreeDetail.foliageTriangles >= 3200 && mobileTreeDetail.foliageTriangles <= 6000,
     'mobile V94 must render the same curved four-whorl conifer within the instanced geometry budget');
