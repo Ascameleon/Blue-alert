@@ -259,6 +259,48 @@ const createCastTurretGeometry = (THREE, stations) => {
   return geometry;
 };
 
+
+const createCommandBunkerGeometry = (THREE, profile, stations) => {
+  const ringSize = profile.length, positions = [], uvs = [], shellIndices = [], crownIndices = [];
+  const ringFor = station => {
+    const [z, widthScale, heightScale] = station;
+    return profile.map(([x, y]) => [x * widthScale, y * heightScale, z]);
+  };
+  for (const station of stations) ringFor(station).forEach(point => {
+    positions.push(...point); uvs.push((point[0] + 1.4) / 2.8, point[1] / 1.8);
+  });
+  const capCenters = [stations[0], stations[stations.length - 1]].map(station => {
+    const ring = ringFor(station);
+    positions.push(ring.reduce((sum,p)=>sum+p[0],0)/ring.length,
+      ring.reduce((sum,p)=>sum+p[1],0)/ring.length,station[0]);
+    uvs.push(.5,.5); return positions.length/3-1;
+  });
+  for(let segment=0;segment<stations.length-1;segment++) for(let edgeIndex=0;edgeIndex<ringSize;edgeIndex++){
+    const a=segment*ringSize+edgeIndex,b=segment*ringSize+(edgeIndex+1)%ringSize;
+    const c=(segment+1)*ringSize+(edgeIndex+1)%ringSize,d=(segment+1)*ringSize+edgeIndex;
+    const target=edgeIndex>=5&&edgeIndex<=7?crownIndices:shellIndices;
+    target.push(a,c,d,a,b,c);
+  }
+  const endBase=(stations.length-1)*ringSize;
+  for(let edgeIndex=0;edgeIndex<ringSize;edgeIndex++){
+    const next=(edgeIndex+1)%ringSize;
+    shellIndices.push(capCenters[0],next,edgeIndex);
+    shellIndices.push(capCenters[1],endBase+edgeIndex,endBase+next);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setIndex([...shellIndices,...crownIndices]);
+  geometry.addGroup(0,shellIndices.length,0);
+  geometry.addGroup(shellIndices.length,crownIndices.length,1);
+  geometry.computeVertexNormals(); geometry.computeBoundingBox(); geometry.computeBoundingSphere();
+  geometry.userData.beveledArmor=true;
+  geometry.userData.castCommandBunker=true;
+  geometry.userData.commandCoreStationCount=stations.length;
+  geometry.userData.commandCoreProfileVertexCount=profile.length;
+  return geometry;
+};
+
 export function createTank(THREE, options={}) {
   const { team='blue', variant='main-battle-tank', scale=1 } = options;
   const isRed = team === 'red';
@@ -1123,25 +1165,37 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
 export function createBuilding(THREE, type='barracks', options={}) {
   const {team='blue',scale=1}=options, g=new THREE.Group(); g.name='BA_Building_'+type;
   let rotatingGun = null, defenseTurretGeometryProfile = null, defenseTurretStationCount = 0;
-  let commandCoreGeometryProfile = null, commandCoreProfileVertexCount = 0;
+  let commandCoreGeometryProfile = null, commandCoreProfileVertexCount = 0, commandCoreStationCount = 0;
   const faction=teamColor(THREE,team), concrete=mat(THREE,PALETTE.concrete), dark=mat(THREE,PALETTE.dark), glass=mat(THREE,PALETTE.glass), roof=mat(THREE,0x454d49);
   const metal=mat(THREE,PALETTE.metal,0.38,0.72);
   box(THREE,g,'foundation',[3.5,.22,2.8],[0,.11,0],dark);
   if(type==='headquarters') {
-    // One continuous stepped cast shell replaces the plain rectangular command box.
-    // Its chamfered shoulders and raised deck stay inside the original 3.5 × 2.8 footprint.
+    // One continuous depth-lofted cast shell creates a real 3D shoulder break:
+    // nose and rear taper in plan, while the roof shoulders descend toward both
+    // armored end caps. The original foundation footprint, root transform,
+    // collision envelope and front-facing service interfaces remain fixed.
     const commandCoreProfile = [
       [-1.18,0],[1.18,0],[1.18,.28],[1.08,.42],[1.08,1.08],
       [.96,1.31],[.78,1.54],[-.78,1.54],[-.96,1.31],[-1.08,1.08],
       [-1.08,.42],[-1.18,.28]
     ];
-    const commandCore = createArmoredProfileMesh(
-      THREE,g,'command-core-cast-shell',commandCoreProfile,1.78,concrete,[0,.22,0],.055
+    const commandCoreStations = [
+      [-.89,.80,.90],[-.72,.91,.97],[-.46,1,1],
+      [.46,1,1],[.72,.91,.97],[.89,.80,.90]
+    ];
+    const commandCore = new THREE.Mesh(
+      createCommandBunkerGeometry(THREE,commandCoreProfile,commandCoreStations),[concrete,roof]
     );
-    commandCoreGeometryProfile = 'ARMORED_BASTION_COMMAND_CORE_V2';
-    commandCoreProfileVertexCount = commandCoreProfile.length;
-    commandCore.userData.commandCoreGeometryProfile = commandCoreGeometryProfile;
-    commandCore.userData.commandCoreProfileVertexCount = commandCoreProfileVertexCount;
+    commandCore.name='command-core-cast-shell';
+    commandCore.position.set(0,.22,0);
+    commandCore.castShadow=true; commandCore.receiveShadow=true;
+    commandCoreGeometryProfile='ARMORED_BASTION_COMMAND_CORE_V3';
+    commandCoreProfileVertexCount=commandCoreProfile.length;
+    commandCoreStationCount=commandCoreStations.length;
+    commandCore.userData.commandCoreGeometryProfile=commandCoreGeometryProfile;
+    commandCore.userData.commandCoreProfileVertexCount=commandCoreProfileVertexCount;
+    commandCore.userData.commandCoreStationCount=commandCoreStationCount;
+    g.add(commandCore);
 
     // A layered overhanging roof and parapet give the bunker a clear military silhouette.
     beveledBox(THREE,g,'command-roof',[2.52,.18,1.94],[0,1.82,0],faction,[0,0,0],.045);
@@ -1289,7 +1343,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
       for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
     }
   }
-  g.userData={kind:'building',buildingType:type,team,rotatingGun,defenseTurretGeometryProfile,defenseTurretStationCount,commandCoreGeometryProfile,commandCoreProfileVertexCount}; g.scale.setScalar(scale); return g;
+  g.userData={kind:'building',buildingType:type,team,rotatingGun,defenseTurretGeometryProfile,defenseTurretStationCount,commandCoreGeometryProfile,commandCoreProfileVertexCount,commandCoreStationCount}; g.scale.setScalar(scale); return g;
 }
 
 export function createTree(THREE, options={}) {

@@ -121,8 +121,9 @@ def main():
         raise SystemExit("FAIL: cast defensive turret sculpt missing: " + ", ".join(missing))
 
     required_command_hq_features = (
-        "ARMORED_BASTION_COMMAND_CORE_V2", "commandCoreGeometryProfile",
-        "commandCoreProfileVertexCount", "command-core-cast-shell",
+        "ARMORED_BASTION_COMMAND_CORE_V3", "createCommandBunkerGeometry",
+        "commandCoreGeometryProfile", "commandCoreProfileVertexCount", "commandCoreStationCount",
+        "commandCoreStations", "geometry.userData.castCommandBunker", "command-core-cast-shell",
         "command-window-recess", "command-glass-pane-", "command-entry-frame",
         "command-entry-door", "command-buttress-left", "command-buttress-right",
         "command-roof-parapet", "command-annex-vent-louver",
@@ -136,7 +137,7 @@ def main():
 
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=12", "defenseTurretGeometryProfile", "defenseTurretStationCount", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=13", "defenseTurretGeometryProfile", "defenseTurretStationCount", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")

@@ -43,7 +43,7 @@ let current;function clear(){if(current){scene.remove(current);current.traverse(
 const desc={
 tank:['Char de combat','Coque monobloc moulée en sept stations, glacis intégré, flancs inclinés, tourelle profilée et chenilles fermées à maillons.'],
 infantry:['Fantassin','Fantassin V4 : volumes anatomiques lissés, plaques composites convexes, casque haute définition, respirateur scellé, bottes à semelles crantées, équipement dorsal et fusil détaillé. Rig d’épaules, coudes, hanches et genoux conservé.'],
-hq:['Quartier général','Bunker de commandement à coque moulée facettée, épaules inclinées, vitrage encastré, entrée blindée, annexe technique et radar orientable.'],
+hq:['Quartier général','Bunker à coque blindée moulée en profondeur, nez et arrière effilés, épaules inclinées, couronne facettée, vitrage encastré, entrée protégée et radar orientable.'],
 barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
 refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],
 turret:['Tourelle défensive','Barbette circulaire, coupole blindée facettée, double autocanon, optiques et boulonnerie périphérique.'],
@@ -138,6 +138,7 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     defenseTurretStationCount:current?.userData?.defenseTurretStationCount||0,
     commandCoreGeometryProfile:current?.userData?.commandCoreGeometryProfile||null,
     commandCoreProfileVertexCount:current?.userData?.commandCoreProfileVertexCount||0,
+    commandCoreStationCount:current?.userData?.commandCoreStationCount||0,
     wheelBoltInstances:current?.userData?.wheelBoltInstances||0,
     detailInstances:current?.userData?.detailInstances||null,
     signatureParts,

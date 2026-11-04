@@ -550,10 +550,12 @@ try {
 
 
   const desktopHeadquartersFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusHeadquarters());
-  assert.equal(desktopHeadquartersFocus?.modelProfile, 'ARMORED_BASTION_COMMAND_CORE_V2',
+  assert.equal(desktopHeadquartersFocus?.modelProfile, 'ARMORED_BASTION_COMMAND_CORE_V3',
     'desktop live V94 HQ camera must target the new cast command shell');
   assert.equal(desktopHeadquartersFocus?.profileVertexCount, 12,
     'desktop live V94 HQ must expose its complete stepped cast profile');
+  assert.equal(desktopHeadquartersFocus?.stationCount, 6,
+    'desktop live V94 HQ must instantiate all six depth-loft stations');
   await desktop.waitForTimeout(500);
   await desktop.screenshot({ path: output + '/desktop-v94-headquarters-focus.png', fullPage: true });
 
@@ -996,10 +998,12 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-detail-390x844.png', fullPage: true });
 
   const mobileHeadquartersFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.focusHeadquarters());
-  assert.equal(mobileHeadquartersFocus?.modelProfile, 'ARMORED_BASTION_COMMAND_CORE_V2',
+  assert.equal(mobileHeadquartersFocus?.modelProfile, 'ARMORED_BASTION_COMMAND_CORE_V3',
     'mobile live V94 HQ camera must target the same cast command shell');
   assert.equal(mobileHeadquartersFocus?.profileVertexCount, 12,
     'mobile live V94 HQ must expose its complete stepped cast profile');
+  assert.equal(mobileHeadquartersFocus?.stationCount, 6,
+    'mobile live V94 HQ must instantiate all six depth-loft stations');
   await mobile.waitForTimeout(500);
   await mobile.screenshot({ path: output + '/mobile-v94-headquarters-focus-390x844.png', fullPage: true });
 

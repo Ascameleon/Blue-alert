@@ -262,13 +262,15 @@ try {
 
   await page.selectOption('#asset','hq');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='hq' &&
-    window.__BLUE_ALERTS_PREVIEW__().commandCoreGeometryProfile==='ARMORED_BASTION_COMMAND_CORE_V2' &&
-    window.__BLUE_ALERTS_PREVIEW__().commandCoreProfileVertexCount===12,null,{timeout:10000});
+    window.__BLUE_ALERTS_PREVIEW__().commandCoreGeometryProfile==='ARMORED_BASTION_COMMAND_CORE_V3' &&
+    window.__BLUE_ALERTS_PREVIEW__().commandCoreProfileVertexCount===12 &&
+    window.__BLUE_ALERTS_PREVIEW__().commandCoreStationCount===6,null,{timeout:10000});
   await page.waitForTimeout(500);
   const commandHq=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
-  assert.equal(commandHq.commandCoreGeometryProfile,'ARMORED_BASTION_COMMAND_CORE_V2',
-    'HQ must instantiate the continuous cast command bunker');
+  assert.equal(commandHq.commandCoreGeometryProfile,'ARMORED_BASTION_COMMAND_CORE_V3',
+    'HQ must instantiate the depth-lofted cast command bunker');
   assert.equal(commandHq.commandCoreProfileVertexCount,12,'HQ cast shell must retain its 12-point stepped elevation profile');
+  assert.equal(commandHq.commandCoreStationCount,6,'HQ shell must use six depth stations to shape its armored nose and rear');
   for(const name of ['command-core-cast-shell','command-roof-parapet','command-window-recess',
     'command-glass-pane-0','command-glass-pane-1','command-glass-pane-2','command-entry-frame',
     'command-entry-door','command-buttress-left','command-buttress-right','command-annex']) {
@@ -335,11 +337,12 @@ try {
   await page.screenshot({path:output+'/mobile-turret-390x844.png',fullPage:true});
   await page.selectOption('#asset','hq');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='hq' &&
-    window.__BLUE_ALERTS_PREVIEW__().commandCoreGeometryProfile==='ARMORED_BASTION_COMMAND_CORE_V2',null,{timeout:10000});
+    window.__BLUE_ALERTS_PREVIEW__().commandCoreGeometryProfile==='ARMORED_BASTION_COMMAND_CORE_V3' &&
+    window.__BLUE_ALERTS_PREVIEW__().commandCoreStationCount===6,null,{timeout:10000});
   await page.waitForTimeout(450);
   const mobileCommandHq=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.ok(mobileCommandHq.canvasWidth>=300 && mobileCommandHq.canvasHeight>=400 &&
-    mobileCommandHq.commandCoreProfileVertexCount===12 && mobileCommandHq.drawCalls<=70,
+    mobileCommandHq.commandCoreProfileVertexCount===12 && mobileCommandHq.commandCoreStationCount===6 && mobileCommandHq.drawCalls<=70,
     'mobile HQ must render the same cast bunker inside the mobile preview budget');
   await page.screenshot({path:output+'/mobile-hq-390x844.png',fullPage:true});
   console.log('MOBILE_LAYOUT '+JSON.stringify(mobile));

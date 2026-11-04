@@ -324,7 +324,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 <script type="module">
 let BLUE_MODELS = null;
 try {
-  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=12');
+  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=13');
 } catch (assetError) {
   console.warn('BLUE ALERTS: bibliothèque de modèles indisponible, géométries natives conservées.', assetError);
 }
@@ -4424,7 +4424,8 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       return {
         ...cameraQaSnapshot(),
         modelProfile: model.userData.commandCoreGeometryProfile || null,
-        profileVertexCount: model.userData.commandCoreProfileVertexCount || 0
+        profileVertexCount: model.userData.commandCoreProfileVertexCount || 0,
+        stationCount: model.userData.commandCoreStationCount || 0
       };
     }
   });
