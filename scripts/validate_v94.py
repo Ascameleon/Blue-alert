@@ -131,10 +131,15 @@ def main():
         "start: start.clone()",
         "Math.atan2(dx, dz) - u.g.rotation.y",
         "window.__BLUE_ALERTS_COMBAT_QA",
+        "window.__BLUE_ALERTS_TANK_QA__",
     )
     missing = [feature for feature in required_combat_features if feature not in source]
     if missing:
         raise SystemExit("FAIL: 3D combat rig integration missing: " + ", ".join(missing))
+    required_tank_armor = ("hullNormalProfile", "turretNormalProfile", "CREASED_HARD_SURFACE_V1", "camTarget.copy(tankCameraRestore.target)", "camDist=isMobile?7.5:8.5")
+    missing = [feature for feature in required_tank_armor if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: live V94 tank armor crease-normal QA missing: " + ", ".join(missing))
     required_infantry_grip = ("weaponForwardAlignment", "leftGripError", "rightGripError", "weaponForwardAxis")
     missing = [name for name in required_infantry_grip if name not in source]
     if missing:

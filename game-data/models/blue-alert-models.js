@@ -352,6 +352,64 @@ const createCastTurretGeometry = (THREE, stations) => {
 };
 
 
+const applyCreasedNormals = (THREE, geometry, angleDegrees = 34) => {
+  const position = geometry.getAttribute('position');
+  const index = geometry.index;
+  if (!position || !index || index.count % 3 !== 0) return geometry;
+  const faceCount = index.count / 3;
+  const incidentFaces = Array.from({ length: position.count }, () => []);
+  const faces = new Array(faceCount);
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  const ab = new THREE.Vector3(), ac = new THREE.Vector3(), faceNormal = new THREE.Vector3();
+  for (let face = 0; face < faceCount; face++) {
+    const offset = face * 3;
+    const ia = index.getX(offset), ib = index.getX(offset + 1), ic = index.getX(offset + 2);
+    a.fromBufferAttribute(position, ia); b.fromBufferAttribute(position, ib); c.fromBufferAttribute(position, ic);
+    ab.subVectors(b, a); ac.subVectors(c, a); faceNormal.crossVectors(ab, ac);
+    const area = faceNormal.length();
+    if (area > 1e-10) faceNormal.multiplyScalar(1 / area);
+    else faceNormal.set(0, 1, 0);
+    faces[face] = { normal: faceNormal.clone(), area: Math.max(area, 1e-10) };
+    incidentFaces[ia].push(face); incidentFaces[ib].push(face); incidentFaces[ic].push(face);
+  }
+  const threshold = Math.cos(THREE.MathUtils.degToRad(angleDegrees));
+  const uv = geometry.getAttribute('uv');
+  const positions = [], normals = [], uvs = [];
+  const point = new THREE.Vector3();
+  let invalidNormals = 0;
+  for (let face = 0; face < faceCount; face++) {
+    const faceOffset = face * 3, reference = faces[face].normal;
+    for (let corner = 0; corner < 3; corner++) {
+      const sourceIndex = index.getX(faceOffset + corner);
+      point.fromBufferAttribute(position, sourceIndex);
+      positions.push(point.x, point.y, point.z);
+      if (uv) uvs.push(uv.getX(sourceIndex), uv.getY(sourceIndex));
+      const normal = new THREE.Vector3();
+      for (const adjacentFace of incidentFaces[sourceIndex]) {
+        const candidate = faces[adjacentFace];
+        if (reference.dot(candidate.normal) >= threshold) normal.addScaledVector(candidate.normal, candidate.area);
+      }
+      if (normal.lengthSq() < 1e-12) normal.copy(reference);
+      normal.normalize();
+      const magnitude = normal.length();
+      if (!Number.isFinite(normal.x) || !Number.isFinite(normal.y) ||
+          !Number.isFinite(normal.z) || Math.abs(magnitude - 1) > 1e-4) invalidNormals++;
+      normals.push(normal.x, normal.y, normal.z);
+    }
+  }
+  const creased = new THREE.BufferGeometry();
+  creased.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  creased.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  if (uv) creased.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  for (const group of geometry.groups) creased.addGroup(group.start, group.count, group.materialIndex);
+  creased.setDrawRange(geometry.drawRange.start, geometry.drawRange.count);
+  creased.computeBoundingBox(); creased.computeBoundingSphere();
+  creased.userData = {...geometry.userData,normalProfile:'CREASED_HARD_SURFACE_V1',normalCreaseAngle:angleDegrees,
+    normalSourceVertexCount:position.count,normalFaceCount:faceCount,normalVertexCount:index.count,normalFinite:invalidNormals===0};
+  geometry.dispose();
+  return creased;
+};
+
 const createCommandBunkerGeometry = (THREE, profile, stations) => {
   const ringSize = profile.length, positions = [], uvs = [], shellIndices = [], crownIndices = [];
   const ringFor = station => {
@@ -440,7 +498,7 @@ export function createTank(THREE, options={}) {
     [.82,.20,.67,.65,.74,.94,.54],
     [1.32,.20,.62,.30,.66,.36,.42]
   ];
-  const hullGeometry = createCastHullGeometry(THREE,hullStations);
+  const hullGeometry = applyCreasedNormals(THREE,createCastHullGeometry(THREE,hullStations),34);
   const hullShell = new THREE.Mesh(hullGeometry,[hull,heavyArmor]);
   hullShell.name = 'cast-hull-shell';
   hullShell.userData.mergedPartNames = ['cast-hull-shell','front-glacis'];
@@ -564,7 +622,8 @@ export function createTank(THREE, options={}) {
     [.64,.10,.33,.22,.44,.40,.32,.35],
     [.76,.10,.24,.18,.34,.31,.25,.27]
   ];
-  const turretShell=new THREE.Mesh(createCastTurretGeometry(THREE,turretStations),[hull,armor]);
+  const turretGeometry = applyCreasedNormals(THREE,createCastTurretGeometry(THREE,turretStations),34);
+  const turretShell=new THREE.Mesh(turretGeometry,[hull,armor]);
   turretShell.name='turret-body';
   const roofAlias=isRed?'red-bastion-roof-plate':'blue-sentinel-crown';
   turretShell.userData.mergedPartNames=['turret-body',roofAlias];
@@ -632,10 +691,18 @@ export function createTank(THREE, options={}) {
     kind:'vehicle',unitType:variant,team,turret,factionProfile,
     hullGeometryProfile:'CAST_MULTI_STATION_HULL_V2',
     hullStationCount:hullStations.length,
+    hullNormalProfile:hullGeometry.userData.normalProfile,
+    hullNormalCreaseAngle:hullGeometry.userData.normalCreaseAngle,
+    hullNormalVertexCount:hullGeometry.userData.normalVertexCount,
+    hullNormalFinite:hullGeometry.userData.normalFinite,
     trackGeometryProfile:'CLOSED_STADIUM_TREAD_LOOP_V1',
     turretGeometryProfile:'MULTI_STATION_CAST_TURRET_V2',
     turretStationProfile:'CAST_TURRET_STATIONS_V2',
     turretStationCount:turretStations.length,
+    turretNormalProfile:turretGeometry.userData.normalProfile,
+    turretNormalCreaseAngle:turretGeometry.userData.normalCreaseAngle,
+    turretNormalVertexCount:turretGeometry.userData.normalVertexCount,
+    turretNormalFinite:turretGeometry.userData.normalFinite,
     trackLinkCount:shoeTransforms.length,
     trackShoeInstances:shoeTransforms.length,
     wheelBoltInstances:boltTransforms.length,

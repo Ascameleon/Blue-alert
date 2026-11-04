@@ -101,6 +101,7 @@ def main():
         "createCastHullGeometry", "createArmoredProfileGeometry", "createArmoredProfileMesh", "createTrackLoopGeometry",
         "CAST_MULTI_STATION_HULL_V2", "hullStationCount", "CLOSED_STADIUM_TREAD_LOOP_V1",
         "createCastTurretGeometry", "CAST_TURRET_STATIONS_V2", "turretStationCount", "MULTI_STATION_CAST_TURRET_V2",
+        "applyCreasedNormals", "CREASED_HARD_SURFACE_V1", "hullNormalProfile", "turretNormalProfile", "normalCreaseAngle",
         "track-belt-loop-left", "track-belt-loop-right", "trackLinkCount",
         "engine-deck-grilles-instanced", "reactive-armor-tiles-instanced",
         "return-rollers-instanced", "road-wheels-instanced", "wheel-hubs-instanced",
@@ -142,7 +143,7 @@ def main():
 
     if "BLUE_MODELS.createTank" not in game:
         raise SystemExit("FAIL: V94 runtime must instantiate the faction tank model kit")
-    for token in ("blue-alert-models.js?v=14", "defenseTurretGeometryProfile", "defenseTurretStationCount", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
+    for token in ("blue-alert-models.js?v=15", "defenseTurretGeometryProfile", "defenseTurretStationCount", "BLUE_MODELS.createHarvester", "BLUE_MODELS.createCitadel", "BLUE_MODELS.createOreNode", "BLUE_MODELS.updateInfantryAnimation", "g.userData.infantryRig"):
         if token not in game:
             raise SystemExit(f"FAIL: game integration missing {token}")
     node_check(model, "model kit")
