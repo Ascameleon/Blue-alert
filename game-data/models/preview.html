@@ -111,6 +111,25 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     }
   });
   const bounds=current?new THREE.Box3().setFromObject(current):null;
+  let weaponGripDiagnostics=null;
+  const infantryRig=current?.userData?.animationRig;
+  if(infantryRig?.weapon && infantryRig.leftHand && infantryRig.rightHand && infantryRig.leftGrip && infantryRig.rightGrip){
+    current.updateMatrixWorld(true);
+    const weaponForward=new THREE.Vector3(1,0,0).applyQuaternion(infantryRig.weapon.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const expectedForward=new THREE.Vector3(0,0,1).applyQuaternion(current.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const leftHandWorld=new THREE.Vector3();infantryRig.leftHand.getWorldPosition(leftHandWorld);
+    const rightHandWorld=new THREE.Vector3();infantryRig.rightHand.getWorldPosition(rightHandWorld);
+    const leftGripWorld=new THREE.Vector3();infantryRig.leftGrip.getWorldPosition(leftGripWorld);
+    const rightGripWorld=new THREE.Vector3();infantryRig.rightGrip.getWorldPosition(rightGripWorld);
+    weaponGripDiagnostics={
+      forwardAxis:[weaponForward.x,weaponForward.y,weaponForward.z],
+      forwardAlignment:weaponForward.dot(expectedForward),
+      leftGripError:leftHandWorld.distanceTo(leftGripWorld),
+      rightGripError:rightHandWorld.distanceTo(rightGripWorld),
+      torsoParented:infantryRig.leftArm.parent===infantryRig.torso && infantryRig.rightArm.parent===infantryRig.torso &&
+        infantryRig.leftLeg.parent===infantryRig.torso && infantryRig.rightLeg.parent===infantryRig.torso && infantryRig.weapon.parent===infantryRig.torso
+    };
+  }
   const signatureParts=[];
   const infantryArmorParts=[];
   current?.traverse(object=>{
@@ -159,6 +178,8 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     curvedArmorPlateCount:current?.userData?.curvedArmorPlateCount||0,
     animationJointProfile:current?.userData?.animationJointProfile||null,
     weaponGripProfile:current?.userData?.weaponGripProfile||null,
+    weaponForwardAxis:current?.userData?.weaponForwardAxis||null,
+    weaponGripDiagnostics,
     jointDiagnostics:{
       leftElbow:!!current?.userData?.animationRig?.leftElbow,
       rightElbow:!!current?.userData?.animationRig?.rightElbow,

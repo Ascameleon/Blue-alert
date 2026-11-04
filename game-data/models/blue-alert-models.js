@@ -1043,8 +1043,8 @@ export function createInfantry(THREE, options={}) {
   // Helmet and face have faction-specific silhouettes, not just recoloured cloth.
   const head = new THREE.Group();
   head.name = 'infantry-head-rig';
-  head.position.set(0, 1.17, 0);
-  g.add(head);
+  head.position.set(0, .37, 0);
+  torso.add(head);
   heroSphere(head, 'head', .13, [0, 0, 0], dark, [.86, 1.02, .88]);
   // Sculpted helmet shell: faceted crown, raised brow and side protection.
   const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 24, 16), cloth);
@@ -1095,18 +1095,21 @@ export function createInfantry(THREE, options={}) {
   const makeArm = (side, label) => {
     const pivot = new THREE.Group();
     pivot.name = label + '-arm-pivot';
-    pivot.position.set(side * .215, .99, .015);
-    g.add(pivot);
+    pivot.position.set(side * .215, .19, .015);
+    torso.add(pivot);
+    const supportReach = side < 0 ? .19 : 0;
     heroSphere(pivot, label + '-shoulder-pad', .105, [0, -.045, .015], armor, [.95, .78, 1.02]);
     beveledBox(THREE,pivot,label+'-angular-pauldron',[.17,.12,.17],[side*.01,-.045,.025],armor,[0,0,side*-.08],.018);
     const upperArm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-      [-.01,.066,.064],[-.045,.071,.068],[-.09,.069,.064],[-.135,.058,.056],[-.18,.05,.048]
+      [-.01,.066,.064,0,0],[-.045,.071,.068,-side*.025,supportReach*.08],
+      [-.09,.069,.064,-side*.06,supportReach*.24],[-.135,.058,.056,-side*.105,supportReach*.48],
+      [-.18,.05,.048,-side*.13,supportReach*.8]
     ],14), uniform);
     upperArm.name = label + '-upper-arm-loft';
     upperArm.position.set(side*.01,0,.015); upperArm.castShadow=true; upperArm.receiveShadow=true; pivot.add(upperArm);
     const elbow = new THREE.Group();
     elbow.name = label + '-elbow-pivot';
-    elbow.position.set(side*.01,-.18,.035);
+    elbow.position.set(-side*.13,-.18,.035+supportReach*.8);
     pivot.add(elbow);
     heroSphere(elbow, label + '-elbow-joint', .052, [0,0,0], armor, [.92,.9,1]);
     const forearm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
@@ -1116,7 +1119,7 @@ export function createInfantry(THREE, options={}) {
     forearm.position.set(0,0,.065); forearm.rotation.x=-.86;
     forearm.castShadow=true; forearm.receiveShadow=true; elbow.add(forearm);
     beveledBox(THREE, elbow, label + '-wrist-guard', [.125,.065,.13], [0,-.13,.16], armor, [0,0,0], .012);
-    detailSphere(elbow, label + '-glove-palm', .057, [0,-.16,.19], rubber, [.92,.72,1.18]);
+    const palm = detailSphere(elbow, label + '-glove-palm', .057, [0,-.16,.19], rubber, [.92,.72,1.18]);
     for(let finger=0;finger<4;finger++) {
       detailSphere(elbow, label + '-glove-finger', .021,
         [(finger-1.5)*.025,-.198,.235], rubber, [.82,1.25,.78]);
@@ -1129,7 +1132,7 @@ export function createInfantry(THREE, options={}) {
       box(THREE, pivot, label + '-sentinel-shoulder-mark', [.10,.045,.022],
         [side*.012,-.045,.13], accent);
     }
-    return { pivot, elbow };
+    return { pivot, elbow, palm };
   };
   const leftArm = makeArm(-1, 'left');
   const rightArm = makeArm(1, 'right');
@@ -1137,8 +1140,8 @@ export function createInfantry(THREE, options={}) {
   const makeLeg = (side, label) => {
     const pivot = new THREE.Group();
     pivot.name = label + '-leg-pivot';
-    pivot.position.set(side * .105, .75, 0);
-    g.add(pivot);
+    pivot.position.set(side * .105, -.05, 0);
+    torso.add(pivot);
     const thigh = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
       [-.01,.078,.076],[-.055,.085,.083],[-.11,.084,.08],[-.17,.075,.073],[-.23,.067,.066],[-.28,.06,.06]
     ],14), cloth);
@@ -1169,8 +1172,8 @@ export function createInfantry(THREE, options={}) {
   // A compact assault pack, radio, antenna and field canteen finish the rear silhouette.
   const pack = new THREE.Group();
   pack.name = 'infantry-field-pack';
-  pack.position.set(0, .79, -.17);
-  g.add(pack);
+  pack.position.set(0, -.01, -.17);
+  torso.add(pack);
   box(THREE, pack, 'radio-backpack', [.25, .34, .16], [0, 0, 0], cloth);
   box(THREE, pack, 'backpack-top-flap', [.23, .075, .17], [0, .16, 0], armor);
   for (const side of [-1, 1]) {
@@ -1184,8 +1187,20 @@ export function createInfantry(THREE, options={}) {
   const rifleGroup = new THREE.Group();
   rifleGroup.name = 'infantry-assault-rifle';
   rifleGroup.userData.keepSeparateForCombat = true;
-  rifleGroup.position.set(.05, .73, .29);
-  g.add(rifleGroup);
+  rifleGroup.position.set(0, -.15, .24);
+  rifleGroup.rotation.y = -Math.PI / 2; // local +X barrel becomes soldier-forward +Z.
+  rifleGroup.userData.weaponForwardAxis = 'POSITIVE_Z';
+  rifleGroup.userData.gripProfile = 'TWO_HAND_FORWARD_READY_V2';
+  torso.add(rifleGroup);
+  const rightGrip = new THREE.Group();
+  rightGrip.name = 'rifle-trigger-grip';
+  rightGrip.position.set(0, 0, -.085);
+  rifleGroup.add(rightGrip);
+  const leftGrip = new THREE.Group();
+  leftGrip.name = 'rifle-support-grip';
+  leftGrip.position.set(.152, 0, .085);
+  rifleGroup.add(leftGrip);
+  rifleGroup.userData.gripPoints = { left: leftGrip, right: rightGrip };
   const rifle = box(THREE, rifleGroup, 'rifle-receiver', [.48, .06, .075], [0, 0, 0], rifleMat);
   box(THREE, rifleGroup, 'rifle-stock', [.18, .085, .095], [-.3, -.005, -.005], dark);
   beveledBox(THREE, rifleGroup, 'rifle-handguard', [.22,.085,.095], [.18,0,0], armor, [0,0,0], .012);
@@ -1208,6 +1223,8 @@ export function createInfantry(THREE, options={}) {
     leftElbow:leftArm.elbow, rightElbow:rightArm.elbow,
     leftLeg:leftLeg.pivot, rightLeg:rightLeg.pivot,
     leftKnee:leftLeg.knee, rightKnee:rightLeg.knee,
+    leftHand:leftArm.palm, rightHand:rightArm.palm,
+    leftGrip, rightGrip, weapon:rifleGroup,
     torso, head, phase:0, walkAmount:0
   };
   g.userData = {
@@ -1218,8 +1235,9 @@ export function createInfantry(THREE, options={}) {
     armorGeometryProfile:'CONVEX_COMPOSITE_CERAMIC_V2',
     bootGeometryProfile:'REINFORCED_TREAD_AND_TOE_CAP_V2',
     geometryBudgetProfile:'MOBILE_RTS_SOLDIER_GEOMETRY_V2',
-    animationJointProfile:'SHOULDER_ELBOW_HIP_KNEE_V1',
-    weaponGripProfile:'TWO_HAND_FORWARD_READY_V1',
+    animationJointProfile:'TORSO_PARENTED_SHOULDER_ELBOW_HIP_KNEE_V2',
+    weaponGripProfile:'TWO_HAND_FORWARD_READY_V2',
+    weaponForwardAxis:'POSITIVE_Z',
     armorDetailParts: renderOptimization.sourceMeshCount,
     curvedArmorPlateCount,
     surfaceFinish: surfaceTextures ? 'FIELDWEAVE_CERAMIC_MICROSCUFF_V2' : 'UNTEXTURED_FALLBACK',
@@ -1244,10 +1262,12 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
   rig.rightLeg.rotation.x = -swing + idle;
   rig.leftKnee.rotation.x = Math.max(0, Math.sin(rig.phase + .35)) * .46 * intensity;
   rig.rightKnee.rotation.x = Math.max(0, Math.sin(rig.phase + Math.PI + .35)) * .46 * intensity;
-  rig.leftArm.rotation.x = -swing * .24 - .04 + idle;
-  rig.rightArm.rotation.x = swing * .24 - .04 - idle;
-  rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.045*intensity;
-  rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.045*intensity;
+  // A rifleman keeps both hands on the forward weapon while the legs carry the gait.
+  // Small counter-swing preserves life in the upper body without breaking the grip.
+  rig.leftArm.rotation.x = -swing * .12 - .04 + idle;
+  rig.rightArm.rotation.x = swing * .12 - .04 - idle;
+  rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.018*intensity;
+  rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.018*intensity;
   rig.torso.rotation.z = idle * .55;
   rig.head.rotation.x = idle * .25;
   rig.walkAmount = intensity;

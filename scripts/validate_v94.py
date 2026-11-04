@@ -131,6 +131,10 @@ def main():
     missing = [feature for feature in required_combat_features if feature not in source]
     if missing:
         raise SystemExit("FAIL: 3D combat rig integration missing: " + ", ".join(missing))
+    required_infantry_grip = ("weaponForwardAlignment", "leftGripError", "rightGripError", "weaponForwardAxis")
+    missing = [name for name in required_infantry_grip if name not in game]
+    if missing:
+        raise SystemExit("FAIL: live V94 infantry forward weapon grip diagnostics missing: " + ", ".join(missing))
 
     required_live_vfx_features = (
         "BLUE_MODELS?.createProjectile",

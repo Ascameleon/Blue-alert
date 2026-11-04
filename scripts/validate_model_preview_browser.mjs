@@ -160,10 +160,15 @@ try {
   assert.equal(blueInfantry.headScale,.82,'infantry head/helmet silhouette must use the corrected human proportion');
   assert.equal(blueInfantry.bodyGeometryProfile,'ANATOMICAL_HARDSHELL_FIELDWEAVE_V2',
     'infantry torso and limbs must use tapered anatomical loft geometry');
-  assert.equal(blueInfantry.animationJointProfile,'SHOULDER_ELBOW_HIP_KNEE_V1',
-    'infantry must expose shoulder, elbow, hip and knee articulation');
-  assert.equal(blueInfantry.weaponGripProfile,'TWO_HAND_FORWARD_READY_V1',
-    'infantry weapon and hand pose must use the two-hand ready alignment');
+  assert.equal(blueInfantry.animationJointProfile,'TORSO_PARENTED_SHOULDER_ELBOW_HIP_KNEE_V2',
+    'infantry head, upper body, arms and legs must share the torso rig hierarchy');
+  assert.equal(blueInfantry.weaponGripProfile,'TWO_HAND_FORWARD_READY_V2',
+    'infantry weapon and hand pose must use the two-hand forward grip');
+  assert.equal(blueInfantry.weaponForwardAxis,'POSITIVE_Z','rifle barrel must point along the soldier forward axis');
+  assert.ok(blueInfantry.weaponGripDiagnostics?.forwardAlignment>.995 &&
+    blueInfantry.weaponGripDiagnostics.leftGripError<.035 && blueInfantry.weaponGripDiagnostics.rightGripError<.035 &&
+    blueInfantry.weaponGripDiagnostics.torsoParented,
+    'both articulated hands must physically meet the rifle while it points forward: '+JSON.stringify(blueInfantry.weaponGripDiagnostics));
   assert.deepEqual(blueInfantry.jointDiagnostics,{leftElbow:true,rightElbow:true,leftKnee:true,rightKnee:true},
     'both elbows and both knees must be real articulated rig pivots');
   assert.ok(blueInfantry.cameraDistance<8,'blue infantry preview camera must frame the model closely: '+blueInfantry.cameraDistance);
@@ -207,6 +212,10 @@ try {
   const redInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(redInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V2','red infantry must share the same textured surface pipeline');
   assert.ok(redInfantry.surfaceTextureCount>=7 && redInfantry.surfaceMaterialCount>=5,'red infantry PBR maps must be bound');
+  assert.ok(redInfantry.weaponGripDiagnostics?.forwardAlignment>.995 &&
+    redInfantry.weaponGripDiagnostics.leftGripError<.035 && redInfantry.weaponGripDiagnostics.rightGripError<.035 &&
+    redInfantry.weaponGripDiagnostics.torsoParented,
+    'red Bastion rifleman must retain the same forward two-hand weapon grip');
   assert.ok(redInfantry.namedParts.includes('bastion-brow-guard') &&
     redInfantry.namedParts.includes('bastion-jaw-guard') &&
     redInfantry.namedParts.includes('right-bastion-pauldron'),
@@ -312,10 +321,20 @@ try {
   assert.ok(mobileBlueInfantry.canvasWidth>=300 && mobileBlueInfantry.canvasHeight>=400 &&
     mobileBlueInfantry.hasAnimationRig && mobileBlueInfantry.drawCalls<=60 && mobileBlueInfantry.cameraDistance<8,
     'blue infantry must remain readable and animated in the mobile preview');
+  assert.equal(mobileBlueInfantry.weaponForwardAxis,'POSITIVE_Z');
+  assert.ok(mobileBlueInfantry.weaponGripDiagnostics?.forwardAlignment>.995 &&
+    mobileBlueInfantry.weaponGripDiagnostics.leftGripError<.04 && mobileBlueInfantry.weaponGripDiagnostics.rightGripError<.04 &&
+    mobileBlueInfantry.weaponGripDiagnostics.torsoParented,
+    'mobile Blue Sentinel must preserve the forward rifle and two-hand grip');
   await page.screenshot({path:output+'/mobile-blue-sentinel-infantry-390x844.png',fullPage:true});
   await page.selectOption('#team','red');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION_RIFLEMAN',null,{timeout:10000});
   await page.waitForTimeout(350);
+  const mobileRedInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.ok(mobileRedInfantry.weaponGripDiagnostics?.forwardAlignment>.995 &&
+    mobileRedInfantry.weaponGripDiagnostics.leftGripError<.04 && mobileRedInfantry.weaponGripDiagnostics.rightGripError<.04 &&
+    mobileRedInfantry.weaponGripDiagnostics.torsoParented,
+    'mobile Red Bastion must preserve the forward rifle and two-hand grip');
   await page.screenshot({path:output+'/mobile-red-bastion-infantry-390x844.png',fullPage:true});
   await page.selectOption('#asset','tank');
   await page.selectOption('#team','blue');

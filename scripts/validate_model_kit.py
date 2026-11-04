@@ -74,8 +74,9 @@ def main():
         "new THREE.SphereGeometry(radius, 12, 8)", "new THREE.SphereGeometry(1, 12, 8)",
         "new THREE.SphereGeometry(.17, 24, 16)", "new THREE.SphereGeometry(radius, 8, 6)",
         "MOBILE_RTS_SOLDIER_GEOMETRY_V2",
-        "SHOULDER_ELBOW_HIP_KNEE_V1",
-        "TWO_HAND_FORWARD_READY_V1", "-elbow-pivot", "-knee-pivot",
+        "TORSO_PARENTED_SHOULDER_ELBOW_HIP_KNEE_V2",
+        "TWO_HAND_FORWARD_READY_V2", "POSITIVE_Z", "rifle-trigger-grip", "rifle-support-grip",
+        "torso.add(pivot)", "torso.add(rifleGroup)", "supportReach = side < 0 ? .19 : 0", "-elbow-pivot", "-knee-pivot",
         "-upper-arm-loft", "-forearm-loft", "-thigh-loft", "-calf-loft",
         "-glove-palm", "leftKnee.rotation.x", "rightKnee.rotation.x",
     )
@@ -88,6 +89,8 @@ def main():
         raise SystemExit("FAIL: infantry render batching contract missing: " + ", ".join(missing))
     if "surfaceFinish" not in preview or "surfaceTextureCount" not in preview or "surfaceMaterialCount" not in preview:
         raise SystemExit("FAIL: preview must expose real infantry PBR surface-map diagnostics")
+    if "weaponGripDiagnostics" not in preview or "weaponForwardAxis" not in preview:
+        raise SystemExit("FAIL: model preview must expose forward rifle axis and both physical hand-grip checks")
     if "mergedPartNames" not in preview or "renderOptimization" not in preview:
         raise SystemExit("FAIL: preview must retain source part names and render-batching diagnostics")
     missing = [name for name in REQUIRED_PREVIEW if name not in preview]

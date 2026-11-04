@@ -4534,6 +4534,19 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     const unit = infantryProbe();
     if (!unit) return null;
     const rig = unit.g.userData.infantryRig;
+    unit.g.updateMatrixWorld(true);
+    const weaponForward = rig?.weapon ? new THREE.Vector3(1, 0, 0)
+      .applyQuaternion(rig.weapon.getWorldQuaternion(new THREE.Quaternion())).normalize() : null;
+    const unitForward = new THREE.Vector3(0, 0, 1)
+      .applyQuaternion(unit.g.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const leftHandWorld = new THREE.Vector3();
+    const rightHandWorld = new THREE.Vector3();
+    const leftGripWorld = new THREE.Vector3();
+    const rightGripWorld = new THREE.Vector3();
+    rig?.leftHand?.getWorldPosition(leftHandWorld);
+    rig?.rightHand?.getWorldPosition(rightHandWorld);
+    rig?.leftGrip?.getWorldPosition(leftGripWorld);
+    rig?.rightGrip?.getWorldPosition(rightGripWorld);
     return {
       profile: unit.g.userData.infantryProfile,
       position: [unit.g.position.x, unit.g.position.z],
@@ -4542,7 +4555,11 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       leftLeg: rig.leftLeg.rotation.x,
       rightLeg: rig.rightLeg.rotation.x,
       leftArm: rig.leftArm.rotation.x,
-      rightArm: rig.rightArm.rotation.x
+      rightArm: rig.rightArm.rotation.x,
+      weaponForwardAlignment: weaponForward ? weaponForward.dot(unitForward) : null,
+      leftGripError: rig?.leftHand && rig?.leftGrip ? leftHandWorld.distanceTo(leftGripWorld) : null,
+      rightGripError: rig?.rightHand && rig?.rightGrip ? rightHandWorld.distanceTo(rightGripWorld) : null,
+      weaponForwardAxis: rig?.weapon?.userData?.weaponForwardAxis || null
     };
   };
   window.__BLUE_ALERTS_INFANTRY_QA__ = Object.freeze({

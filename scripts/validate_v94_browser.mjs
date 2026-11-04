@@ -482,6 +482,9 @@ try {
   // The infantry rig must follow actual V94 displacement, not merely animate in the preview.
   const infantryReady = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(infantryReady?.profile === 'BLUE_SENTINEL_RIFLEMAN', 'V94 must attach the Blue Sentinel infantry rig to a live unit');
+  assert.equal(infantryReady.weaponForwardAxis,'POSITIVE_Z','live V94 infantry rifle must face the unit forward axis');
+  assert.ok(infantryReady.weaponForwardAlignment>.995 && infantryReady.leftGripError<.04 && infantryReady.rightGripError<.04,
+    'live V94 soldier hands must contact the forward rifle before movement: '+JSON.stringify(infantryReady));
   const infantryWalkStart = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
   try {
     await desktop.waitForFunction(start => {
@@ -500,8 +503,9 @@ try {
   assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 &&
     desktopInfantryGait.walkAmount > 0.2 &&
     Math.abs(desktopInfantryGait.leftLeg - desktopInfantryGait.rightLeg) > 0.1 &&
-    Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04,
-    'desktop V94 infantry arms and legs must animate in response to real movement');
+    Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04 &&
+    desktopInfantryGait.weaponForwardAlignment>.995 && desktopInfantryGait.leftGripError<.055 && desktopInfantryGait.rightGripError<.055,
+    'desktop V94 infantry must animate while retaining the forward rifle and both hand grips');
   console.log('DESKTOP_INFANTRY_GAIT ' + JSON.stringify({ start: infantryWalkStart, state: desktopInfantryGait }));
   await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
@@ -983,6 +987,9 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
 
   const mobileInfantryReady = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(mobileInfantryReady?.profile === 'BLUE_SENTINEL_RIFLEMAN', 'mobile V94 must load the faction infantry rig');
+  assert.equal(mobileInfantryReady.weaponForwardAxis,'POSITIVE_Z','mobile live infantry rifle must face the unit forward axis');
+  assert.ok(mobileInfantryReady.weaponForwardAlignment>.995 && mobileInfantryReady.leftGripError<.04 && mobileInfantryReady.rightGripError<.04,
+    'mobile live soldier hands must contact the forward rifle before movement: '+JSON.stringify(mobileInfantryReady));
   const mobileInfantryWalkStart = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
   try {
     await mobile.waitForFunction(start => {
@@ -1001,8 +1008,9 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 &&
     mobileInfantryGait.walkAmount > 0.15 &&
     Math.abs(mobileInfantryGait.leftLeg - mobileInfantryGait.rightLeg) > 0.08 &&
-    Math.abs(mobileInfantryGait.leftArm - mobileInfantryGait.rightArm) > 0.035,
-    'mobile V94 infantry arms and legs must animate in response to real movement');
+    Math.abs(mobileInfantryGait.leftArm - mobileInfantryGait.rightArm) > 0.035 &&
+    mobileInfantryGait.weaponForwardAlignment>.995 && mobileInfantryGait.leftGripError<.06 && mobileInfantryGait.rightGripError<.06,
+    'mobile V94 infantry must animate while retaining the forward rifle and both hand grips');
   console.log('MOBILE_INFANTRY_GAIT ' + JSON.stringify({ start: mobileInfantryWalkStart, state: mobileInfantryGait }));
   await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true });
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
