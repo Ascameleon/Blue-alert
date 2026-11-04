@@ -4434,7 +4434,8 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
         surfaceTextureCount: model.userData.surfaceTextureCount || 0,
         surfaceTextureResolution: model.userData.surfaceTextureResolution || 0,
         surfaceMaterialCount: model.userData.surfaceMaterialCount || 0,
-        surfaceDetailEnabled: model.userData.surfaceDetailEnabled === true
+        surfaceDetailEnabled: model.userData.surfaceDetailEnabled === true,
+        surfaceMaterialBindingsActive: model.userData.surfaceMaterialBindingsActive || 0
       };
     },
     setHeadquartersSurfaceDetail(enabled) {
@@ -4442,7 +4443,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       if (!model) throw new Error('The live player headquarters model is not available.');
       const applied = BLUE_MODELS?.setBuildingSurfaceDetail?.(model, Boolean(enabled));
       if (!applied) throw new Error('The live headquarters surface maps are unavailable.');
-      return {surfaceDetailEnabled:model.userData.surfaceDetailEnabled===true,surfaceTextureCount:model.userData.surfaceTextureCount||0,surfaceTextureResolution:model.userData.surfaceTextureResolution||0,surfaceMaterialCount:model.userData.surfaceMaterialCount||0};
+      return {surfaceDetailEnabled:model.userData.surfaceDetailEnabled===true,surfaceTextureCount:model.userData.surfaceTextureCount||0,surfaceTextureResolution:model.userData.surfaceTextureResolution||0,surfaceMaterialCount:model.userData.surfaceMaterialCount||0,surfaceMaterialBindingsActive:model.userData.surfaceMaterialBindingsActive||0};
     }
   });
   const infantryProbe = () => {

@@ -281,10 +281,10 @@ try {
     'HQ cast architecture must remain PBR-lit and within the browser geometry budget');
   await page.screenshot({path:output+'/desktop-hq.png',fullPage:true});
   const hqSurfaceBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setHqSurfaceDetail(false));
-  assert.equal(hqSurfaceBaseline?.surfaceDetailEnabled,false);assert.equal(hqSurfaceBaseline?.surfaceTextureCount,7);assert.equal(hqSurfaceBaseline?.surfaceMaterialCount,4);assert.equal(hqSurfaceBaseline?.surfaceTextureResolution,512);
+  assert.equal(hqSurfaceBaseline?.surfaceDetailEnabled,false);assert.equal(hqSurfaceBaseline?.surfaceTextureCount,7);assert.equal(hqSurfaceBaseline?.surfaceMaterialCount,4);assert.equal(hqSurfaceBaseline?.surfaceTextureResolution,512);assert.equal(hqSurfaceBaseline?.surfaceMaterialBindingsActive,0);
   await page.waitForTimeout(350);await page.screenshot({path:output+'/desktop-hq-surface-baseline.png',fullPage:true});
   const hqSurfaceDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setHqSurfaceDetail(true));
-  assert.equal(hqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(hqSurfaceDetail?.surfaceTextureResolution,512);
+  assert.equal(hqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(hqSurfaceDetail?.surfaceTextureResolution,512);assert.equal(hqSurfaceDetail?.surfaceMaterialBindingsActive,4);
   await page.waitForTimeout(350);await page.screenshot({path:output+'/desktop-hq-surface-detail.png',fullPage:true});
 
   await page.selectOption('#asset','controlTower');
@@ -352,10 +352,10 @@ try {
     'mobile HQ must render the same cast bunker inside the mobile preview budget');
   await page.screenshot({path:output+'/mobile-hq-390x844.png',fullPage:true});
   const mobileHqSurfaceBaseline=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setHqSurfaceDetail(false));
-  assert.equal(mobileHqSurfaceBaseline?.surfaceDetailEnabled,false);assert.equal(mobileHqSurfaceBaseline?.surfaceTextureCount,7);assert.equal(mobileHqSurfaceBaseline?.surfaceTextureResolution,256);
+  assert.equal(mobileHqSurfaceBaseline?.surfaceDetailEnabled,false);assert.equal(mobileHqSurfaceBaseline?.surfaceTextureCount,7);assert.equal(mobileHqSurfaceBaseline?.surfaceTextureResolution,256);assert.equal(mobileHqSurfaceBaseline?.surfaceMaterialBindingsActive,0);
   await page.waitForTimeout(300);await page.screenshot({path:output+'/mobile-hq-surface-baseline-390x844.png',fullPage:true});
   const mobileHqSurfaceDetail=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW_QA__?.setHqSurfaceDetail(true));
-  assert.equal(mobileHqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(mobileHqSurfaceDetail?.surfaceTextureResolution,256);
+  assert.equal(mobileHqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(mobileHqSurfaceDetail?.surfaceTextureResolution,256);assert.equal(mobileHqSurfaceDetail?.surfaceMaterialBindingsActive,4);
   await page.waitForTimeout(300);await page.screenshot({path:output+'/mobile-hq-surface-detail-390x844.png',fullPage:true});
   console.log('MOBILE_LAYOUT '+JSON.stringify(mobile));
   console.log('VISUAL_BASELINE '+JSON.stringify(baselineMetrics));

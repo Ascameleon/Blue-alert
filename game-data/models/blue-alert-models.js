@@ -20,15 +20,21 @@ const mat = (THREE, color, roughness=0.82, metalness=0.12) =>
     envMapIntensity: metalness > 0.35 ? 1.25 : 0.8
   });
 
+
 const BUILDING_SURFACE_TEXTURE_CACHE = new WeakMap();
 const createBuildingSurfaceTextures = THREE => {
   if (typeof document === 'undefined') return null;
-  let cached = BUILDING_SURFACE_TEXTURE_CACHE.get(THREE);
-  if (cached) return cached;
   const resolution = typeof window !== 'undefined' && window.innerWidth < 700 ? 256 : 512;
+  let resolutionCache = BUILDING_SURFACE_TEXTURE_CACHE.get(THREE);
+  if (!resolutionCache) {
+    resolutionCache = new Map();
+    BUILDING_SURFACE_TEXTURE_CACHE.set(THREE, resolutionCache);
+  }
+  const cached = resolutionCache.get(resolution);
+  if (cached) return cached;
   let seed = 0xB17D1A5;
   const random = () => { seed = (Math.imul(seed,1664525)+1013904223)>>>0; return seed/4294967296; };
-  const makeTexture = (name,paint,colorMap=false,repeat=1.35) => {
+  const makeTexture = (name,paint,colorMap=false,repeat=1.2) => {
     const canvas=document.createElement('canvas'); canvas.width=canvas.height=resolution;
     const context=canvas.getContext('2d'); if(!context) return null;
     paint(context,resolution,random);
@@ -40,52 +46,70 @@ const createBuildingSurfaceTextures = THREE => {
     texture.magFilter=THREE.LinearFilter; texture.needsUpdate=true; return texture;
   };
   const concreteMap=makeTexture('blue-alert-hq-cast-concrete-albedo',(ctx,size,rand)=>{
-    ctx.fillStyle='#eeeeea';ctx.fillRect(0,0,size,size);
-    for(let i=0;i<1900;i++){const v=Math.round(218+rand()*31);ctx.globalAlpha=.035+rand()*.085;ctx.fillStyle='rgb('+v+','+v+','+Math.max(0,v-2)+')';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,.45+rand()*2.8,.4+rand()*2.1,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
-    for(let i=0;i<110;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.035+rand()*.07;ctx.strokeStyle=rand()>.5?'#6e716c':'#ffffff';ctx.lineWidth=.35+rand()*.7;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*28,y+(rand()-.5)*5);ctx.stroke();}
+    ctx.fillStyle='#e4e3dc';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<1900;i++){const v=Math.round(176+rand()*78);ctx.globalAlpha=.07+rand()*.16;ctx.fillStyle='rgb('+v+','+v+','+Math.max(0,v-3)+')';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,.55+rand()*3.2,.45+rand()*2.5,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<150;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.12+rand()*.20;ctx.fillStyle=rand()>.5?'#b7b9b0':'#f8f8f1';ctx.beginPath();ctx.ellipse(x,y,2+rand()*7,1.5+rand()*5,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<110;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.10+rand()*.15;ctx.strokeStyle=rand()>.5?'#666a64':'#ffffff';ctx.lineWidth=.45+rand()*.9;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*34,y+(rand()-.5)*7);ctx.stroke();}
     ctx.globalAlpha=1;
-  },true,1.25);
+  },true,1.15);
   const concreteBumpMap=makeTexture('blue-alert-hq-cast-concrete-pore-relief',(ctx,size,rand)=>{
     ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
-    for(let i=0;i<4200;i++){const v=Math.round(104+rand()*55);ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.globalAlpha=.18+rand()*.34;ctx.fillRect(rand()*size,rand()*size,.55+rand()*1.8,.55+rand()*1.5);}
-    for(let i=0;i<150;i++){ctx.globalAlpha=.16+rand()*.18;ctx.strokeStyle=rand()>.5?'#b2b2b2':'#555555';ctx.lineWidth=.4+rand()*.8;const x=rand()*size,y=rand()*size;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*18,y+(rand()-.5)*3);ctx.stroke();}
+    for(let i=0;i<4200;i++){const v=Math.round(64+rand()*128);ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.globalAlpha=.30+rand()*.48;ctx.fillRect(rand()*size,rand()*size,.65+rand()*2.7,.6+rand()*2.2);}
+    for(let i=0;i<150;i++){ctx.globalAlpha=.25+rand()*.22;ctx.strokeStyle=rand()>.5?'#c4c4c4':'#414141';ctx.lineWidth=.5+rand()*1.1;const x=rand()*size,y=rand()*size;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*22,y+(rand()-.5)*4);ctx.stroke();}
+    for(let i=0;i<90;i++){const v=Math.round(88+rand()*92);ctx.globalAlpha=.18+rand()*.24;ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,1.4+rand()*4.5,.9+rand()*3.2,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
     ctx.globalAlpha=1;
-  },false,1.25);
+  },false,1.15);
   const paintMap=makeTexture('blue-alert-hq-painted-armor-wear',(ctx,size,rand)=>{
     ctx.fillStyle='#eeeeee';ctx.fillRect(0,0,size,size);
-    for(let i=0;i<125;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.12+rand()*.20;ctx.strokeStyle=rand()>.5?'#777777':'#ffffff';ctx.lineWidth=.45+rand()*1.05;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*22,y+(rand()-.5)*4);ctx.stroke();}
-    for(let i=0;i<32;i++){ctx.globalAlpha=.12+rand()*.16;ctx.fillStyle='#7b807b';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,.8+rand()*2.8,.5+rand()*1.8,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<125;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.24+rand()*.34;ctx.strokeStyle=rand()>.5?'#606762':'#ffffff';ctx.lineWidth=.55+rand()*1.35;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*28,y+(rand()-.5)*5);ctx.stroke();}
+    for(let i=0;i<72;i++){ctx.globalAlpha=.22+rand()*.32;ctx.fillStyle=rand()>.5?'#656d66':'#ffffff';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,.9+rand()*3.8,.65+rand()*2.3,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
     ctx.globalAlpha=1;
-  },true,1.45);
+  },true,1.25);
   const paintBumpMap=makeTexture('blue-alert-hq-painted-armor-microrelief',(ctx,size,rand)=>{
     ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
-    for(let i=0;i<180;i++){ctx.globalAlpha=.18+rand()*.2;ctx.strokeStyle=rand()>.5?'#b9b9b9':'#555555';ctx.lineWidth=.4+rand()*.9;const x=rand()*size,y=rand()*size;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*16,y+(rand()-.5)*3);ctx.stroke();}
-    ctx.globalAlpha=1;
-  },false,1.45);
-  const metalMap=makeTexture('blue-alert-hq-brushed-metal-albedo',(ctx,size,rand)=>{
-    ctx.fillStyle='#eeeeee';ctx.fillRect(0,0,size,size);
-    for(let i=0;i<420;i++){const y=rand()*size;ctx.globalAlpha=.06+rand()*.12;ctx.strokeStyle=rand()>.5?'#777777':'#ffffff';ctx.lineWidth=.3+rand()*.65;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y+(rand()-.5)*4);ctx.stroke();}
-    ctx.globalAlpha=1;
-  },true,1.2);
-  const metalBumpMap=makeTexture('blue-alert-hq-brushed-metal-relief',(ctx,size,rand)=>{
-    ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
-    for(let i=0;i<620;i++){const y=rand()*size;ctx.globalAlpha=.10+rand()*.16;ctx.strokeStyle=rand()>.5?'#b5b5b5':'#565656';ctx.lineWidth=.3+rand()*.55;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y+(rand()-.5)*2);ctx.stroke();}
-    ctx.globalAlpha=1;
-  },false,1.2);
-  const roughnessMap=makeTexture('blue-alert-hq-material-roughness',(ctx,size,rand)=>{
-    ctx.fillStyle='#dddddd';ctx.fillRect(0,0,size,size);
-    for(let i=0;i<5200;i++){const v=Math.round(166+rand()*82);ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.globalAlpha=.18+rand()*.3;ctx.fillRect(rand()*size,rand()*size,.7+rand()*1.8,.7+rand()*1.6);}
+    for(let i=0;i<180;i++){ctx.globalAlpha=.30+rand()*.35;ctx.strokeStyle=rand()>.5?'#c7c7c7':'#444444';ctx.lineWidth=.55+rand()*1.35;const x=rand()*size,y=rand()*size;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*22,y+(rand()-.5)*4);ctx.stroke();}
+    for(let i=0;i<70;i++){const v=rand()>.5?168:91;ctx.globalAlpha=.25+rand()*.3;ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,1+rand()*3,1+rand()*2,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
     ctx.globalAlpha=1;
   },false,1.25);
-  cached={concreteMap,concreteBumpMap,paintMap,paintBumpMap,metalMap,metalBumpMap,roughnessMap,resolution};
-  BUILDING_SURFACE_TEXTURE_CACHE.set(THREE,cached);return cached;
+  const metalMap=makeTexture('blue-alert-hq-brushed-metal-albedo',(ctx,size,rand)=>{
+    ctx.fillStyle='#e8e8e8';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<420;i++){const y=rand()*size;ctx.globalAlpha=.12+rand()*.20;ctx.strokeStyle=rand()>.5?'#666666':'#ffffff';ctx.lineWidth=.4+rand()*.9;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y+(rand()-.5)*5);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },true,1.1);
+  const metalBumpMap=makeTexture('blue-alert-hq-brushed-metal-relief',(ctx,size,rand)=>{
+    ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<620;i++){const y=rand()*size;ctx.globalAlpha=.22+rand()*.25;ctx.strokeStyle=rand()>.5?'#c2c2c2':'#454545';ctx.lineWidth=.35+rand()*.7;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y+(rand()-.5)*2.5);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },false,1.1);
+  const roughnessMap=makeTexture('blue-alert-hq-material-roughness',(ctx,size,rand)=>{
+    ctx.fillStyle='#d2d2d2';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<5200;i++){const v=Math.round(105+rand()*145);ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.globalAlpha=.30+rand()*.48;ctx.fillRect(rand()*size,rand()*size,.8+rand()*2,.8+rand()*1.8);}
+    ctx.globalAlpha=1;
+  },false,1.15);
+  const result={concreteMap,concreteBumpMap,paintMap,paintBumpMap,metalMap,metalBumpMap,roughnessMap,resolution};
+  resolutionCache.set(resolution,result);
+  return result;
 };
 export function setBuildingSurfaceDetail(building,enabled=true){
   const bindings=building?.userData?.surfaceMaterialBindings||[];if(!bindings.length)return false;
-  const active=Boolean(enabled);
-  for(const binding of bindings){binding.material.map=active?binding.map:null;binding.material.bumpMap=active?binding.bumpMap:null;binding.material.roughnessMap=active?binding.roughnessMap:null;binding.material.bumpScale=active?binding.bumpScale:0;binding.material.needsUpdate=true;}
-  building.userData.surfaceDetailEnabled=active;return true;
+  const active=Boolean(enabled);let verified=0;
+  for(const binding of bindings){
+    binding.material.map=active?binding.map:null;
+    binding.material.bumpMap=active?binding.bumpMap:null;
+    binding.material.roughnessMap=active?binding.roughnessMap:null;
+    binding.material.bumpScale=active?binding.bumpScale:0;
+    binding.material.needsUpdate=true;
+    const matches=active
+      ? binding.material.map===binding.map&&binding.material.bumpMap===binding.bumpMap&&binding.material.roughnessMap===binding.roughnessMap&&binding.material.bumpScale===binding.bumpScale
+      : binding.material.map===null&&binding.material.bumpMap===null&&binding.material.roughnessMap===null&&binding.material.bumpScale===0;
+    if(matches)verified++;
+  }
+  building.userData.surfaceDetailEnabled=active&&verified===bindings.length;
+  building.userData.surfaceMaterialBindingsActive=active?verified:0;
+  return verified===bindings.length;
 }
+
+
 
 const box = (THREE, parent, name, size, position, material, rotation) => {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
@@ -1243,10 +1267,10 @@ export function createBuilding(THREE, type='barracks', options={}) {
     surfaceTextures=createBuildingSurfaceTextures(THREE);
     if(surfaceTextures){
       const bindSurface=(material,map,bumpMap,bumpScale)=>{if(map&&bumpMap&&surfaceTextures.roughnessMap)surfaceMaterialBindings.push({material,map,bumpMap,roughnessMap:surfaceTextures.roughnessMap,bumpScale});};
-      bindSurface(concrete,surfaceTextures.concreteMap,surfaceTextures.concreteBumpMap,.012);
-      bindSurface(roof,surfaceTextures.paintMap,surfaceTextures.paintBumpMap,.006);
-      bindSurface(faction,surfaceTextures.paintMap,surfaceTextures.paintBumpMap,.006);
-      bindSurface(metal,surfaceTextures.metalMap,surfaceTextures.metalBumpMap,.0025);
+      bindSurface(concrete,surfaceTextures.concreteMap,surfaceTextures.concreteBumpMap,.045);
+      bindSurface(roof,surfaceTextures.paintMap,surfaceTextures.paintBumpMap,.018);
+      bindSurface(faction,surfaceTextures.paintMap,surfaceTextures.paintBumpMap,.018);
+      bindSurface(metal,surfaceTextures.metalMap,surfaceTextures.metalBumpMap,.008);
     }
     // One continuous depth-lofted cast shell creates a real 3D shoulder break:
     // nose and rear taper in plan, while the roof shoulders descend toward both
@@ -1425,7 +1449,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
   g.userData={kind:'building',buildingType:type,team,rotatingGun,defenseTurretGeometryProfile,defenseTurretStationCount,commandCoreGeometryProfile,commandCoreProfileVertexCount,commandCoreStationCount,
     surfaceFinish:surfaceTextureCount?'CAST_CONCRETE_PAINT_MICROWEAR_V1':'UNTEXTURED_FALLBACK',surfaceTextureCount,
     surfaceTextureResolution:surfaceTextures?.resolution||0,surfaceMaterialCount:surfaceMaterialBindings.length,
-    surfaceMaterialBindings,surfaceDetailEnabled:false};
+    surfaceMaterialBindings,surfaceDetailEnabled:false,surfaceMaterialBindingsActive:0};
   if(surfaceDetail)setBuildingSurfaceDetail(g,true);
   g.scale.setScalar(scale); return g;
 }

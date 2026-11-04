@@ -60,7 +60,7 @@ def main():
         "respirator-filter-vent", "respirator-breathing-hose", "gas-mask-chin-guard",
         "angular-pauldron", "articulated-knee-guard", "rifle-top-rail", "rifle-ejection-port",
         "createInfantrySurfaceTextures", "FIELDWEAVE_CERAMIC_MICROSCUFF_V2", "fabricBump", "armorBump", "metalBump",
-        "createBuildingSurfaceTextures", "CAST_CONCRETE_PAINT_MICROWEAR_V1", "surfaceMaterialBindings", "surfaceTextureResolution",
+        "createBuildingSurfaceTextures", "CAST_CONCRETE_PAINT_MICROWEAR_V1", "surfaceMaterialBindings", "surfaceTextureResolution", "resolutionCache", "surfaceMaterialBindingsActive",
         "head.scale.setScalar(.82)", "helmet shell above is the sole crown surface",
     )
     missing = [name for name in REQUIRED_HERO_PARTS if name not in model]

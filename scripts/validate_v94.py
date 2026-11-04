@@ -352,6 +352,7 @@ def main():
         "mobile-v94-headquarters-surface-detail-390x844.png",
         "CAST_CONCRETE_PAINT_MICROWEAR_V1",
         "surfaceTextureResolution",
+        "surfaceMaterialBindingsActive",
         "ARMORED_BASTION_COMMAND_CORE_V3",
         "desktopHeadquartersFocus?.stationCount, 6",
         "mobileHeadquartersFocus?.stationCount, 6",

@@ -556,10 +556,10 @@ try {
     'desktop live V94 HQ must expose its complete stepped cast profile');
   assert.equal(desktopHeadquartersFocus?.stationCount, 6,
     'desktop live V94 HQ must instantiate all six depth-loft stations');
-  assert.equal(desktopHeadquartersFocus?.surfaceFinish,'CAST_CONCRETE_PAINT_MICROWEAR_V1');assert.equal(desktopHeadquartersFocus?.surfaceTextureCount,7);assert.equal(desktopHeadquartersFocus?.surfaceTextureResolution,512);assert.equal(desktopHeadquartersFocus?.surfaceMaterialCount,4);assert.equal(desktopHeadquartersFocus?.surfaceDetailEnabled,true);
-  const desktopHqSurfaceBaseline=await desktop.evaluate(()=>window.__BLUE_ALERTS_CAMERA_QA__?.setHeadquartersSurfaceDetail(false));assert.equal(desktopHqSurfaceBaseline?.surfaceDetailEnabled,false);
+  assert.equal(desktopHeadquartersFocus?.surfaceFinish,'CAST_CONCRETE_PAINT_MICROWEAR_V1');assert.equal(desktopHeadquartersFocus?.surfaceTextureCount,7);assert.equal(desktopHeadquartersFocus?.surfaceTextureResolution,512);assert.equal(desktopHeadquartersFocus?.surfaceMaterialCount,4);assert.equal(desktopHeadquartersFocus?.surfaceDetailEnabled,true);assert.equal(desktopHeadquartersFocus?.surfaceMaterialBindingsActive,4);
+  const desktopHqSurfaceBaseline=await desktop.evaluate(()=>window.__BLUE_ALERTS_CAMERA_QA__?.setHeadquartersSurfaceDetail(false));assert.equal(desktopHqSurfaceBaseline?.surfaceDetailEnabled,false);assert.equal(desktopHqSurfaceBaseline?.surfaceMaterialBindingsActive,0);
   await desktop.waitForTimeout(350);await desktop.screenshot({path:output+'/desktop-v94-headquarters-surface-baseline.png',fullPage:true});
-  const desktopHqSurfaceDetail=await desktop.evaluate(()=>window.__BLUE_ALERTS_CAMERA_QA__?.setHeadquartersSurfaceDetail(true));assert.equal(desktopHqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(desktopHqSurfaceDetail?.surfaceTextureResolution,512);
+  const desktopHqSurfaceDetail=await desktop.evaluate(()=>window.__BLUE_ALERTS_CAMERA_QA__?.setHeadquartersSurfaceDetail(true));assert.equal(desktopHqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(desktopHqSurfaceDetail?.surfaceMaterialBindingsActive,4);assert.equal(desktopHqSurfaceDetail?.surfaceTextureResolution,512);
   await desktop.waitForTimeout(350);await desktop.screenshot({path:output+'/desktop-v94-headquarters-surface-detail.png',fullPage:true});
   await desktop.screenshot({ path: output + '/desktop-v94-headquarters-focus.png', fullPage: true });
 
@@ -1008,10 +1008,10 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     'mobile live V94 HQ must expose its complete stepped cast profile');
   assert.equal(mobileHeadquartersFocus?.stationCount, 6,
     'mobile live V94 HQ must instantiate all six depth-loft stations');
-  assert.equal(mobileHeadquartersFocus?.surfaceFinish,'CAST_CONCRETE_PAINT_MICROWEAR_V1');assert.equal(mobileHeadquartersFocus?.surfaceTextureCount,7);assert.equal(mobileHeadquartersFocus?.surfaceTextureResolution,256);assert.equal(mobileHeadquartersFocus?.surfaceMaterialCount,4);assert.equal(mobileHeadquartersFocus?.surfaceDetailEnabled,true);
-  const mobileHqSurfaceBaseline=await mobile.evaluate(()=>window.__BLUE_ALERTS_CAMERA_QA__?.setHeadquartersSurfaceDetail(false));assert.equal(mobileHqSurfaceBaseline?.surfaceDetailEnabled,false);
+  assert.equal(mobileHeadquartersFocus?.surfaceFinish,'CAST_CONCRETE_PAINT_MICROWEAR_V1');assert.equal(mobileHeadquartersFocus?.surfaceTextureCount,7);assert.equal(mobileHeadquartersFocus?.surfaceTextureResolution,256);assert.equal(mobileHeadquartersFocus?.surfaceMaterialCount,4);assert.equal(mobileHeadquartersFocus?.surfaceDetailEnabled,true);assert.equal(mobileHeadquartersFocus?.surfaceMaterialBindingsActive,4);
+  const mobileHqSurfaceBaseline=await mobile.evaluate(()=>window.__BLUE_ALERTS_CAMERA_QA__?.setHeadquartersSurfaceDetail(false));assert.equal(mobileHqSurfaceBaseline?.surfaceDetailEnabled,false);assert.equal(mobileHqSurfaceBaseline?.surfaceMaterialBindingsActive,0);
   await mobile.waitForTimeout(300);await mobile.screenshot({path:output+'/mobile-v94-headquarters-surface-baseline-390x844.png',fullPage:true});
-  const mobileHqSurfaceDetail=await mobile.evaluate(()=>window.__BLUE_ALERTS_CAMERA_QA__?.setHeadquartersSurfaceDetail(true));assert.equal(mobileHqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(mobileHqSurfaceDetail?.surfaceTextureResolution,256);
+  const mobileHqSurfaceDetail=await mobile.evaluate(()=>window.__BLUE_ALERTS_CAMERA_QA__?.setHeadquartersSurfaceDetail(true));assert.equal(mobileHqSurfaceDetail?.surfaceDetailEnabled,true);assert.equal(mobileHqSurfaceDetail?.surfaceMaterialBindingsActive,4);assert.equal(mobileHqSurfaceDetail?.surfaceTextureResolution,256);
   await mobile.waitForTimeout(300);await mobile.screenshot({path:output+'/mobile-v94-headquarters-surface-detail-390x844.png',fullPage:true});
   await mobile.screenshot({ path: output + '/mobile-v94-headquarters-focus-390x844.png', fullPage: true });
 
