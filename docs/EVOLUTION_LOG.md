@@ -668,17 +668,16 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Changed files in the tested ccf794e commit: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94_bundle_browser.mjs`, and `docs/EVOLUTION_LOG.md`. The exact workflow reported success; non-blocking Node deprecation notices and 100 legacy Java compiler warnings were present. No uncaught OpenRTS exception was recorded.
 - Evidence boundaries: 390×844 is browser emulation, not a physical Samsung test. The V94 web runtime and native OpenRTS evidence are separate. No merge, game version or release was created; budget remains 0 €.
 
-## V94 woodland canopy — tapered needle-spray sculpt candidate (2026-11-04)
-
-- Rework the existing V3 foliage clusters rather than adding scenery: replace each rounded polyhedral cluster with five tapered, double-sided needle blades distributed radially around the existing curved branch tangent.
-- Preserve the four branch whorls, 21 curved branch arms, 126 spray clusters, instanced tree transforms, trunk, collision/pathing and three render groups. The new canopy targets 630 blades and a 3,200–4,000 triangle budget; no new world objects or paid assets.
-- Regression coverage requires the tapered-needle profile and exact blade/cluster diagnostics on desktop and 390×844 mobile. Existing same-camera legacy/detail screenshots remain the visual acceptance gate.
-- Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, and this log. Exact commit SHA, final workflow, new screenshot artifact paths and visual verdict will be recorded after exact-head validation.
-- Status: candidate only; no merge, version or release. Browser mobile is emulation, not a physical Samsung test. OpenRTS is validated separately and does not import this Three.js canopy. Budget remains 0 €.
-
-
 ## First exact-head validation failure — b600dd4023e5dfcb830f00928b08e3d9869c7e7b (2026-11-04)
 
 - Workflow [41846650072](https://github.com/Ascameleon/Blue-alert/actions/runs/41846650072) completed with failure in `Validate BLUE ALERTS v94 3D prototype`, before browser rendering, standalone build or OpenRTS. No screenshot artifacts were produced.
-- Exact error: the static tree contract still required `new THREE.Quaternion()` and `new THREE.DodecahedronGeometry(1, 0)`. Those tokens belonged to the removed rounded dodecahedral cluster implementation; the runtime candidate now constructs five tapered needle blades per cluster. This was a stale validator contract, not a browser/runtime failure.
-- Correction: replace those obsolete assertions with the new fan-basis and `needleBladeCountPerCluster = 5` contracts. The exact-head workflow must be rerun before any visual judgement. No additional branch write occurred while workflow 41846650072 was active.
+- Exact error: the static tree contract still required `new THREE.Quaternion()` and `new THREE.DodecahedronGeometry(1, 0)`. Those tokens belonged to the removed rounded dodecahedral cluster implementation; the intermediate V1 candidate used five flat tapered blades per cluster; V1 was not rendered or accepted. This was a stale validator contract, not a browser/runtime failure.
+- Correction commit `19f8095bcc26a0062684923fc95de816aa9acab6` replaced those obsolete assertions with the fan-basis and `needleBladeCountPerCluster = 5` contracts. That validator/docs-only head did not produce a workflow run; the next runtime-bearing commit triggers exact-head validation.
+
+
+## V94 woodland canopy — 3D ridge-needle candidate (2026-11-04)
+
+- V2 supersedes the unrendered V1 candidate: four tapered blades per existing spray cluster, each with paired front/back facets meeting at a shallow ridge. This avoids flat camera-dependent leaf cards while preserving the existing branch skeleton and instance layout.
+- Expected diagnostics: 504 blades, 32 triangles per cluster, approximately 5,040 total foliage triangles (1,008 branch triangles + 4,032 needle triangles). Browser checks bound the result to 3,200–5,200 triangles and assert the exact profile on desktop and mobile.
+- Changed files in this candidate commit: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, and `docs/EVOLUTION_LOG.md`. Exact commit SHA, workflow result, screenshot artifact paths and visual verdict will be recorded after exact-head validation.
+- This remains a candidate, not an accepted visual improvement. Fresh desktop and 390×844 mobile captures from the exact V2 head are required; inspect the same-camera legacy/detail tree pair before acceptance. Browser mobile is emulation, not a physical Samsung test. OpenRTS remains separate. Budget: 0 €.

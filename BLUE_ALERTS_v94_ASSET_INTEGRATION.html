@@ -1743,8 +1743,8 @@ function createLayeredTreeFoliageGeometry() {
     }
   };
   let needleBladeCount = 0;
-  const needleBladeCountPerCluster = 5;
-  const needleBladeTrianglesPerCluster = needleBladeCountPerCluster * 4;
+  const needleBladeCountPerCluster = 4;
+  const needleBladeTrianglesPerCluster = needleBladeCountPerCluster * 8;
   const appendNeedleTriangle = (a, b, c, tone, variation) => {
     const faceNormal = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
     const shade = tone * variation;
@@ -1768,6 +1768,7 @@ function createLayeredTreeFoliageGeometry() {
         .addScaledVector(up, bladeIndex % 2 ? .018 : -.012).normalize();
       const bladeReference = Math.abs(bladeDirection.y) > .92 ? new THREE.Vector3(1, 0, 0) : up;
       const bladeSide = bladeDirection.clone().cross(bladeReference).normalize();
+      const bladeNormal = bladeDirection.clone().cross(bladeSide).normalize();
       const start = center.clone()
         .addScaledVector(spread, width * .07)
         .addScaledVector(bladeDirection, -length * .08);
@@ -1776,12 +1777,17 @@ function createLayeredTreeFoliageGeometry() {
       const halfWidth = width * (.16 + (bladeIndex % 3) * .012);
       const left = shoulder.clone().addScaledVector(bladeSide, halfWidth);
       const right = shoulder.clone().addScaledVector(bladeSide, -halfWidth);
+      const ridge = shoulder.clone().addScaledVector(bladeNormal, halfWidth * .22);
       const variation = .91 + Math.sin(twist * 2.1 + bladeIndex * 1.73) * .06;
-      // Front and reverse faces keep each tapered needle readable from every RTS camera angle.
-      appendNeedleTriangle(start, left, tip, tone, variation);
-      appendNeedleTriangle(start, tip, right, tone, variation * .985);
-      appendNeedleTriangle(start, tip, left, tone, variation * .985);
-      appendNeedleTriangle(start, right, tip, tone, variation);
+      // Paired front/back facets form a thin 3D ridge instead of a flat, camera-dependent card.
+      appendNeedleTriangle(start, left, ridge, tone, variation);
+      appendNeedleTriangle(start, ridge, right, tone, variation * .985);
+      appendNeedleTriangle(left, tip, ridge, tone, variation * .97);
+      appendNeedleTriangle(ridge, tip, right, tone, variation * .985);
+      appendNeedleTriangle(start, ridge, left, tone, variation);
+      appendNeedleTriangle(start, right, ridge, tone, variation * .985);
+      appendNeedleTriangle(left, ridge, tip, tone, variation * .97);
+      appendNeedleTriangle(ridge, right, tip, tone, variation * .985);
       needleBladeCount++;
     }
     needleClusters++;
@@ -1832,8 +1838,9 @@ function createLayeredTreeFoliageGeometry() {
     needleSpraysPerArm: needleSprays.length,
     needleClustersPerArm: needleSprays.length * 2,
     needleBladeCount,
+    needleBladeCountPerCluster,
     needleBladeTrianglesPerCluster,
-    needleProfile: 'TAPERED_RADIAL_NEEDLE_FAN_V1',
+    needleProfile: 'TAPERED_3D_NEEDLE_FAN_V2',
     branchTubeSegments: 6,
     branchRadialSegments: 4,
     canopyProfile: 'CURVED_BRAIDED_CONIFER_V3',
@@ -1990,6 +1997,7 @@ window.__BLUE_ALERTS_VEGETATION = Object.freeze({
   needleSpraysPerArm: treeFoliageGeometry.userData.needleSpraysPerArm,
   needleClustersPerArm: treeFoliageGeometry.userData.needleClustersPerArm,
   needleBladeCount: treeFoliageGeometry.userData.needleBladeCount,
+  needleBladeCountPerCluster: treeFoliageGeometry.userData.needleBladeCountPerCluster,
   needleBladeTrianglesPerCluster: treeFoliageGeometry.userData.needleBladeTrianglesPerCluster,
   needleProfile: treeFoliageGeometry.userData.needleProfile,
   branchTubeSegments: treeFoliageGeometry.userData.branchTubeSegments,

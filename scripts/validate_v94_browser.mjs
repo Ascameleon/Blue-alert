@@ -269,16 +269,16 @@ try {
     desktopMetrics.vegetation.needleSpraysPerArm === 3 &&
     desktopMetrics.vegetation.needleClustersPerArm === 6 &&
     desktopMetrics.vegetation.needleClusters === 126 &&
-    desktopMetrics.vegetation.needleBladeCount === 630 &&
-    desktopMetrics.vegetation.needleBladeTrianglesPerCluster === 20 &&
-    desktopMetrics.vegetation.needleProfile === 'TAPERED_RADIAL_NEEDLE_FAN_V1' &&
+    desktopMetrics.vegetation.needleBladeCount === 504 &&
+    desktopMetrics.vegetation.needleBladeTrianglesPerCluster === 32 &&
+    desktopMetrics.vegetation.needleProfile === 'TAPERED_3D_NEEDLE_FAN_V2' &&
     desktopMetrics.vegetation.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
     desktopMetrics.vegetation.coreConeCount === 0 &&
     desktopMetrics.vegetation.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     desktopMetrics.vegetation.trunkHeight >= 2.6 &&
     desktopMetrics.vegetation.branchTubeSegments === 6 &&
     desktopMetrics.vegetation.branchRadialSegments === 4 &&
-    desktopMetrics.vegetation.foliageTriangles >= 3200 && desktopMetrics.vegetation.foliageTriangles <= 4000 &&
+    desktopMetrics.vegetation.foliageTriangles >= 3200 && desktopMetrics.vegetation.foliageTriangles <= 5200 &&
     desktopMetrics.vegetation.rockInstances >= 30 &&
     desktopMetrics.vegetation.renderGroups === 3 && desktopMetrics.vegetation.blocksMovement === false,
     'desktop vegetation must expose the V3 curved branch canopy, detailed bark trunk and bounded instanced geometry');
@@ -845,15 +845,15 @@ try {
     mobileMetrics.vegetation.foliageTiers === 4 &&
     mobileMetrics.vegetation.branchWhorls === 4 && mobileMetrics.vegetation.branchArms === 21 &&
     mobileMetrics.vegetation.needleClustersPerArm === 6 && mobileMetrics.vegetation.needleClusters === 126 &&
-    mobileMetrics.vegetation.needleBladeCount === 630 &&
-    mobileMetrics.vegetation.needleBladeTrianglesPerCluster === 20 &&
-    mobileMetrics.vegetation.needleProfile === 'TAPERED_RADIAL_NEEDLE_FAN_V1' &&
+    mobileMetrics.vegetation.needleBladeCount === 504 &&
+    mobileMetrics.vegetation.needleBladeTrianglesPerCluster === 32 &&
+    mobileMetrics.vegetation.needleProfile === 'TAPERED_3D_NEEDLE_FAN_V2' &&
     mobileMetrics.vegetation.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
     mobileMetrics.vegetation.coreConeCount === 0 &&
     mobileMetrics.vegetation.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     mobileMetrics.vegetation.trunkHeight >= 2.6 &&
     mobileMetrics.vegetation.branchTubeSegments === 6 && mobileMetrics.vegetation.branchRadialSegments === 4 &&
-    mobileMetrics.vegetation.foliageTriangles >= 3200 && mobileMetrics.vegetation.foliageTriangles <= 4000 &&
+    mobileMetrics.vegetation.foliageTriangles >= 3200 && mobileMetrics.vegetation.foliageTriangles <= 5200 &&
     mobileMetrics.vegetation.rockInstances >= 15 &&
     mobileMetrics.vegetation.renderGroups === 3 && mobileMetrics.vegetation.blocksMovement === false,
     'mobile vegetation must preserve the V3 curved conifer, instanced rocks and non-blocking gameplay lanes');
