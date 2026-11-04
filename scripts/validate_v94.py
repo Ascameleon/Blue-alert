@@ -82,6 +82,10 @@ def main():
         "new THREE.PerspectiveCamera",
         "function terrainHash",
         "function terrainNoise",
+        "function terrainHeightAt(x, z)",
+        "SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1",
+        "const terrainSegmentsX = isMobile ? 120 : 160",
+        "const terrainSegmentsZ = isMobile ? 96 : 128",
         "createSeededTerrainRandom",
         "vertexColors: true",
         "terrain-ground",
@@ -226,6 +230,13 @@ def main():
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
     if "terrainMaterial.normalMap = terrainSurfaceTextures.normal" not in terrain_section or "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
+    if "new THREE.PlaneGeometry(200, 160, terrainSegmentsX, terrainSegmentsZ)" not in terrain_section or "terrainPositions.setZ(i, height)" not in terrain_section or "terrainGeometry.computeVertexNormals()" not in terrain_section or "heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V1'" not in terrain_section:
+        raise SystemExit("FAIL: terrain must use a deterministic sculpted heightfield with computed normals and a bounded geometry profile")
+    if "terrainHeightAt(u.g.position.x,u.g.position.z) + 0.04" not in source or "treeDummy.position.set(x, terrainHeightAt(x,z), z)" not in source or "rockDummy.position.set(x, terrainHeightAt(x,z) + radius * verticalScale * 0.88, z)" not in source or "TERRAIN_FLAT_ZONES" not in terrain_section:
+        raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
+    browser_source = BROWSER_TEST.read_text(encoding="utf-8")
+    if "async function captureViewport(page, path)" not in browser_source or "png.readUInt32BE(16)" not in browser_source or "png.readUInt32BE(20)" not in browser_source or "mobile-v94-sculpted-terrain-390x844.png" not in browser_source:
+        raise SystemExit("FAIL: desktop/mobile browser evidence must be fresh, viewport-sized PNG captures with dimensional assertions")
     if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
         raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
     if "terrainMaterial.normalScale.set(1.15, 1.15)" not in terrain_section or "setMicroRelief(enabled)" not in terrain_section or "* 3.4;" not in terrain_section or "const soil = terrainSmoothstep(0.41, 0.63, broad * 0.64 + medium * 0.36);" not in terrain_section or "const roughness = channel(202 + soil * 24 + exposedStone * 26 -" not in terrain_section:
