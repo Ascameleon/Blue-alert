@@ -480,3 +480,14 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 
 
 - Follow-up implementation: per-resolution cache and stronger authored surface response are being validated on the exact branch head; the next run must produce fresh desktop/mobile model-preview and live V94 A/B screenshots before any visual acceptance.
+
+
+
+## Cycle — curved conifer canopy and flared bark trunk (2026-11-04)
+
+- Starting exact branch head: \`1b86d0363739568059a9a911fbd3e863d1924011\` on \`art/v94-terrain-pbr-relief-20261103\`; PR #50 remains a draft against unchanged \`main\` \`462b6d448c810485b597effcf3e60c708dbbd48e\`. All workflows for the branch were complete before this change; no concurrent validation was active.
+- Visual diagnosis from exact-head workflow [#41759494751](https://github.com/Ascameleon/Blue-alert/actions/runs/41759494751): the existing evergreen still reads as a low-poly cone with detached angular tufts. The live V94 desktop/mobile captures show the tree in gameplay, but the canopy silhouette remains artificial. The headquarters material A/B screenshots from the same run differ only subtly at normal gameplay scale, so that material candidate is not accepted as a material visual improvement.
+- Deepened the existing instanced evergreen instead of adding scenery: remove the exposed cone core; replace straight branch rods with six-segment, four-sided tapered Bézier boughs; distribute six overlapping needle masses per bough across four irregular whorls; and replace the short cylinder trunk with a 2.65-unit flared, ridged, vertex-coloured bark profile. Keep deterministic placement, existing tree count/instance matrices, three render groups, visual-only collision/pathing behavior and the old geometry as a reversible A/B baseline.
+- New runtime profile: \`CURVED_BRAIDED_CONIFER_V3\`; trunk profile: \`TAPERED_FLARED_BARK_V2\`. Desktop and 390×844 mobile browser checks now assert the exact branch/cluster/trunk contracts and cap the shared foliage geometry at 6,000 triangles.
+- Changed files: \`BLUE_ALERTS_v94_ASSET_INTEGRATION.html\`, \`scripts/validate_v94.py\`, \`scripts/validate_v94_browser.mjs\`, and this log.
+- Exact implementation commit, workflow result, changed-file SHAs, fresh desktop/mobile screenshot paths and visual A/B acceptance decision will be recorded after the exact-head run finishes. Expected evidence: \`v94-browser/desktop-v94-woodland-tree-{baseline,detail}.png\` and \`v94-browser/mobile-v94-woodland-tree-{baseline,detail}-390x844.png\`, plus the gameplay desktop/mobile captures. No release/version or merge is authorized until those real runtime captures are inspected. Budget: 0 €.

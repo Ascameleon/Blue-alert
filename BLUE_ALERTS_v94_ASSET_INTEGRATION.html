@@ -1393,95 +1393,132 @@ createBuildZoneVisual();
 // Battlefield vegetation — layered conifers and rocks, batched for desktop/mobile.
 // Every transform is deterministic; props remain visual-only and never alter pathing.
 function createLayeredTreeFoliageGeometry() {
+  // Four irregular whorls of curved, tapered boughs replace the exposed cone core.
+  // Every branch and needle cluster is baked into one shared geometry for instancing.
   const tiers = [
-    { radius: .82, height: 1.28, y: 1.10, light: .76, branches: 6, branchLength: .78, branchRise: .20, branchRadius: .065 },
-    { radius: .65, height: 1.12, y: 1.62, light: .88, branches: 6, branchLength: .62, branchRise: .18, branchRadius: .058 },
-    { radius: .47, height: .96, y: 2.08, light: 1.00, branches: 5, branchLength: .46, branchRise: .15, branchRadius: .050 }
+    { y: .96, branches: 6, branchLength: 1.04, branchRise: .24, branchDrop: .19, branchRadius: .054, tone: .72 },
+    { y: 1.42, branches: 6, branchLength: .86, branchRise: .21, branchDrop: .16, branchRadius: .047, tone: .83 },
+    { y: 1.88, branches: 5, branchLength: .66, branchRise: .18, branchDrop: .12, branchRadius: .041, tone: .95 },
+    { y: 2.28, branches: 4, branchLength: .45, branchRise: .15, branchDrop: .07, branchRadius: .035, tone: 1.05 }
   ];
   const needleSprays = [
-    { at: .43, length: .22, width: .17, tone: .92 },
-    { at: .68, length: .21, width: .16, tone: 1.00 },
-    { at: .88, length: .17, width: .125, tone: 1.07 }
+    { at: .38, length: .34, width: .19, radialOffset: .025, sideOffset: .060, heightOffset: .012, tone: .94 },
+    { at: .70, length: .31, width: .175, radialOffset: .035, sideOffset: .055, heightOffset: .022, tone: 1.00 },
+    { at: .94, length: .25, width: .145, radialOffset: .020, sideOffset: .045, heightOffset: .030, tone: 1.07 }
   ];
   const positions = [], normals = [], colors = [];
   let branchArms = 0;
   let needleClusters = 0;
   const up = new THREE.Vector3(0, 1, 0);
-  const appendCone = (radius, height, segments, center, direction, tone, greenShift = 1) => {
-    const indexed = new THREE.ConeGeometry(radius, height, segments, 1);
-    const part = indexed.toNonIndexed();
-    indexed.dispose();
-    const axis = direction.clone().normalize();
-    const rotation = new THREE.Quaternion().setFromUnitVectors(up, axis);
-    part.applyMatrix4(new THREE.Matrix4().compose(center, rotation, new THREE.Vector3(1, 1, 1)));
-    const p = part.getAttribute('position');
-    const n = part.getAttribute('normal');
-    for (let vertex = 0; vertex < p.count; vertex++) {
-      positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
-      normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
-      const facet = .91 + (vertex % 7) * .014;
-      const shade = tone * facet;
-      colors.push(shade * .78, shade * greenShift, shade * .80);
+  const bezierPoint = (a, b, c, d, t) => {
+    const u = 1 - t;
+    return a.clone().multiplyScalar(u * u * u)
+      .addScaledVector(b, 3 * u * u * t)
+      .addScaledVector(c, 3 * u * t * t)
+      .addScaledVector(d, t * t * t);
+  };
+  const bezierTangent = (a, b, c, d, t) => {
+    const u = 1 - t;
+    return b.clone().sub(a).multiplyScalar(3 * u * u)
+      .addScaledVector(c.clone().sub(b), 6 * u * t)
+      .addScaledVector(d.clone().sub(c), 3 * t * t).normalize();
+  };
+  const appendBranchVertex = (vertex, tone, variation) => {
+    positions.push(vertex.point.x, vertex.point.y, vertex.point.z);
+    normals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
+    const shade = tone * variation;
+    colors.push(shade * .43, shade * .67, shade * .45);
+  };
+  const appendBranchTriangle = (a, b, c, tone, variation) => {
+    appendBranchVertex(a, tone, variation);
+    appendBranchVertex(b, tone, variation);
+    appendBranchVertex(c, tone, variation);
+  };
+  const appendTaperedBranch = (p0, p1, p2, p3, baseRadius, tone) => {
+    const longitudinalSegments = 6;
+    const radialSegments = 4;
+    const rings = [];
+    for (let segment = 0; segment <= longitudinalSegments; segment++) {
+      const t = segment / longitudinalSegments;
+      const center = bezierPoint(p0, p1, p2, p3, t);
+      const tangent = bezierTangent(p0, p1, p2, p3, t);
+      const reference = Math.abs(tangent.y) > .90 ? new THREE.Vector3(1, 0, 0) : up;
+      const side = tangent.clone().cross(reference).normalize();
+      const binormal = tangent.clone().cross(side).normalize();
+      const radius = baseRadius * (1 - .78 * t) + .0035;
+      const ring = [];
+      for (let radialIndex = 0; radialIndex < radialSegments; radialIndex++) {
+        const angle = radialIndex / radialSegments * Math.PI * 2;
+        const normal = side.clone().multiplyScalar(Math.cos(angle))
+          .addScaledVector(binormal, Math.sin(angle)).normalize();
+        ring.push({ point: center.clone().addScaledVector(normal, radius), normal });
+      }
+      rings.push(ring);
     }
-    part.dispose();
+    for (let segment = 0; segment < longitudinalSegments; segment++) {
+      for (let radialIndex = 0; radialIndex < radialSegments; radialIndex++) {
+        const next = (radialIndex + 1) % radialSegments;
+        const variation = .91 + Math.sin(segment * 1.7 + radialIndex * 2.1) * .055;
+        const a = rings[segment][radialIndex];
+        const b = rings[segment][next];
+        const c = rings[segment + 1][radialIndex];
+        const d = rings[segment + 1][next];
+        appendBranchTriangle(a, b, c, tone, variation);
+        appendBranchTriangle(b, d, c, tone, variation);
+      }
+    }
   };
   const needleClusterBase = new THREE.DodecahedronGeometry(1, 0);
   const appendNeedleCluster = (length, width, center, direction, tone, twist) => {
-    const indexed = needleClusterBase.clone();
-    const part = indexed.toNonIndexed();
-    indexed.dispose();
+    const part = needleClusterBase.clone().toNonIndexed();
     const axis = direction.clone().normalize();
     const rotation = new THREE.Quaternion().setFromUnitVectors(up, axis);
     rotation.multiply(new THREE.Quaternion().setFromAxisAngle(axis, twist));
-    const scale = new THREE.Vector3(width, length, width * .90);
+    const scale = new THREE.Vector3(width, length, width * .88);
     part.applyMatrix4(new THREE.Matrix4().compose(center, rotation, scale));
     const p = part.getAttribute('position');
     const n = part.getAttribute('normal');
     for (let vertex = 0; vertex < p.count; vertex++) {
       positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
       normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
-      const facet = .84 + (vertex % 5) * .032;
+      const facet = .86 + (vertex % 7) * .024;
       const shade = tone * facet;
-      colors.push(shade * .72, shade * 1.02, shade * .74);
+      colors.push(shade * .66, shade * .96, shade * .68);
     }
     part.dispose();
+    needleClusters++;
   };
   for (let tierIndex = 0; tierIndex < tiers.length; tierIndex++) {
     const tier = tiers[tierIndex];
-    appendCone(tier.radius, tier.height, 7, new THREE.Vector3(0, tier.y, 0), up, tier.light * .88, 1);
     for (let branchIndex = 0; branchIndex < tier.branches; branchIndex++) {
-      const angle = branchIndex / tier.branches * Math.PI * 2 + tierIndex * .19;
+      const phase = Math.sin(branchIndex * 2.399 + tierIndex * 1.71);
+      const angle = branchIndex / tier.branches * Math.PI * 2 + tierIndex * .31 + phase * .045;
       const radial = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
-      const origin = new THREE.Vector3(radial.x * .12, tier.y - tier.height * .25, radial.z * .12);
-      const branchVector = new THREE.Vector3(
-        radial.x * tier.branchLength,
-        tier.branchRise,
-        radial.z * tier.branchLength
-      );
-      const branchLength = branchVector.length();
-      const branchDirection = branchVector.normalize();
-      appendCone(
-        tier.branchRadius,
-        branchLength,
-        5,
-        origin.clone().addScaledVector(branchDirection, branchLength * .5),
-        branchDirection,
-        tier.light * .74,
-        .96
-      );
+      const lateral = new THREE.Vector3(-radial.z, 0, radial.x);
+      const length = tier.branchLength * (.91 + phase * .09);
+      const origin = new THREE.Vector3(radial.x * .085, tier.y, radial.z * .085);
+      const p1 = origin.clone().addScaledVector(radial, length * .30)
+        .addScaledVector(up, tier.branchRise + phase * .025);
+      const p2 = origin.clone().addScaledVector(radial, length * .70)
+        .addScaledVector(up, tier.branchRise * .42 - tier.branchDrop * .20)
+        .addScaledVector(lateral, phase * .030);
+      const p3 = origin.clone().addScaledVector(radial, length)
+        .addScaledVector(up, tier.branchRise * .10 - tier.branchDrop)
+        .addScaledVector(lateral, phase * .050);
+      appendTaperedBranch(origin, p1, p2, p3, tier.branchRadius, tier.tone);
       branchArms++;
       for (let sprayIndex = 0; sprayIndex < needleSprays.length; sprayIndex++) {
         const spray = needleSprays[sprayIndex];
-        const center = origin.clone().addScaledVector(branchDirection, branchLength * spray.at);
-        appendNeedleCluster(
-          spray.length,
-          spray.width,
-          center,
-          branchDirection,
-          tier.light * spray.tone,
-          angle + sprayIndex * .71
-        );
-        needleClusters++;
+        const point = bezierPoint(origin, p1, p2, p3, spray.at);
+        const tangent = bezierTangent(origin, p1, p2, p3, spray.at);
+        const center = point.clone()
+          .addScaledVector(radial, spray.radialOffset)
+          .addScaledVector(up, spray.heightOffset);
+        const first = center.clone().addScaledVector(lateral, spray.sideOffset);
+        const second = center.clone().addScaledVector(lateral, -spray.sideOffset)
+          .addScaledVector(up, spray.heightOffset * .65);
+        appendNeedleCluster(spray.length, spray.width, first, tangent, tier.tone * spray.tone, angle + sprayIndex * .71);
+        appendNeedleCluster(spray.length * .92, spray.width * .94, second, tangent, tier.tone * spray.tone * .97, angle + sprayIndex * .71 + 1.13);
       }
     }
   }
@@ -1495,12 +1532,16 @@ function createLayeredTreeFoliageGeometry() {
     branchArms,
     needleClusters,
     needleSpraysPerArm: needleSprays.length,
+    needleClustersPerArm: needleSprays.length * 2,
+    branchTubeSegments: 6,
+    branchRadialSegments: 4,
+    canopyProfile: 'CURVED_BRAIDED_CONIFER_V3',
+    coreConeCount: 0,
     triangleCount: positions.length / 9
   };
   geometry.computeBoundingSphere();
   return geometry;
 }
-
 
 function createLegacyLayeredTreeFoliageGeometry() {
   const tiers = [
@@ -1536,11 +1577,37 @@ function createLegacyLayeredTreeFoliageGeometry() {
 }
 
 const treeCapacity = isMobile ? 100 : 160;
-const treeTrunkGeometry = new THREE.CylinderGeometry(.10, .16, .85, 7);
-treeTrunkGeometry.translate(0, .425, 0);
+function createEvergreenTrunkGeometry() {
+  const geometry = new THREE.CylinderGeometry(.075, .22, 2.65, 10, 8);
+  geometry.translate(0, 1.325, 0);
+  const position = geometry.getAttribute('position');
+  const colors = [];
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    const y = position.getY(vertex);
+    const t = (y + 1.325) / 2.65;
+    const angle = Math.atan2(position.getZ(vertex), position.getX(vertex));
+    const ridge = 1 + Math.sin(angle * 7 + t * 2.6) * .035 + Math.sin(angle * 3 - t * 5.1) * .018;
+    position.setX(vertex, position.getX(vertex) * ridge + Math.sin(t * 1.5) * .045);
+    position.setZ(vertex, position.getZ(vertex) * ridge + Math.cos(t * 1.2) * .030);
+    const bark = .82 + Math.sin(angle * 5 + t * 11) * .10 + Math.sin(angle * 11 - t * 7) * .06;
+    colors.push(.34 * bark, .245 * bark, .155 * bark);
+  }
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeVertexNormals();
+  geometry.userData.profile = 'TAPERED_FLARED_BARK_V2';
+  geometry.computeBoundingBox();
+  return geometry;
+}
+const treeTrunkGeometry = createEvergreenTrunkGeometry();
+const treeTrunkMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff, vertexColors: true, roughness: .98, metalness: 0
+});
+const legacyTreeTrunkGeometry = new THREE.CylinderGeometry(.10, .16, .85, 7);
+legacyTreeTrunkGeometry.translate(0, .425, 0);
+const legacyTreeTrunkMaterial = mkMat(0x4a3820, .96, .01);
 const treeFoliageGeometry = createLayeredTreeFoliageGeometry();
 const treeTrunks = new THREE.InstancedMesh(
-  treeTrunkGeometry, mkMat(0x4a3820, .96, .01), treeCapacity
+  treeTrunkGeometry, treeTrunkMaterial, treeCapacity
 );
 treeTrunks.name = 'battlefield-trees-trunks-instanced';
 treeTrunks.castShadow = !isMobile;
@@ -1620,6 +1687,13 @@ window.__BLUE_ALERTS_VEGETATION = Object.freeze({
   branchArms: treeFoliageGeometry.userData.branchArms,
   needleClusters: treeFoliageGeometry.userData.needleClusters,
   needleSpraysPerArm: treeFoliageGeometry.userData.needleSpraysPerArm,
+  needleClustersPerArm: treeFoliageGeometry.userData.needleClustersPerArm,
+  branchTubeSegments: treeFoliageGeometry.userData.branchTubeSegments,
+  branchRadialSegments: treeFoliageGeometry.userData.branchRadialSegments,
+  canopyProfile: treeFoliageGeometry.userData.canopyProfile,
+  coreConeCount: treeFoliageGeometry.userData.coreConeCount,
+  trunkProfile: treeTrunkGeometry.userData.profile,
+  trunkHeight: Number((treeTrunkGeometry.boundingBox.max.y - treeTrunkGeometry.boundingBox.min.y).toFixed(2)),
   foliageTriangles: treeFoliageGeometry.userData.triangleCount,
   rockInstances: battlefieldRocks.count,
   renderGroups: 3,
@@ -1644,9 +1718,13 @@ window.__BLUE_ALERTS_VEGETATION_QA = Object.freeze({
   setLegacy(enabled) {
     if (enabled) {
       if (!legacyTreeFoliageGeometry) legacyTreeFoliageGeometry = createLegacyLayeredTreeFoliageGeometry();
+      treeTrunks.geometry = legacyTreeTrunkGeometry;
+      treeTrunks.material = legacyTreeTrunkMaterial;
       treeFoliage.geometry = legacyTreeFoliageGeometry;
       return 'legacy';
     }
+    treeTrunks.geometry = treeTrunkGeometry;
+    treeTrunks.material = treeTrunkMaterial;
     treeFoliage.geometry = treeFoliageGeometry;
     if (legacyTreeFoliageGeometry) {
       legacyTreeFoliageGeometry.dispose();

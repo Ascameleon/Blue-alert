@@ -499,11 +499,17 @@ try {
   console.log('DESKTOP_INFANTRY_GAIT ' + JSON.stringify({ start: infantryWalkStart, state: desktopInfantryGait }));
   await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
-  assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
-    desktopTreeDetail.needleSpraysPerArm === 3 &&
-    desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 3 &&
-    desktopTreeDetail.needleClusters >= 51 && desktopTreeDetail.foliageTriangles >= 1500,
-    'desktop live V94 must expose a complete instanced evergreen asset for close visual inspection');
+  assert.ok(desktopTreeDetail?.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
+    desktopTreeDetail.coreConeCount === 0 && desktopTreeDetail.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
+    desktopTreeDetail.trunkHeight >= 2.6 && desktopTreeDetail.branchWhorls === 4 &&
+    desktopTreeDetail.branchArms === 21 && desktopTreeDetail.needleSpraysPerArm === 3 &&
+    desktopTreeDetail.needleClustersPerArm === 6 &&
+    desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 6 &&
+    desktopTreeDetail.needleClusters === 126 && desktopTreeDetail.branchTubeSegments === 6 &&
+    desktopTreeDetail.branchRadialSegments === 4 &&
+    desktopTreeDetail.foliageTriangles >= 3200 && desktopTreeDetail.foliageTriangles <= 6000,
+    'desktop live V94 must render the curved four-whorl conifer, flared bark trunk and bounded instanced geometry');
+  console.log('DESKTOP_CONIFER_V3 ' + JSON.stringify(desktopTreeDetail));
   const desktopTreeBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
   assert.equal(desktopTreeBaseline, 'legacy', 'desktop A/B baseline must restore the previous three-cone evergreen geometry');
   await desktop.waitForTimeout(300);
@@ -987,11 +993,17 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
 
   const mobileTreeDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
-  assert.ok(mobileTreeDetail?.branchWhorls === 3 && mobileTreeDetail.branchArms >= 17 &&
-    mobileTreeDetail.needleSpraysPerArm === 3 &&
-    mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 3 &&
-    mobileTreeDetail.needleClusters >= 51 && mobileTreeDetail.foliageTriangles >= 1500,
-    'mobile live V94 must expose the same detailed evergreen asset within the mobile draw-call budget');
+  assert.ok(mobileTreeDetail?.canopyProfile === 'CURVED_BRAIDED_CONIFER_V3' &&
+    mobileTreeDetail.coreConeCount === 0 && mobileTreeDetail.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
+    mobileTreeDetail.trunkHeight >= 2.6 && mobileTreeDetail.branchWhorls === 4 &&
+    mobileTreeDetail.branchArms === 21 && mobileTreeDetail.needleSpraysPerArm === 3 &&
+    mobileTreeDetail.needleClustersPerArm === 6 &&
+    mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 6 &&
+    mobileTreeDetail.needleClusters === 126 && mobileTreeDetail.branchTubeSegments === 6 &&
+    mobileTreeDetail.branchRadialSegments === 4 &&
+    mobileTreeDetail.foliageTriangles >= 3200 && mobileTreeDetail.foliageTriangles <= 6000,
+    'mobile V94 must render the same curved four-whorl conifer within the instanced geometry budget');
+  console.log('MOBILE_CONIFER_V3 ' + JSON.stringify(mobileTreeDetail));
   const mobileTreeBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
   assert.equal(mobileTreeBaseline, 'legacy', 'mobile A/B baseline must restore the previous three-cone evergreen geometry');
   await mobile.waitForTimeout(300);
