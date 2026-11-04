@@ -56,9 +56,9 @@ assert.ok(runtimeBundle.includes('WebGLRenderer'), 'bundled runtime must include
 assert.ok(runtimeBundle.includes('PerspectiveCamera'), 'bundled runtime must include perspective camera support');
 assert.ok(!/https?:\/\/(?:cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)\/.*three/i.test(runtimeBundle),
   'standalone runtime must not retain external Three.js CDN imports');
-assert.doesNotMatch(runtimeBundle, /^\\s*import\\s/m,
+assert.ok(!runtimeBundle.split('\n').some(line => line.trimStart().startsWith('import ')),
   'standalone runtime must not retain unresolved static module imports');
-assert.doesNotMatch(runtimeBundle, /\\bimport\\s*\\(/,
+assert.ok(!runtimeBundle.includes('import(') && !runtimeBundle.includes('import ('),
   'standalone runtime must not retain unresolved dynamic module imports');
 bundledHtml = bundledHtml.replace(moduleMatch[0], '<script type="module">\n' + runtimeBundle + '\n</script>');
 assert.ok(!bundledHtml.includes('./game-data/models/blue-alert-models.js?v='), 'bundle must not require a separate model file');
