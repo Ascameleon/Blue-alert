@@ -675,3 +675,10 @@ The previous battlefield screenshot showed isolated single-cone trees and indivi
 - Regression coverage requires the tapered-needle profile and exact blade/cluster diagnostics on desktop and 390×844 mobile. Existing same-camera legacy/detail screenshots remain the visual acceptance gate.
 - Changed files: `BLUE_ALERTS_v94_ASSET_INTEGRATION.html`, `scripts/validate_v94.py`, `scripts/validate_v94_browser.mjs`, and this log. Exact commit SHA, final workflow, new screenshot artifact paths and visual verdict will be recorded after exact-head validation.
 - Status: candidate only; no merge, version or release. Browser mobile is emulation, not a physical Samsung test. OpenRTS is validated separately and does not import this Three.js canopy. Budget remains 0 €.
+
+
+## First exact-head validation failure — b600dd4023e5dfcb830f00928b08e3d9869c7e7b (2026-11-04)
+
+- Workflow [41846650072](https://github.com/Ascameleon/Blue-alert/actions/runs/41846650072) completed with failure in `Validate BLUE ALERTS v94 3D prototype`, before browser rendering, standalone build or OpenRTS. No screenshot artifacts were produced.
+- Exact error: the static tree contract still required `new THREE.Quaternion()` and `new THREE.DodecahedronGeometry(1, 0)`. Those tokens belonged to the removed rounded dodecahedral cluster implementation; the runtime candidate now constructs five tapered needle blades per cluster. This was a stale validator contract, not a browser/runtime failure.
+- Correction: replace those obsolete assertions with the new fan-basis and `needleBladeCountPerCluster = 5` contracts. The exact-head workflow must be rerun before any visual judgement. No additional branch write occurred while workflow 41846650072 was active.
