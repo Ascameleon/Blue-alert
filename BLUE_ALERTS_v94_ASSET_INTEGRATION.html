@@ -4411,6 +4411,21 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       camVelX = 0;
       camVelZ = 0;
       return cameraQaSnapshot();
+    },
+    focusHeadquarters() {
+      const model = playerHQ?.g?.children?.find(child => child.userData?.buildingType === 'headquarters');
+      if (!model) throw new Error('The live player headquarters model is not available.');
+      camTarget.set(playerHQ.x, 2.25, playerHQ.z);
+      camYaw = 0.42;
+      camPitch = 0.76;
+      camDist = 16;
+      camVelX = 0;
+      camVelZ = 0;
+      return {
+        ...cameraQaSnapshot(),
+        modelProfile: model.userData.commandCoreGeometryProfile || null,
+        profileVertexCount: model.userData.commandCoreProfileVertexCount || 0
+      };
     }
   });
   const infantryProbe = () => {

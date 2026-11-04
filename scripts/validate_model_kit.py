@@ -120,6 +120,17 @@ def main():
     if missing:
         raise SystemExit("FAIL: cast defensive turret sculpt missing: " + ", ".join(missing))
 
+    required_command_hq_features = (
+        "ARMORED_BASTION_COMMAND_CORE_V2", "commandCoreGeometryProfile",
+        "commandCoreProfileVertexCount", "command-core-cast-shell",
+        "command-window-recess", "command-glass-pane-", "command-entry-frame",
+        "command-entry-door", "command-buttress-left", "command-buttress-right",
+        "command-roof-parapet", "command-annex-vent-louver",
+    )
+    missing = [feature for feature in required_command_hq_features if feature not in model]
+    if missing:
+        raise SystemExit("FAIL: cast command-HQ architecture missing: " + ", ".join(missing))
+
     if "camera.position.set(a==='landscape'?22:a==='infantry'?2.75:8" not in preview or "infantryArmorParts" not in preview:
         raise SystemExit("FAIL: infantry preview must use close framing and expose actual armor mesh diagnostics")
 

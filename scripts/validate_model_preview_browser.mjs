@@ -74,6 +74,12 @@ try {
   const baselineMetrics=await baselinePage.evaluate(()=>({canvas:!!document.querySelector('#view canvas'),width:document.querySelector('#view canvas')?.width||0,height:document.querySelector('#view canvas')?.height||0,asset:document.querySelector('#asset').value}));
   assert.ok(baselineMetrics.canvas && baselineMetrics.width>0 && baselineMetrics.height>0,'base-branch turret must render a WebGL canvas');
   await baselinePage.screenshot({path:output+'/baseline-turret.png',fullPage:true});
+  await baselinePage.selectOption('#asset','hq');
+  await baselinePage.waitForTimeout(900);
+  const baselineHqMetrics=await baselinePage.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.ok(baselineHqMetrics.asset==='hq' && baselineHqMetrics.canvasWidth>0 && baselineHqMetrics.meshCount>0,
+    'frozen main-branch headquarters must render before the new cast shell is compared');
+  await baselinePage.screenshot({path:output+'/baseline-hq-desktop.png',fullPage:true});
   await baselinePage.selectOption('#asset','tank');
   await baselinePage.waitForTimeout(900);
   const baselineTankMetrics=await baselinePage.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
@@ -88,6 +94,10 @@ try {
   await baselinePage.click('#reset');
   await baselinePage.waitForTimeout(350);
   await baselinePage.screenshot({path:output+'/baseline-turret-mobile-390x844.png',fullPage:true});
+  await baselinePage.selectOption('#asset','hq');
+  await baselinePage.click('#reset');
+  await baselinePage.waitForTimeout(350);
+  await baselinePage.screenshot({path:output+'/baseline-hq-mobile-390x844.png',fullPage:true});
   await baselinePage.selectOption('#asset','tank');
   await baselinePage.click('#reset');
   await baselinePage.waitForTimeout(350);
@@ -250,6 +260,25 @@ try {
   assert.equal(turret.defenseTurretStationCount,7,'defensive turret cast cupola must retain all seven sculpt stations');
   await page.screenshot({path:output+'/desktop-turret.png',fullPage:true});
 
+  await page.selectOption('#asset','hq');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='hq' &&
+    window.__BLUE_ALERTS_PREVIEW__().commandCoreGeometryProfile==='ARMORED_BASTION_COMMAND_CORE_V2' &&
+    window.__BLUE_ALERTS_PREVIEW__().commandCoreProfileVertexCount===12,null,{timeout:10000});
+  await page.waitForTimeout(500);
+  const commandHq=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.equal(commandHq.commandCoreGeometryProfile,'ARMORED_BASTION_COMMAND_CORE_V2',
+    'HQ must instantiate the continuous cast command bunker');
+  assert.equal(commandHq.commandCoreProfileVertexCount,12,'HQ cast shell must retain its 12-point stepped elevation profile');
+  for(const name of ['command-core-cast-shell','command-roof-parapet','command-window-recess',
+    'command-glass-pane-0','command-glass-pane-1','command-glass-pane-2','command-entry-frame',
+    'command-entry-door','command-buttress-left','command-buttress-right','command-annex']) {
+    assert.ok(commandHq.namedParts.includes(name),'HQ must render integrated architectural part: '+name);
+  }
+  assert.equal(commandHq.genericDecorationCount,0,'HQ must not retain detached generic facade panels or vents');
+  assert.ok(commandHq.physicalMaterialCount>0 && commandHq.drawCalls<=70 && commandHq.triangleCount<6000,
+    'HQ cast architecture must remain PBR-lit and within the browser geometry budget');
+  await page.screenshot({path:output+'/desktop-hq.png',fullPage:true});
+
   await page.selectOption('#asset','controlTower');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='controlTower' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=30,null,{timeout:10000});
   await page.waitForTimeout(500);
@@ -304,6 +333,15 @@ try {
   await page.selectOption('#asset','turret');
   await page.waitForTimeout(450);
   await page.screenshot({path:output+'/mobile-turret-390x844.png',fullPage:true});
+  await page.selectOption('#asset','hq');
+  await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='hq' &&
+    window.__BLUE_ALERTS_PREVIEW__().commandCoreGeometryProfile==='ARMORED_BASTION_COMMAND_CORE_V2',null,{timeout:10000});
+  await page.waitForTimeout(450);
+  const mobileCommandHq=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.ok(mobileCommandHq.canvasWidth>=300 && mobileCommandHq.canvasHeight>=400 &&
+    mobileCommandHq.commandCoreProfileVertexCount===12 && mobileCommandHq.drawCalls<=70,
+    'mobile HQ must render the same cast bunker inside the mobile preview budget');
+  await page.screenshot({path:output+'/mobile-hq-390x844.png',fullPage:true});
   console.log('MOBILE_LAYOUT '+JSON.stringify(mobile));
   console.log('VISUAL_BASELINE '+JSON.stringify(baselineMetrics));
   assert.ok(mobile.documentWidth<=mobile.viewportWidth+1,'mobile preview must not overflow horizontally');
@@ -312,9 +350,9 @@ try {
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
-  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','baseline-tank-desktop.png','baseline-tank-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
+  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','baseline-hq-desktop.png','baseline-hq-mobile-390x844.png','baseline-tank-desktop.png','baseline-tank-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-hq.png','desktop-control-tower.png','mobile-hq-390x844.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
   for(const file of files) assert.ok((await stat(output+'/'+file)).size>10000,'screenshot must contain rendered evidence: '+file);
-  console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files},null,2));
+  console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files,baselineHqMetrics,commandHq},null,2));
 } catch(error) {
   console.error(error);
   if(failures.length) console.error('Browser errors:',failures);

@@ -1123,14 +1123,58 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
 export function createBuilding(THREE, type='barracks', options={}) {
   const {team='blue',scale=1}=options, g=new THREE.Group(); g.name='BA_Building_'+type;
   let rotatingGun = null, defenseTurretGeometryProfile = null, defenseTurretStationCount = 0;
+  let commandCoreGeometryProfile = null, commandCoreProfileVertexCount = 0;
   const faction=teamColor(THREE,team), concrete=mat(THREE,PALETTE.concrete), dark=mat(THREE,PALETTE.dark), glass=mat(THREE,PALETTE.glass), roof=mat(THREE,0x454d49);
   const metal=mat(THREE,PALETTE.metal,0.38,0.72);
   box(THREE,g,'foundation',[3.5,.22,2.8],[0,.11,0],dark);
   if(type==='headquarters') {
-    box(THREE,g,'command-core',[2.35,1.55,1.7],[0,1,0],concrete);
-    box(THREE,g,'command-roof',[2.55,.2,1.9],[0,1.83,0],faction);
-    box(THREE,g,'front-window',[1.45,.38,.035],[0,1.3,.87],glass);
-    // Sculpted communications tower replacing the old square mast.
+    // One continuous stepped cast shell replaces the plain rectangular command box.
+    // Its chamfered shoulders and raised deck stay inside the original 3.5 × 2.8 footprint.
+    const commandCoreProfile = [
+      [-1.18,0],[1.18,0],[1.18,.28],[1.08,.42],[1.08,1.08],
+      [.96,1.31],[.78,1.54],[-.78,1.54],[-.96,1.31],[-1.08,1.08],
+      [-1.08,.42],[-1.18,.28]
+    ];
+    const commandCore = createArmoredProfileMesh(
+      THREE,g,'command-core-cast-shell',commandCoreProfile,1.78,concrete,[0,.22,0],.055
+    );
+    commandCoreGeometryProfile = 'ARMORED_BASTION_COMMAND_CORE_V2';
+    commandCoreProfileVertexCount = commandCoreProfile.length;
+    commandCore.userData.commandCoreGeometryProfile = commandCoreGeometryProfile;
+    commandCore.userData.commandCoreProfileVertexCount = commandCoreProfileVertexCount;
+
+    // A layered overhanging roof and parapet give the bunker a clear military silhouette.
+    beveledBox(THREE,g,'command-roof',[2.52,.18,1.94],[0,1.82,0],faction,[0,0,0],.045);
+    beveledBox(THREE,g,'command-roof-parapet',[2.12,.10,1.56],[0,1.94,0],roof,[0,0,0],.025);
+    for(const side of [-1,1]) {
+      beveledBox(THREE,g,side<0?'command-buttress-left':'command-buttress-right',
+        [.22,1.22,1.82],[side*1.12,.82,0],roof,[0,0,side*-.035],.035);
+    }
+
+    // Deep-set three-pane command glazing with a metal sill, lintel and mullions.
+    beveledBox(THREE,g,'command-window-recess',[1.72,.46,.075],[0,1.20,.925],dark,[0,0,0],.018);
+    beveledBox(THREE,g,'command-window-lintel',[1.86,.075,.12],[0,1.475,.925],metal,[0,0,0],.012);
+    beveledBox(THREE,g,'command-window-sill',[1.86,.075,.12],[0,.925,.925],metal,[0,0,0],.012);
+    for(const [index,x] of [-.51,0,.51].entries()) {
+      beveledBox(THREE,g,'command-glass-pane-'+index,[.43,.29,.028],[x,1.20,.977],glass,[0,0,0],.01);
+    }
+    for(const x of [-.255,.255]) box(THREE,g,'command-window-mullion',[.025,.36,.035],[x,1.20,.99],metal);
+
+    // Recessed armored entrance and low access step, aligned to the playable front.
+    beveledBox(THREE,g,'command-entry-frame',[.76,.78,.10],[0,.59,.925],metal,[0,0,0],.02);
+    beveledBox(THREE,g,'command-entry-door',[.52,.62,.035],[0,.58,.99],dark,[0,0,0],.012);
+    beveledBox(THREE,g,'command-entry-vision-slit',[.25,.11,.018],[0,.73,1.014],glass,[0,0,0],.006);
+    beveledBox(THREE,g,'command-entry-step',[.92,.10,.34],[0,.27,1.04],concrete,[0,0,0],.018);
+    beveledBox(THREE,g,'command-faction-crest',[.22,.16,.05],[-.83,.58,.945],faction,[0,0,0],.014);
+
+    // A faceted service annex is integrated into the right flank, not floated off the wall.
+    beveledBox(THREE,g,'command-annex',[.64,.82,1.26],[1.36,.64,-.20],roof,[0,0,-.035],.035);
+    beveledBox(THREE,g,'command-annex-vent-recess',[.055,.40,.44],[1.704,.65,-.20],dark,[0,0,0],.012);
+    for(let i=0;i<4;i++) {
+      box(THREE,g,'command-annex-vent-louver',[.025,.035,.34],[1.722,.51+i*.09,-.20],metal);
+    }
+
+    // The existing communications mast, radar cabin and rotating dish are retained.
     cylinder(THREE,g,'comms-tower-shaft',.2,.34,1.25,[-.72,2.48,-.42],roof,10);
     cylinder(THREE,g,'comms-platform',.58,.58,.12,[-.72,3.12,-.42],metal,12);
     cylinder(THREE,g,'radar-cabin',.43,.43,.46,[-.72,3.42,-.42],glass,12);
@@ -1138,7 +1182,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
     for(let i=0;i<8;i++){const a=i*Math.PI/4;const mullion=box(THREE,g,'radar-cabin-mullion',[.035,.4,.035],[-.72+Math.cos(a)*.42,3.42,-.42+Math.sin(a)*.42],dark);mullion.rotation.y=-a;}
     cylinder(THREE,g,'radar-mast',.025,.025,.58,[-.72,4.02,-.42],dark,8);
     const dish=cylinder(THREE,g,'radar-dish',.28,.28,.045,[-.72,4.26,-.42],glass,16);dish.rotation.x=Math.PI/2.7;
-    box(THREE,g,'side-wing',[.65,.85,1.25],[1.35,.6,-.28],roof);
+    commandCoreGeometryProfile = commandCoreGeometryProfile;
   } else if(type==='barracks') {
     box(THREE,g,'main-hall',[2.85,1.25,2.05],[0,.76,0],concrete);
     box(THREE,g,'roof',[3,.18,2.2],[0,1.48,0],faction);
@@ -1237,7 +1281,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
   }
   // Rectangular-building details are not reused on curved towers or turrets:
   // their fixed offsets would leave detached panels and vents outside the silhouette.
-  if(type!=='controlTower' && type!=='tower' && type!=='turret') {
+  if(type!=='headquarters' && type!=='controlTower' && type!=='tower' && type!=='turret') {
     box(THREE,g,'faction-panel',[.5,.22,.045],[-1.25,1.25,1.04],faction);
     for(const x of [-.85,.85]){
       box(THREE,g,'exterior-light',[.18,.12,.06],[x,1.08,1.42],glass);
@@ -1245,7 +1289,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
       for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
     }
   }
-  g.userData={kind:'building',buildingType:type,team,rotatingGun,defenseTurretGeometryProfile,defenseTurretStationCount}; g.scale.setScalar(scale); return g;
+  g.userData={kind:'building',buildingType:type,team,rotatingGun,defenseTurretGeometryProfile,defenseTurretStationCount,commandCoreGeometryProfile,commandCoreProfileVertexCount}; g.scale.setScalar(scale); return g;
 }
 
 export function createTree(THREE, options={}) {
