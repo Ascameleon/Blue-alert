@@ -263,29 +263,34 @@ try {
   assert.ok(desktopMetrics.vegetation?.treeCount >= 50 &&
     desktopMetrics.vegetation.trunkInstances === desktopMetrics.vegetation.treeCount &&
     desktopMetrics.vegetation.foliageInstances === desktopMetrics.vegetation.treeCount &&
-    desktopMetrics.vegetation.foliageTiers === 4 &&
-    desktopMetrics.vegetation.branchWhorls === 4 &&
+    desktopMetrics.vegetation.foliageTiers === 5 &&
+    desktopMetrics.vegetation.lowestBranchHeight === 0.56 &&
+    desktopMetrics.vegetation.lowerBranchDrop === 0.42 &&
+    desktopMetrics.vegetation.needleBaseRadiusRatio === 0.1 &&
+    desktopMetrics.vegetation.leaderSprayLevels === 4 &&
+    desktopMetrics.vegetation.leaderDirectionsPerLevel === 4 &&
+    desktopMetrics.vegetation.branchWhorls === 5 &&
     desktopMetrics.vegetation.branchArms === 21 &&
-    desktopMetrics.vegetation.needleSpraysPerArm === 3 &&
-    desktopMetrics.vegetation.needleClustersPerArm === 6 &&
-    desktopMetrics.vegetation.needleClusters === 129 &&
-    desktopMetrics.vegetation.needleBladeCount === 774 &&
-    desktopMetrics.vegetation.needleBladeCountPerCluster === 6 &&
-    desktopMetrics.vegetation.needleBladeTrianglesPerCluster === 48 &&
-    desktopMetrics.vegetation.needleProfile === 'DENSE_LAYERED_CONIFER_SPRAYS_V3' &&
-    desktopMetrics.vegetation.canopyProfile === 'DENSE_LAYERED_CONIFER_V4' &&
+    desktopMetrics.vegetation.needleSpraysPerArm === 4 &&
+    desktopMetrics.vegetation.needleClustersPerArm === 8 &&
+    desktopMetrics.vegetation.needleClusters === 184 &&
+    desktopMetrics.vegetation.needleBladeCount === 1472 &&
+    desktopMetrics.vegetation.needleBladeCountPerCluster === 8 &&
+    desktopMetrics.vegetation.needleBladeTrianglesPerCluster === 32 &&
+    desktopMetrics.vegetation.needleProfile === 'TAPERED_TRIAD_NEEDLES_V4' &&
+    desktopMetrics.vegetation.canopyProfile === 'DROOPED_SPRUCE_CROWN_V5' &&
     desktopMetrics.vegetation.leaderStemCount === 1 &&
-    desktopMetrics.vegetation.leaderSprayClusters === 3 &&
-    desktopMetrics.vegetation.leaderProfile === 'CENTRAL_TERMINAL_LEADER_V1' &&
+    desktopMetrics.vegetation.leaderSprayClusters === 16 &&
+    desktopMetrics.vegetation.leaderProfile === 'LAYERED_RADIAL_LEADER_V2' &&
     desktopMetrics.vegetation.coreConeCount === 0 &&
     desktopMetrics.vegetation.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     desktopMetrics.vegetation.trunkHeight >= 2.6 &&
     desktopMetrics.vegetation.branchTubeSegments === 6 &&
     desktopMetrics.vegetation.branchRadialSegments === 4 &&
-    desktopMetrics.vegetation.foliageTriangles === 7248 &&
+    desktopMetrics.vegetation.foliageTriangles === 6944 &&
     desktopMetrics.vegetation.rockInstances >= 30 &&
     desktopMetrics.vegetation.renderGroups === 3 && desktopMetrics.vegetation.blocksMovement === false,
-    'desktop vegetation must expose the V3 curved branch canopy, detailed bark trunk and bounded instanced geometry');
+    'desktop vegetation must expose the V5 drooping spruce crown, detailed bark trunk and bounded instanced geometry');
   assert.ok(desktopMetrics.environment?.runtimeIntegrated &&
     desktopMetrics.environment.clusterCount === 4 &&
     desktopMetrics.environment.cargoCrates === 18 &&
@@ -593,25 +598,28 @@ try {
   console.log('DESKTOP_INFANTRY_GAIT ' + JSON.stringify({ start: infantryWalkStart, state: desktopInfantryGait, grounding: desktopGaitGrounding }));
   await captureViewport(desktop, output + '/desktop-v94-infantry-gait.png');
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
-  assert.ok(desktopTreeDetail?.canopyProfile === 'DENSE_LAYERED_CONIFER_V4' &&
+  assert.ok(desktopTreeDetail?.canopyProfile === 'DROOPED_SPRUCE_CROWN_V5' &&
     desktopTreeDetail.coreConeCount === 0 && desktopTreeDetail.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
-    desktopTreeDetail.trunkHeight >= 2.6 && desktopTreeDetail.branchWhorls === 4 &&
-    desktopTreeDetail.branchArms === 21 && desktopTreeDetail.needleSpraysPerArm === 3 &&
-    desktopTreeDetail.needleClustersPerArm === 6 &&
-    desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 6 + desktopTreeDetail.leaderSprayClusters &&
-    desktopTreeDetail.needleClusters === 129 &&
-    desktopTreeDetail.needleBladeCount === 774 &&
-    desktopTreeDetail.needleBladeCountPerCluster === 6 &&
-    desktopTreeDetail.needleBladeTrianglesPerCluster === 48 &&
-    desktopTreeDetail.needleProfile === 'DENSE_LAYERED_CONIFER_SPRAYS_V3' &&
+    desktopTreeDetail.trunkHeight >= 2.6 && desktopTreeDetail.branchWhorls === 5 &&
+    desktopTreeDetail.lowestBranchHeight === 0.56 && desktopTreeDetail.lowerBranchDrop === 0.42 &&
+    desktopTreeDetail.needleBaseRadiusRatio === 0.1 && desktopTreeDetail.leaderSprayLevels === 4 &&
+    desktopTreeDetail.leaderDirectionsPerLevel === 4 &&
+    desktopTreeDetail.branchArms === 21 && desktopTreeDetail.needleSpraysPerArm === 4 &&
+    desktopTreeDetail.needleClustersPerArm === 8 &&
+    desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 8 + desktopTreeDetail.leaderSprayClusters &&
+    desktopTreeDetail.needleClusters === 184 &&
+    desktopTreeDetail.needleBladeCount === 1472 &&
+    desktopTreeDetail.needleBladeCountPerCluster === 8 &&
+    desktopTreeDetail.needleBladeTrianglesPerCluster === 32 &&
+    desktopTreeDetail.needleProfile === 'TAPERED_TRIAD_NEEDLES_V4' &&
     desktopTreeDetail.leaderStemCount === 1 &&
-    desktopTreeDetail.leaderSprayClusters === 3 &&
-    desktopTreeDetail.leaderProfile === 'CENTRAL_TERMINAL_LEADER_V1' &&
+    desktopTreeDetail.leaderSprayClusters === 16 &&
+    desktopTreeDetail.leaderProfile === 'LAYERED_RADIAL_LEADER_V2' &&
     desktopTreeDetail.branchTubeSegments === 6 &&
     desktopTreeDetail.branchRadialSegments === 4 &&
-    desktopTreeDetail.foliageTriangles === 7248,
-    'desktop live V94 must render the curved four-whorl conifer, flared bark trunk and bounded instanced geometry');
-  console.log('DESKTOP_CONIFER_V3 ' + JSON.stringify(desktopTreeDetail));
+    desktopTreeDetail.foliageTriangles === 6944,
+    'desktop live V94 must render the five-whorl drooping spruce crown, flared bark trunk and bounded instanced geometry');
+  console.log('DESKTOP_SPRUCE_V5 ' + JSON.stringify(desktopTreeDetail));
   const desktopTreeBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
   assert.equal(desktopTreeBaseline, 'legacy', 'desktop A/B baseline must restore the previous three-cone evergreen geometry');
   await desktop.waitForTimeout(300);
@@ -854,25 +862,31 @@ try {
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
     mobileMetrics.vegetation.trunkInstances === mobileMetrics.vegetation.treeCount &&
     mobileMetrics.vegetation.foliageInstances === mobileMetrics.vegetation.treeCount &&
-    mobileMetrics.vegetation.foliageTiers === 4 &&
-    mobileMetrics.vegetation.branchWhorls === 4 && mobileMetrics.vegetation.branchArms === 21 &&
-    mobileMetrics.vegetation.needleClustersPerArm === 6 && mobileMetrics.vegetation.needleClusters === 129 &&
-    mobileMetrics.vegetation.needleBladeCount === 774 &&
-    mobileMetrics.vegetation.needleBladeCountPerCluster === 6 &&
-    mobileMetrics.vegetation.needleBladeTrianglesPerCluster === 48 &&
-    mobileMetrics.vegetation.needleProfile === 'DENSE_LAYERED_CONIFER_SPRAYS_V3' &&
-    mobileMetrics.vegetation.canopyProfile === 'DENSE_LAYERED_CONIFER_V4' &&
+    mobileMetrics.vegetation.foliageTiers === 5 &&
+    mobileMetrics.vegetation.lowestBranchHeight === 0.56 &&
+    mobileMetrics.vegetation.lowerBranchDrop === 0.42 &&
+    mobileMetrics.vegetation.needleBaseRadiusRatio === 0.1 &&
+    mobileMetrics.vegetation.leaderSprayLevels === 4 &&
+    mobileMetrics.vegetation.leaderDirectionsPerLevel === 4 &&
+    mobileMetrics.vegetation.needleSpraysPerArm === 4 &&
+    mobileMetrics.vegetation.branchWhorls === 5 && mobileMetrics.vegetation.branchArms === 21 &&
+    mobileMetrics.vegetation.needleClustersPerArm === 8 && mobileMetrics.vegetation.needleClusters === 184 &&
+    mobileMetrics.vegetation.needleBladeCount === 1472 &&
+    mobileMetrics.vegetation.needleBladeCountPerCluster === 8 &&
+    mobileMetrics.vegetation.needleBladeTrianglesPerCluster === 32 &&
+    mobileMetrics.vegetation.needleProfile === 'TAPERED_TRIAD_NEEDLES_V4' &&
+    mobileMetrics.vegetation.canopyProfile === 'DROOPED_SPRUCE_CROWN_V5' &&
     mobileMetrics.vegetation.leaderStemCount === 1 &&
-    mobileMetrics.vegetation.leaderSprayClusters === 3 &&
-    mobileMetrics.vegetation.leaderProfile === 'CENTRAL_TERMINAL_LEADER_V1' &&
+    mobileMetrics.vegetation.leaderSprayClusters === 16 &&
+    mobileMetrics.vegetation.leaderProfile === 'LAYERED_RADIAL_LEADER_V2' &&
     mobileMetrics.vegetation.coreConeCount === 0 &&
     mobileMetrics.vegetation.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
     mobileMetrics.vegetation.trunkHeight >= 2.6 &&
     mobileMetrics.vegetation.branchTubeSegments === 6 && mobileMetrics.vegetation.branchRadialSegments === 4 &&
-    mobileMetrics.vegetation.foliageTriangles === 7248 &&
+    mobileMetrics.vegetation.foliageTriangles === 6944 &&
     mobileMetrics.vegetation.rockInstances >= 15 &&
     mobileMetrics.vegetation.renderGroups === 3 && mobileMetrics.vegetation.blocksMovement === false,
-    'mobile vegetation must preserve the V3 curved conifer, instanced rocks and non-blocking gameplay lanes');
+    'mobile vegetation must preserve the V5 drooping spruce crown, instanced rocks and non-blocking gameplay lanes');
   assert.ok(mobileMetrics.environment?.runtimeIntegrated &&
     mobileMetrics.environment.clusterCount === 4 &&
     mobileMetrics.environment.cargoCrates === 18 &&
@@ -1194,25 +1208,28 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await captureViewport(mobile, output + '/mobile-v94-terrain-surface-390x844.png');
 
   const mobileTreeDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
-  assert.ok(mobileTreeDetail?.canopyProfile === 'DENSE_LAYERED_CONIFER_V4' &&
+  assert.ok(mobileTreeDetail?.canopyProfile === 'DROOPED_SPRUCE_CROWN_V5' &&
     mobileTreeDetail.coreConeCount === 0 && mobileTreeDetail.trunkProfile === 'TAPERED_FLARED_BARK_V2' &&
-    mobileTreeDetail.trunkHeight >= 2.6 && mobileTreeDetail.branchWhorls === 4 &&
-    mobileTreeDetail.branchArms === 21 && mobileTreeDetail.needleSpraysPerArm === 3 &&
-    mobileTreeDetail.needleClustersPerArm === 6 &&
-    mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 6 + mobileTreeDetail.leaderSprayClusters &&
-    mobileTreeDetail.needleClusters === 129 &&
-    mobileTreeDetail.needleBladeCount === 774 &&
-    mobileTreeDetail.needleBladeCountPerCluster === 6 &&
-    mobileTreeDetail.needleBladeTrianglesPerCluster === 48 &&
-    mobileTreeDetail.needleProfile === 'DENSE_LAYERED_CONIFER_SPRAYS_V3' &&
+    mobileTreeDetail.trunkHeight >= 2.6 && mobileTreeDetail.branchWhorls === 5 &&
+    mobileTreeDetail.lowestBranchHeight === 0.56 && mobileTreeDetail.lowerBranchDrop === 0.42 &&
+    mobileTreeDetail.needleBaseRadiusRatio === 0.1 && mobileTreeDetail.leaderSprayLevels === 4 &&
+    mobileTreeDetail.leaderDirectionsPerLevel === 4 &&
+    mobileTreeDetail.branchArms === 21 && mobileTreeDetail.needleSpraysPerArm === 4 &&
+    mobileTreeDetail.needleClustersPerArm === 8 &&
+    mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 8 + mobileTreeDetail.leaderSprayClusters &&
+    mobileTreeDetail.needleClusters === 184 &&
+    mobileTreeDetail.needleBladeCount === 1472 &&
+    mobileTreeDetail.needleBladeCountPerCluster === 8 &&
+    mobileTreeDetail.needleBladeTrianglesPerCluster === 32 &&
+    mobileTreeDetail.needleProfile === 'TAPERED_TRIAD_NEEDLES_V4' &&
     mobileTreeDetail.leaderStemCount === 1 &&
-    mobileTreeDetail.leaderSprayClusters === 3 &&
-    mobileTreeDetail.leaderProfile === 'CENTRAL_TERMINAL_LEADER_V1' &&
+    mobileTreeDetail.leaderSprayClusters === 16 &&
+    mobileTreeDetail.leaderProfile === 'LAYERED_RADIAL_LEADER_V2' &&
     mobileTreeDetail.branchTubeSegments === 6 &&
     mobileTreeDetail.branchRadialSegments === 4 &&
-    mobileTreeDetail.foliageTriangles === 7248,
-    'mobile V94 must render the same curved four-whorl conifer within the instanced geometry budget');
-  console.log('MOBILE_CONIFER_V3 ' + JSON.stringify(mobileTreeDetail));
+    mobileTreeDetail.foliageTriangles === 6944,
+    'mobile V94 must render the same five-whorl drooping spruce crown within the instanced geometry budget');
+  console.log('MOBILE_SPRUCE_V5 ' + JSON.stringify(mobileTreeDetail));
   const mobileTreeBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
   assert.equal(mobileTreeBaseline, 'legacy', 'mobile A/B baseline must restore the previous three-cone evergreen geometry');
   await mobile.waitForTimeout(300);
