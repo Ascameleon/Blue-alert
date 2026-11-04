@@ -313,7 +313,7 @@ def main():
         "const leaderBase = new THREE.Vector3(0, 1.96, 0)",
         "leaderStemCount: 1",
         "leaderSprayClusters: leaderSprays.length",
-        "leaderProfile: 'CENTRAL_TERMINAL_LEADER_V1',
+        "leaderProfile: 'CENTRAL_TERMINAL_LEADER_V1'",
         "branchTubeSegments: 6",
         "branchRadialSegments: 4",
         "canopyProfile: 'DENSE_LAYERED_CONIFER_V4'",
