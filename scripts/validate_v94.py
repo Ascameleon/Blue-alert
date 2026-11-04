@@ -241,7 +241,7 @@ def main():
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
     if "terrainMaterial.normalMap = terrainSurfaceTextures.normal" not in terrain_section or "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
-    if "new THREE.PlaneGeometry(200, 160, terrainSegmentsX, terrainSegmentsZ)" not in terrain_section or "terrainPositions.setZ(i, height)" not in terrain_section or "terrainGeometry.computeVertexNormals()" not in terrain_section or "heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V2'" not in terrain_section:
+    if "new THREE.PlaneGeometry(200, 160, terrainSegmentsX, terrainSegmentsZ)" not in terrain_section or "terrainPositions.setZ(i, height)" not in terrain_section or "terrainGeometry.computeVertexNormals()" not in terrain_section or "heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V3'" not in terrain_section:
         raise SystemExit("FAIL: terrain must use a deterministic sculpted heightfield with computed normals and a bounded geometry profile")
     if "terrainHeightAt(u.g.position.x,u.g.position.z) + 0.04" not in source or "treeDummy.position.set(x, terrainHeightAt(x,z), z)" not in source or "rockDummy.position.set(x, terrainHeightAt(x,z) + radius * verticalScale * 0.88, z)" not in source or "TERRAIN_FLAT_ZONES" not in terrain_section:
         raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
