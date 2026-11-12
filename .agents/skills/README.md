@@ -5,7 +5,7 @@ Curated Agent Skills from [gamedev-skills/awesome-gamedev-agent-skills](https://
 ## Included
 - Router: chooses the smallest engine/task-specific skill set.
 - Web prototype: three.js scene setup, glTF loading, materials and lighting.
-- Game design: tower defense, game AI, level design, procedural generation, physics tuning and save systems.
+- Game design: tower defense, game AI, level design, procedural generation, physics tuning and save systems. The tower-defense wave balancer and its reference guide are included.
 - Player experience: UI/UX, game feel, input, camera, assets and audio.
 - Engineering: performance optimization and shader programming.
 
