@@ -2,16 +2,17 @@
 
 Curated Agent Skills from [gamedev-skills/awesome-gamedev-agent-skills](https://github.com/gamedev-skills/awesome-gamedev-agent-skills), stored in `.agents/skills/` for compatible coding agents.
 
-## Selected skills
-- Router: selects relevant engine/task guidance.
-- three.js: scene setup, glTF loading, materials and lighting. This is relevant to the existing HTML/Three.js prototype.
-- Art assets, UI/UX, game feel, audio design and performance optimization.
-- Game AI and tower-defense design for RTS gameplay systems.
+## Included
+- Router: chooses the smallest engine/task-specific skill set.
+- Web prototype: three.js scene setup, glTF loading, materials and lighting.
+- Game design: tower defense, game AI, level design, procedural generation, physics tuning and save systems.
+- Player experience: UI/UX, game feel, input, camera, assets and audio.
+- Engineering: performance optimization and shader programming.
 
-## Important project-specific note
-The repository also references OpenRTS (Java/jMonkeyEngine). The three.js skills apply only to the existing web prototype; do not apply them to the Java engine. Preserve both implementations and choose the skill set based on the target code.
+## Project-specific engine boundary
+Blue Alert contains an OpenRTS Java/jMonkeyEngine implementation and a separate HTML/Three.js prototype. The three.js skills apply only to the web prototype. For Java/OpenRTS work, preserve the existing engine and use the cross-engine design skills; do not apply three.js APIs to Java code.
 
 ## Usage
-Compatible agents can read `.agents/skills/router/SKILL.md` first, then the smallest relevant skill under `.agents/skills/skills/`. These files are guidance, not a runtime dependency and do not change the game's code.
+A compatible coding agent should read `.agents/skills/router/SKILL.md` first, inspect the target project and engine, then read only the selected skill. These files are guidance, not a runtime dependency, and do not modify game behavior by themselves.
 
 Source skills are Apache-2.0; see `THIRD_PARTY_LICENSE`.
