@@ -324,7 +324,7 @@ html,body{width:100%;height:100%;min-height:100dvh;overflow:hidden;background:#0
 <script type="module">
 let BLUE_MODELS = null;
 try {
-  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=10');
+  BLUE_MODELS = await import('./game-data/models/blue-alert-models.js?v=15');
 } catch (assetError) {
   console.warn('BLUE ALERTS: bibliothèque de modèles indisponible, géométries natives conservées.', assetError);
 }
@@ -463,6 +463,16 @@ studioEnvironment.colorSpace = THREE.SRGBColorSpace;
 studioEnvironment.needsUpdate = true;
 scene.environment = studioEnvironment;
 viewport.appendChild(renderer.domElement);
+window.__BLUE_ALERTS_ENGINE__ = Object.freeze({
+  engine: 'Three.js',
+  threeRevision: THREE.REVISION,
+  renderer: 'WebGLRenderer',
+  camera: 'PerspectiveCamera',
+  projection: 'perspective',
+  webgl2: renderer.capabilities.isWebGL2,
+  maxTextureSize: renderer.capabilities.maxTextureSize,
+  pixelRatio: renderer.getPixelRatio()
+});
 renderer.domElement.addEventListener('webglcontextlost', event => {
   event.preventDefault();
   const existing = document.getElementById('blueRuntimeError');
@@ -563,65 +573,282 @@ function insideBuildZone(x, z, radius = 0) {
   const southPad = z - radius >= BUILD_ZONE.roadHalfWidth;
   return northPad || southPad;
 }
-const terrainGeometry = new THREE.PlaneGeometry(200, 160, 60, 48);
+const INDUSTRIAL_CLEARANCE_ZONES = Object.freeze([
+  { x: -72, z: -47, rx: 14, rz: 10 },
+  { x: 8, z: -38, rx: 16, rz: 10 },
+  { x: 72, z: -46, rx: 15, rz: 10 },
+  { x: 5, z: 56, rx: 12, rz: 11 }
+]);
+const TERRAIN_FLAT_ZONES = Object.freeze([
+  ...INDUSTRIAL_CLEARANCE_ZONES.map(zone => ({ ...zone, feather: 10 })),
+  { x: -32, z: -16, rx: 28, rz: 22, feather: 10 },
+  { x: 34, z: -6, rx: 24, rz: 18, feather: 10 },
+  { x: -6, z: 27, rx: 18, rz: 10, feather: 8 },
+  { x: 48, z: 23, rx: 16, rz: 10, feather: 8 }
+]);
+const terrainEase = (a, b, value) => {
+  const t = Math.max(0, Math.min(1, (value - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+function terrainHeightAt(x, z) {
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return 0;
+  // The field is shaped by two high northern shoulders, a readable central saddle
+  // and a quieter southern swale. Lower-frequency noise keeps the authored forms
+  // legible at tactical zoom instead of disguising them as random green mottling.
+  const broad = (terrainNoise(x + 31, z - 17, 0.024) - 0.5) * 0.68;
+  const medium = (terrainNoise(x - 19, z + 13, 0.065) - 0.5) * 0.20;
+  const fine = (terrainNoise(x + 7, z - 5, 0.17) - 0.5) * 0.03;
+  const ridgeAxis = z - (0.20 * x + 18);
+  const ridge = Math.exp(-Math.pow(ridgeAxis / 12, 2)) * 0.68;
+  const swaleAxis = z - (-0.14 * x - 20);
+  const swale = Math.exp(-Math.pow(swaleAxis / 9, 2)) * 0.30;
+  // Keep both shoulders beyond the build pads and industrial clearances so the
+  // playable construction surfaces remain level while the outer field gains scale.
+  const northwestUpland = Math.exp(
+    -Math.pow((x + 84) / 36, 2) - Math.pow((z - 68) / 32, 2)
+  ) * 2.20;
+  const northeastShoulder = Math.exp(
+    -Math.pow((x - 84) / 38, 2) - Math.pow((z - 68) / 34, 2)
+  ) * 1.80;
+  const outerBerm = terrainEase(65, 82, Math.max(Math.abs(x), Math.abs(z))) * 0.12;
+  const roadFlat = 1 - terrainEase(BUILD_ZONE.roadHalfWidth, BUILD_ZONE.roadHalfWidth + 6, Math.abs(z));
+  const buildX = terrainEase(BUILD_ZONE.minX - 8, BUILD_ZONE.minX, x) *
+    (1 - terrainEase(BUILD_ZONE.maxX, BUILD_ZONE.maxX + 8, x));
+  const buildZ = 1 - terrainEase(BUILD_ZONE.maxZ, BUILD_ZONE.maxZ + 8, Math.abs(z));
+  const buildFlat = buildX * buildZ;
+  let zoneFlat = 0;
+  for (const zone of TERRAIN_FLAT_ZONES) {
+    const dx = Math.max(0, Math.abs(x - zone.x) - zone.rx);
+    const dz = Math.max(0, Math.abs(z - zone.z) - zone.rz);
+    zoneFlat = Math.max(zoneFlat, 1 - terrainEase(0, zone.feather, Math.hypot(dx, dz)));
+  }
+  const flatMask = Math.max(roadFlat, buildFlat, zoneFlat);
+  return Math.max(-3.6, Math.min(3.6,
+    (broad + medium + fine + ridge - swale + northwestUpland + northeastShoulder + outerBerm) * (1 - flatMask)
+  ));
+}
+const terrainSegmentsX = isMobile ? 120 : 160;
+const terrainSegmentsZ = isMobile ? 96 : 128;
+const terrainGeometry = new THREE.PlaneGeometry(200, 160, terrainSegmentsX, terrainSegmentsZ);
 const terrainPositions = terrainGeometry.attributes.position;
 const terrainColors = new Float32Array(terrainPositions.count * 3);
+const terrainHeights = new Float32Array(terrainPositions.count);
 const grassColor = new THREE.Color(0x3d5635);
 const dryColor = new THREE.Color(0x746b43);
 const shadedColor = new THREE.Color(0x29422f);
 const soilColor = new THREE.Color(0x62513d);
+const terrainBedrockColor = new THREE.Color(0x918a79);
 const terrainSmoothstep = (a, b, value) => {
   const t = Math.max(0, Math.min(1, (value - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
+let terrainHeightMin = Infinity;
+let terrainHeightMax = -Infinity;
 for (let i = 0; i < terrainPositions.count; i++) {
   const x = terrainPositions.getX(i);
-  const z = terrainPositions.getY(i);
-  const broad = terrainNoise(x, z, 0.035);
-  const medium = terrainNoise(x + 13, z - 7, 0.11);
-  const fine = terrainNoise(x - 5, z + 11, 0.42);
+  const worldZ = -terrainPositions.getY(i);
+  const height = terrainHeightAt(x, worldZ);
+  terrainPositions.setZ(i, height);
+  terrainHeights[i] = height;
+  terrainHeightMin = Math.min(terrainHeightMin, height);
+  terrainHeightMax = Math.max(terrainHeightMax, height);
+  const broad = terrainNoise(x, worldZ, 0.035);
+  const medium = terrainNoise(x + 13, worldZ - 7, 0.11);
+  const fine = terrainNoise(x - 5, worldZ + 11, 0.42);
   const moisture = broad * 0.62 + medium * 0.27 + fine * 0.11;
   const color = grassColor.clone();
   color.lerp(dryColor, terrainSmoothstep(0.57, 0.82, moisture) * 0.42);
   color.lerp(shadedColor, terrainSmoothstep(0.12, 0.42, 1 - moisture) * 0.28);
-  const roadShoulder = 1 - terrainSmoothstep(3.4, 7.8, Math.abs(z));
-  color.lerp(soilColor, roadShoulder * 0.24);
+  const roadShoulder = 1 - terrainSmoothstep(3.4, 7.8, Math.abs(worldZ));
+  const exposedRelief = terrainSmoothstep(0.35, 1.05, Math.abs(height));
+  const valleySoil = terrainSmoothstep(0.08, 0.36, -height);
+  color.lerp(soilColor, roadShoulder * 0.24 + exposedRelief * 0.06 + valleySoil * 0.22);
   color.multiplyScalar(0.94 + fine * 0.12);
   color.toArray(terrainColors, i * 3);
 }
-terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainColors, 3));
+const terrainGridWidth = terrainSegmentsX + 1;
+const terrainStepX = 200 / terrainSegmentsX;
+const terrainStepZ = 160 / terrainSegmentsZ;
+let terrainMaxSlope = 0;
+let terrainRockExposureVertices = 0;
+for (let row = 0; row <= terrainSegmentsZ; row++) {
+  for (let col = 0; col <= terrainSegmentsX; col++) {
+    const index = row * terrainGridWidth + col;
+    const leftCol = Math.max(0, col - 1);
+    const rightCol = Math.min(terrainSegmentsX, col + 1);
+    const upperRow = Math.max(0, row - 1);
+    const lowerRow = Math.min(terrainSegmentsZ, row + 1);
+    const slopeX = (terrainHeights[row * terrainGridWidth + rightCol] -
+      terrainHeights[row * terrainGridWidth + leftCol]) / ((rightCol - leftCol) * terrainStepX || terrainStepX);
+    const slopeZ = (terrainHeights[lowerRow * terrainGridWidth + col] -
+      terrainHeights[upperRow * terrainGridWidth + col]) / ((lowerRow - upperRow) * terrainStepZ || terrainStepZ);
+    const slope = Math.hypot(slopeX, slopeZ);
+    terrainMaxSlope = Math.max(terrainMaxSlope, slope);
+
+    // Expose bedrock only where the authored landform actually rises or breaks;
+    // this ties the vertex palette to the same relief that drives unit grounding.
+    const slopeExposure = terrainSmoothstep(0.045, 0.13, slope) * 0.94;
+    const elevationExposure = terrainSmoothstep(0.55, 1.45, terrainHeights[index]) * 0.72;
+    const exposure = Math.max(slopeExposure, elevationExposure);
+    const rockMix = Math.min(0.62, exposure * 0.72);
+    if (rockMix >= 0.035) terrainRockExposureVertices++;
+    const color = new THREE.Color().fromArray(terrainColors, index * 3);
+    color.lerp(terrainBedrockColor, rockMix);
+    color.toArray(terrainColors, index * 3);
+  }
+}
+terrainPositions.needsUpdate = true;
+terrainGeometry.computeVertexNormals();
+terrainGeometry.computeBoundingBox();
+terrainGeometry.computeBoundingSphere();
+terrainGeometry.userData.heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V3';
+terrainGeometry.userData.landformProfile = 'TWO_UPLANDS_CENTRAL_SADDLE_V3';
+terrainGeometry.userData.slopeMaterialProfile = 'STRATIFIED_BEDROCK_SHOULDERS_V3';
+terrainGeometry.userData.rockExposureVertices = terrainRockExposureVertices;
+terrainGeometry.userData.heightMin = terrainHeightMin;
+terrainGeometry.userData.heightMax = terrainHeightMax;
+terrainGeometry.userData.heightRange = terrainHeightMax - terrainHeightMin;
+terrainGeometry.userData.maxSlope = terrainMaxSlope;
+
+// Keep the accepted V94 heightfield palette for a controlled A/B comparison.
+// The live field palette adds broad, domain-warped dry-grass, compacted-soil and
+// exposed-stone regions without changing the sculpted geometry or grounding.
+const terrainBaselineColors = new Float32Array(terrainColors);
+const terrainFieldColors = new Float32Array(terrainColors.length);
+const terrainColorChecksum = colors => {
+  let checksum = 2166136261;
+  for (let i = 0; i < colors.length; i++) {
+    checksum = Math.imul(checksum ^ Math.round(colors[i] * 65535), 16777619);
+  }
+  return checksum >>> 0;
+};
+let dryFieldVertices = 0, soilFieldVertices = 0, stoneFieldVertices = 0;
+const terrainZoneWeight = (x, z) => {
+  // Preserve the central supply road and every authored construction / clearance pad.
+  let weight = terrainEase(BUILD_ZONE.roadHalfWidth, BUILD_ZONE.roadHalfWidth + 6, Math.abs(z));
+  for (const zone of TERRAIN_FLAT_ZONES) {
+    const nx = (x - zone.x) / (zone.rx + zone.feather);
+    const nz = (z - zone.z) / (zone.rz + zone.feather);
+    weight = Math.min(weight, terrainSmoothstep(0.72, 1.0, Math.hypot(nx, nz)));
+  }
+  return weight;
+};
+for (let i = 0; i < terrainPositions.count; i++) {
+  const x = terrainPositions.getX(i);
+  const worldZ = -terrainPositions.getY(i);
+  const warpX = (terrainNoise(x + 31, worldZ - 17, 0.035) - 0.5) * 9;
+  const warpZ = (terrainNoise(x - 43, worldZ + 29, 0.035) - 0.5) * 9;
+  const broad = terrainNoise(x + warpX + 29, worldZ + warpZ - 17, 0.055);
+  const medium = terrainNoise(x - 11, worldZ + 23, 0.14);
+  const fine = terrainNoise(x + 7, worldZ - 5, 0.82);
+  const fieldMix = broad * 0.68 + medium * 0.32;
+  const dry = terrainSmoothstep(0.56, 0.69, fieldMix);
+  const soil = terrainSmoothstep(0.62, 0.74, medium * 0.58 + broad * 0.42) * (1 - dry * 0.58);
+  const exposedStone = terrainSmoothstep(0.78, 0.90,
+    medium * 0.52 + fine * 0.20 + terrainHash(i + 701, -307) * 0.28) *
+    (1 - soil * 0.72) * (1 - dry * 0.25);
+  const fieldWeight = terrainZoneWeight(x, worldZ);
+  if (dry * fieldWeight > 0.28) dryFieldVertices++;
+  if (soil * fieldWeight > 0.28) soilFieldVertices++;
+  if (exposedStone * fieldWeight > 0.22) stoneFieldVertices++;
+
+  // Start from the accepted relief-aware color so slope-linked bedrock and
+  // lowland shading remain coherent with the actual V3 landform.
+  const fieldColor = new THREE.Color().fromArray(terrainBaselineColors, i * 3);
+  fieldColor.lerp(dryColor, dry * fieldWeight * 0.72);
+  fieldColor.lerp(soilColor, soil * fieldWeight * 0.72);
+  fieldColor.lerp(terrainBedrockColor, exposedStone * fieldWeight * 0.44);
+  fieldColor.toArray(terrainFieldColors, i * 3);
+}
+const terrainFieldCoverage = {
+  dry: dryFieldVertices / terrainPositions.count,
+  soil: soilFieldVertices / terrainPositions.count,
+  stone: stoneFieldVertices / terrainPositions.count
+};
+const terrainBaselineColorChecksum = terrainColorChecksum(terrainBaselineColors);
+const terrainFieldColorChecksum = terrainColorChecksum(terrainFieldColors);
+terrainGeometry.userData.vertexTintProfile = 'DOMAIN_WARPED_FIELD_STRATA_V1';
+terrainGeometry.userData.fieldCoverage = terrainFieldCoverage;
+terrainGeometry.setAttribute('color', new THREE.BufferAttribute(terrainFieldColors, 3));
+terrainGeometry.userData.segmentsX = terrainSegmentsX;
+terrainGeometry.userData.segmentsZ = terrainSegmentsZ;
 function createTerrainSurfaceTextures(size) {
   const albedoPixels = new Uint8Array(size * size * 4);
+  const roughnessPixels = new Uint8Array(size * size * 4);
+  const normalPixels = new Uint8Array(size * size * 4);
+  const heightField = new Float32Array(size * size);
   let checksum = 2166136261;
   const channel = value => Math.max(0, Math.min(255, Math.round(value)));
   for (let py = 0; py < size; py++) {
     const worldZ = ((py + 0.5) / size - 0.5) * 160;
     for (let px = 0; px < size; px++) {
       const worldX = ((px + 0.5) / size - 0.5) * 200;
-      const broad = terrainNoise(worldX + 29, worldZ - 17, 0.075);
-      const medium = terrainNoise(worldX - 11, worldZ + 23, 0.32);
-      const fine = terrainNoise(worldX + 7, worldZ - 5, 1.25);
+      const broad = terrainNoise(worldX + 29, worldZ - 17, 0.045);
+      const medium = terrainNoise(worldX - 11, worldZ + 23, 0.17);
+      const fine = terrainNoise(worldX + 7, worldZ - 5, 0.85);
       const fleck = terrainHash(px + 701, py - 307);
-      const soil = terrainSmoothstep(0.48, 0.72, broad * 0.62 + medium * 0.38);
-      const exposedStone = terrainSmoothstep(0.70, 0.91, medium * 0.68 + fleck * 0.32) *
-        (1 - terrainSmoothstep(0.32, 0.62, broad));
-      const grain = (fine - 0.5) * 13 + (fleck - 0.5) * 9;
-      const warm = soil * 0.54;
-      const stony = exposedStone * 0.42;
+      const soil = terrainSmoothstep(0.41, 0.63, broad * 0.64 + medium * 0.36);
+      const dry = terrainSmoothstep(0.58, 0.80, broad * 0.62 + medium * 0.38) * (1 - soil * 0.20);
+      const exposedStone = terrainSmoothstep(0.78, 0.92, medium * 0.70 + fleck * 0.30) *
+        (1 - soil) * (1 - dry * 0.55);
+      const grain = (fine - 0.5) * 14 + (fleck - 0.5) * 10;
       const offset = (py * size + px) * 4;
-      const red = channel(240 + warm * 15 - stony * 7 + grain);
-      const green = channel(244 - warm * 17 - stony * 8 + grain * 0.72);
-      const blue = channel(235 - warm * 27 - stony * 3 + grain * 0.46);
-      albedoPixels[offset] = red;
-      albedoPixels[offset + 1] = green;
-      albedoPixels[offset + 2] = blue;
+
+      // A field-authored palette: restrained dry grass, exposed soil and stone,
+      // blended over the existing faction-neutral vertex-colour terrain.
+      let red = 228, green = 236, blue = 216;
+      const dryMix = dry * 0.34;
+      red = red * (1 - dryMix) + 234 * dryMix;
+      green = green * (1 - dryMix) + 221 * dryMix;
+      blue = blue * (1 - dryMix) + 188 * dryMix;
+      const soilMix = soil * 0.30;
+      red = red * (1 - soilMix) + 194 * soilMix;
+      green = green * (1 - soilMix) + 170 * soilMix;
+      blue = blue * (1 - soilMix) + 138 * soilMix;
+      const stoneMix = exposedStone * 0.18;
+      red = red * (1 - stoneMix) + 209 * stoneMix;
+      green = green * (1 - stoneMix) + 207 * stoneMix;
+      blue = blue * (1 - stoneMix) + 194 * stoneMix;
+      albedoPixels[offset] = channel(red + grain);
+      albedoPixels[offset + 1] = channel(green + grain * 0.72);
+      albedoPixels[offset + 2] = channel(blue + grain * 0.45);
       albedoPixels[offset + 3] = 255;
 
+      const roughness = channel(202 + soil * 24 + exposedStone * 26 - dry * 10 +
+        (fine - 0.5) * 16 + (fleck - 0.5) * 10);
+      roughnessPixels[offset] = roughness;
+      roughnessPixels[offset + 1] = roughness;
+      roughnessPixels[offset + 2] = roughness;
+      roughnessPixels[offset + 3] = 255;
+      heightField[py * size + px] = broad * 0.30 + medium * 0.34 + fine * 0.20 +
+        soil * 0.10 + exposedStone * 0.06;
+
       if ((px & 15) === 0 && (py & 3) === 0) {
-        checksum = Math.imul(checksum ^ red ^ (green << 8) ^ (blue << 16), 16777619);
+        checksum = Math.imul(checksum ^ albedoPixels[offset] ^
+          (albedoPixels[offset + 1] << 8) ^ (albedoPixels[offset + 2] << 16) ^ roughness, 16777619);
       }
     }
   }
+
+  // Tangent-space relief follows the authored soil/grass/stone field rather than
+  // a uniform high-frequency bump, keeping the terrain readable at RTS zoom.
+  for (let py = 0; py < size; py++) {
+    const up = Math.max(0, py - 1), down = Math.min(size - 1, py + 1);
+    for (let px = 0; px < size; px++) {
+      const left = Math.max(0, px - 1), right = Math.min(size - 1, px + 1);
+      const dx = (heightField[py * size + right] - heightField[py * size + left]) * 3.4;
+      const dy = (heightField[down * size + px] - heightField[up * size + px]) * 3.4;
+      let nx = -dx, ny = -dy, nz = 1;
+      const length = Math.hypot(nx, ny, nz) || 1;
+      nx /= length; ny /= length; nz /= length;
+      const offset = (py * size + px) * 4;
+      normalPixels[offset] = channel((nx * 0.5 + 0.5) * 255);
+      normalPixels[offset + 1] = channel((ny * 0.5 + 0.5) * 255);
+      normalPixels[offset + 2] = channel((nz * 0.5 + 0.5) * 255);
+      normalPixels[offset + 3] = 255;
+    }
+  }
+
   const makeTexture = (pixels, colorSpace) => {
     const texture = new THREE.DataTexture(pixels, size, size, THREE.RGBAFormat);
     texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -629,7 +856,7 @@ function createTerrainSurfaceTextures(size) {
     texture.magFilter = THREE.LinearFilter;
     texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.generateMipmaps = true;
-    texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), isMobile ? 2 : 8);
+    texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);
     if (colorSpace) texture.colorSpace = colorSpace;
     texture.needsUpdate = true;
     return texture;
@@ -637,38 +864,157 @@ function createTerrainSurfaceTextures(size) {
   return {
     size,
     albedo: makeTexture(albedoPixels, THREE.SRGBColorSpace),
+    normal: makeTexture(normalPixels, THREE.NoColorSpace),
+    roughness: makeTexture(roughnessPixels, THREE.NoColorSpace),
     checksum: checksum >>> 0
   };
 }
 const terrainSurfaceTextures = createTerrainSurfaceTextures(isMobile ? 256 : 512);
 const terrainMaterial = new THREE.MeshStandardMaterial({
-  color: 0xffffff, vertexColors: true, roughness: 1, metalness: 0
+  color: 0xffffff, vertexColors: true, roughness: 0.92, metalness: 0
 });
 terrainMaterial.map = terrainSurfaceTextures.albedo;
+terrainMaterial.normalMap = terrainSurfaceTextures.normal;
+terrainMaterial.normalScale.set(1.15, 1.15);
+terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness;
 terrainMaterial.needsUpdate = true;
 const ground = new THREE.Mesh(terrainGeometry, terrainMaterial);
 ground.name = 'terrain-ground';
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
+const terrainMaxAbs = points => Math.max(...points.map(([x,z]) => Math.abs(terrainHeightAt(x,z))));
+const terrainRoadFlatness = terrainMaxAbs([[-90,0],[-45,4],[0,-4],[45,0],[90,4]]);
+const terrainPlayerPadFlatness = terrainMaxAbs([[-58,-30],[-32,-16],[-10,-10],[-58,30],[-10,30]]);
+const terrainEnemyBaseFlatness = terrainMaxAbs([[20,-16],[34,-6],[48,4],[20,8],[48,-4]]);
+const terrainReliefProbeHeight = terrainHeightAt(-70,55);
 window.__BLUE_ALERTS_TERRAIN = Object.freeze({
   seed: 0x424c5545,
   vertexCount: terrainPositions.count,
   colorCount: terrainColors.length / 3,
   vertexColors: ground.material.vertexColors,
+  vertexTintProfile: terrainGeometry.userData.vertexTintProfile,
+  fieldCoverage: terrainFieldCoverage,
+  baselineColorChecksum: terrainBaselineColorChecksum,
+  fieldColorChecksum: terrainFieldColorChecksum,
   albedoMap: !!terrainMaterial.map,
-  surfaceMode: 'procedural-albedo-grain',
+  surfaceMode: 'procedural-albedo-normal-roughness',
+  normalMap: !!terrainMaterial.normalMap,
+  roughnessMap: !!terrainMaterial.roughnessMap,
+  normalStrength: terrainMaterial.normalScale.x,
   textureResolution: terrainSurfaceTextures.size,
   textureChecksum: terrainSurfaceTextures.checksum,
-  anisotropy: terrainSurfaceTextures.albedo.anisotropy
+  anisotropy: terrainSurfaceTextures.albedo.anisotropy,
+  heightProfile: terrainGeometry.userData.heightProfile,
+  landformProfile: terrainGeometry.userData.landformProfile,
+  segmentsX: terrainSegmentsX,
+  segmentsZ: terrainSegmentsZ,
+  heightMin: terrainHeightMin,
+  heightMax: terrainHeightMax,
+  heightRange: terrainHeightMax - terrainHeightMin,
+  maxSlope: terrainMaxSlope,
+  slopeMaterialProfile: terrainGeometry.userData.slopeMaterialProfile,
+  rockExposureVertices: terrainRockExposureVertices,
+  roadFlatness: terrainRoadFlatness,
+  playerPadFlatness: terrainPlayerPadFlatness,
+  enemyBaseFlatness: terrainEnemyBaseFlatness,
+  reliefProbeHeight: terrainReliefProbeHeight
 });
+let terrainProbeRestore = null;
 window.__BLUE_ALERTS_TERRAIN_QA = Object.freeze({
   focus() {
-    camTarget.set(32, 0, 44);
+    camTarget.set(32, terrainHeightAt(32,44) + 0.35, 44);
     camDist = isMobile ? 14 : 19;
     return {
       textureResolution: terrainSurfaceTextures.size,
-      checksum: terrainSurfaceTextures.checksum
+      checksum: terrainSurfaceTextures.checksum,
+      normalMap: !!terrainMaterial.normalMap,
+      roughnessMap: !!terrainMaterial.roughnessMap,
+      normalStrength: terrainMaterial.normalScale.x
+    };
+  },
+  focusRelief() {
+    const x = -70, z = 55, height = terrainHeightAt(x,z);
+    camTarget.set(x, height + 1.15, z);
+    // Approach from the south-east and look north-west across the live ridge face.
+    camYaw = 2.35; camPitch = 0.42; camDist = isMobile ? 22 : 30;
+    camVelX = 0; camVelZ = 0;
+    return { x, z, height, cameraDistance: camDist, approach: 'SOUTH_EAST_TO_NORTH_WEST_RIDGE' };
+  },
+  heightAt(x,z) {
+    return terrainHeightAt(x,z);
+  },
+  placeProbe() {
+    const unit = units.find(candidate => !candidate.dead && candidate.team === 1 && candidate.kind === 'infantry' && candidate.g);
+    if (!unit) return null;
+    terrainProbeRestore = {
+      unit, x: unit.g.position.x, y: unit.g.position.y, z: unit.g.position.z,
+      rotationY: unit.g.rotation.y, dest: unit.dest, path: unit.path, pathIdx: unit.pathIdx,
+      atkTarget: unit.atkTarget, attackMove: unit.attackMove,
+      combatRouteGoal: unit.combatRouteGoal, savedAttackMoveRoute: unit.savedAttackMoveRoute,
+      stuckTime: unit.stuckTime
+    };
+    unit.dest = null; unit.path = null; unit.pathIdx = 0; unit.atkTarget = null;
+    unit.attackMove = false; unit.combatRouteGoal = null; unit.savedAttackMoveRoute = null;
+    const height = terrainHeightAt(-70,55);
+    unit.g.position.set(-70,terrainHeightAt(-70,55) + 0.04,55);
+    unit.g.rotation.y = 0.4;
+    unit.stuckTime = 0;
+    return { x: -70, z: 55, height, expectedY: height + 0.04 };
+  },
+  unitGrounding() {
+    const live = units.filter(unit => !unit.dead && unit.g);
+    const errors = live.map(unit => Math.abs(unit.g.position.y - (terrainHeightAt(unit.g.position.x,unit.g.position.z) + 0.04)));
+    const probe = terrainProbeRestore?.unit;
+    const probeHeight = probe ? terrainHeightAt(probe.g.position.x,probe.g.position.z) : null;
+    const probeError = probe ? Math.abs(probe.g.position.y - (probeHeight + 0.04)) : null;
+    return {
+      checkedCount: live.length,
+      maxError: errors.length ? Math.max(...errors) : Infinity,
+      probeHeight,
+      probeError
+    };
+  },
+  restoreProbe() {
+    if (!terrainProbeRestore) return false;
+    const state = terrainProbeRestore;
+    const unit = state.unit;
+    unit.g.position.set(state.x,state.y,state.z);
+    unit.g.rotation.y = state.rotationY;
+    unit.dest = state.dest; unit.path = state.path; unit.pathIdx = state.pathIdx;
+    unit.atkTarget = state.atkTarget; unit.attackMove = state.attackMove;
+    unit.combatRouteGoal = state.combatRouteGoal; unit.savedAttackMoveRoute = state.savedAttackMoveRoute;
+    unit.stuckTime = state.stuckTime;
+    terrainProbeRestore = null;
+    return true;
+  },
+  setFieldStrata(enabled) {
+    const active = !!enabled;
+    const colors = active ? terrainFieldColors : terrainBaselineColors;
+    const attribute = terrainGeometry.attributes.color;
+    if (attribute.array !== colors) {
+      attribute.array = colors;
+      attribute.needsUpdate = true;
+    }
+    return {
+      enabled: active,
+      mode: active ? 'domain-warped-field-strata' : 'accepted-v94-baseline',
+      colorChecksum: active ? terrainFieldColorChecksum : terrainBaselineColorChecksum,
+      fieldCoverage: terrainFieldCoverage,
+      camera: { target: camTarget.toArray(), distance: camDist, yaw: camYaw, pitch: camPitch }
+    };
+  },
+  setMicroRelief(enabled) {
+    const active = !!enabled;
+    terrainMaterial.normalMap = active ? terrainSurfaceTextures.normal : null;
+    terrainMaterial.roughnessMap = active ? terrainSurfaceTextures.roughness : null;
+    terrainMaterial.normalScale.setScalar(active ? 1.15 : 0);
+    terrainMaterial.needsUpdate = true;
+    return {
+      enabled: active,
+      normalMap: !!terrainMaterial.normalMap,
+      roughnessMap: !!terrainMaterial.roughnessMap,
+      normalStrength: terrainMaterial.normalScale.x
     };
   }
 });
@@ -1014,7 +1360,7 @@ function addIndustrialLogisticsSet() {
   };
   const cluster = (name,x,z) => {
     const group = new THREE.Group();
-    group.name = name; group.position.set(x,0,z);
+    group.name = name; group.position.set(x,terrainHeightAt(x,z),z);
     group.userData = { kind:'environment-prop', blocksMovement:false };
     root.add(group); return group;
   };
@@ -1136,10 +1482,7 @@ function addIndustrialLogisticsSet() {
   return {
     root, clusters:[substation,gantry,silos,cargo],
     counts:{ cargoCrates:crates.count, hazardBarrels:barrels.count },
-    exclusionZones:[
-      {x:-72,z:-47,rx:14,rz:10}, {x:8,z:-38,rx:16,rz:10},
-      {x:72,z:-46,rx:15,rz:10}, {x:5,z:56,rx:12,rz:11}
-    ],
+    exclusionZones: INDUSTRIAL_CLEARANCE_ZONES,
     focus:{
       base:{x:-18,z:4}, substation:{x:-72,z:-47},
       gantry:{x:8,z:-38}, silos:{x:72,z:-46}, cargo:{x:5,z:56}
@@ -1197,7 +1540,7 @@ function addBattlefieldDressing() {
     if (Math.abs(z) < 8 || insideBuildZone(x, z, 0) || insideIndustrialSet(x, z, 8)) continue;
     const scale = 0.55 + terrainHash(i, 97) * 0.85;
     for (let blade = 0; blade < 2; blade++) {
-      dummy.position.set(x + (blade ? 0.09 : -0.09), 0.025, z + (blade ? -0.06 : 0.06));
+      dummy.position.set(x + (blade ? 0.09 : -0.09), terrainHeightAt(x,z) + 0.025, z + (blade ? -0.06 : 0.06));
       dummy.rotation.set(0, terrainHash(i, blade + 111) * Math.PI * 2, blade ? 0.16 : -0.12);
       dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix();
@@ -1324,99 +1667,193 @@ createBuildZoneVisual();
 // Battlefield vegetation — layered conifers and rocks, batched for desktop/mobile.
 // Every transform is deterministic; props remain visual-only and never alter pathing.
 function createLayeredTreeFoliageGeometry() {
+  // Five descending whorls form a tapered spruce crown; lower boughs droop toward the forest floor.
+  // Fine triad needles are baked into the same shared geometry so every tree remains one instanced draw.
   const tiers = [
-    { radius: .82, height: 1.28, y: 1.10, light: .76, branches: 6, branchLength: .78, branchRise: .20, branchRadius: .065 },
-    { radius: .65, height: 1.12, y: 1.62, light: .88, branches: 6, branchLength: .62, branchRise: .18, branchRadius: .058 },
-    { radius: .47, height: .96, y: 2.08, light: 1.00, branches: 5, branchLength: .46, branchRise: .15, branchRadius: .050 }
+    { y: .56, branches: 6, branchLength: 1.12, branchRise: .06, branchDrop: .42, branchRadius: .058, tone: .72 },
+    { y: 1.12, branches: 5, branchLength: .96, branchRise: .09, branchDrop: .34, branchRadius: .052, tone: .80 },
+    { y: 1.68, branches: 4, branchLength: .76, branchRise: .13, branchDrop: .25, branchRadius: .045, tone: .90 },
+    { y: 2.20, branches: 3, branchLength: .54, branchRise: .15, branchDrop: .15, branchRadius: .038, tone: 1.00 },
+    { y: 2.58, branches: 3, branchLength: .34, branchRise: .13, branchDrop: .08, branchRadius: .031, tone: 1.06 }
   ];
   const needleSprays = [
-    { at: .43, length: .22, width: .17, tone: .92 },
-    { at: .68, length: .21, width: .16, tone: 1.00 },
-    { at: .88, length: .17, width: .125, tone: 1.07 }
+    { at: .20, length: .24, width: .060, radialOffset: .014, sideOffset: .043, heightOffset: -.012, tone: .91 },
+    { at: .44, length: .22, width: .056, radialOffset: .018, sideOffset: .039, heightOffset: -.004, tone: .96 },
+    { at: .68, length: .20, width: .052, radialOffset: .020, sideOffset: .034, heightOffset: .006, tone: 1.01 },
+    { at: .90, length: .17, width: .047, radialOffset: .014, sideOffset: .028, heightOffset: .014, tone: 1.06 }
   ];
   const positions = [], normals = [], colors = [];
   let branchArms = 0;
   let needleClusters = 0;
   const up = new THREE.Vector3(0, 1, 0);
-  const appendCone = (radius, height, segments, center, direction, tone, greenShift = 1) => {
-    const indexed = new THREE.ConeGeometry(radius, height, segments, 1);
-    const part = indexed.toNonIndexed();
-    indexed.dispose();
-    const axis = direction.clone().normalize();
-    const rotation = new THREE.Quaternion().setFromUnitVectors(up, axis);
-    part.applyMatrix4(new THREE.Matrix4().compose(center, rotation, new THREE.Vector3(1, 1, 1)));
-    const p = part.getAttribute('position');
-    const n = part.getAttribute('normal');
-    for (let vertex = 0; vertex < p.count; vertex++) {
-      positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
-      normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
-      const facet = .91 + (vertex % 7) * .014;
-      const shade = tone * facet;
-      colors.push(shade * .78, shade * greenShift, shade * .80);
-    }
-    part.dispose();
+  const bezierPoint = (a, b, c, d, t) => {
+    const u = 1 - t;
+    return a.clone().multiplyScalar(u * u * u)
+      .addScaledVector(b, 3 * u * u * t)
+      .addScaledVector(c, 3 * u * t * t)
+      .addScaledVector(d, t * t * t);
   };
-  const needleClusterBase = new THREE.DodecahedronGeometry(1, 0);
+  const bezierTangent = (a, b, c, d, t) => {
+    const u = 1 - t;
+    return b.clone().sub(a).multiplyScalar(3 * u * u)
+      .addScaledVector(c.clone().sub(b), 6 * u * t)
+      .addScaledVector(d.clone().sub(c), 3 * t * t).normalize();
+  };
+  const appendBranchVertex = (vertex, tone, variation) => {
+    positions.push(vertex.point.x, vertex.point.y, vertex.point.z);
+    normals.push(vertex.normal.x, vertex.normal.y, vertex.normal.z);
+    const shade = tone * variation;
+    colors.push(shade * .30, shade * .46, shade * .32);
+  };
+  const appendBranchTriangle = (a, b, c, tone, variation) => {
+    appendBranchVertex(a, tone, variation);
+    appendBranchVertex(b, tone, variation);
+    appendBranchVertex(c, tone, variation);
+  };
+  const appendTaperedBranch = (p0, p1, p2, p3, baseRadius, tone) => {
+    const longitudinalSegments = 6;
+    const radialSegments = 4;
+    const rings = [];
+    for (let segment = 0; segment <= longitudinalSegments; segment++) {
+      const t = segment / longitudinalSegments;
+      const center = bezierPoint(p0, p1, p2, p3, t);
+      const tangent = bezierTangent(p0, p1, p2, p3, t);
+      const reference = Math.abs(tangent.y) > .90 ? new THREE.Vector3(1, 0, 0) : up;
+      const side = tangent.clone().cross(reference).normalize();
+      const binormal = tangent.clone().cross(side).normalize();
+      const radius = baseRadius * (1 - .78 * t) + .0035;
+      const ring = [];
+      for (let radialIndex = 0; radialIndex < radialSegments; radialIndex++) {
+        const angle = radialIndex / radialSegments * Math.PI * 2;
+        const normal = side.clone().multiplyScalar(Math.cos(angle))
+          .addScaledVector(binormal, Math.sin(angle)).normalize();
+        ring.push({ point: center.clone().addScaledVector(normal, radius), normal });
+      }
+      rings.push(ring);
+    }
+    for (let segment = 0; segment < longitudinalSegments; segment++) {
+      for (let radialIndex = 0; radialIndex < radialSegments; radialIndex++) {
+        const next = (radialIndex + 1) % radialSegments;
+        const variation = .91 + Math.sin(segment * 1.7 + radialIndex * 2.1) * .055;
+        const a = rings[segment][radialIndex];
+        const b = rings[segment][next];
+        const c = rings[segment + 1][radialIndex];
+        const d = rings[segment + 1][next];
+        appendBranchTriangle(a, b, c, tone, variation);
+        appendBranchTriangle(b, d, c, tone, variation);
+      }
+    }
+  };
+
+  let needleBladeCount = 0;
+  const needleBladeCountPerCluster = 8;
+  const needleBladeTrianglesPerCluster = needleBladeCountPerCluster * 4;
+  const needleBaseRadiusRatio = 0.10;
+  const appendNeedleTriangle = (a, b, c, tone, variation) => {
+    const faceNormal = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
+    const shade = tone * variation;
+    for (const point of [a, b, c]) {
+      positions.push(point.x, point.y, point.z);
+      normals.push(faceNormal.x, faceNormal.y, faceNormal.z);
+      colors.push(shade * .24, shade * .52, shade * .30);
+    }
+  };
   const appendNeedleCluster = (length, width, center, direction, tone, twist) => {
-    const indexed = needleClusterBase.clone();
-    const part = indexed.toNonIndexed();
-    indexed.dispose();
     const axis = direction.clone().normalize();
-    const rotation = new THREE.Quaternion().setFromUnitVectors(up, axis);
-    rotation.multiply(new THREE.Quaternion().setFromAxisAngle(axis, twist));
-    const scale = new THREE.Vector3(width, length, width * .90);
-    part.applyMatrix4(new THREE.Matrix4().compose(center, rotation, scale));
-    const p = part.getAttribute('position');
-    const n = part.getAttribute('normal');
-    for (let vertex = 0; vertex < p.count; vertex++) {
-      positions.push(p.getX(vertex), p.getY(vertex), p.getZ(vertex));
-      normals.push(n.getX(vertex), n.getY(vertex), n.getZ(vertex));
-      const facet = .84 + (vertex % 5) * .032;
-      const shade = tone * facet;
-      colors.push(shade * .72, shade * 1.02, shade * .74);
+    const reference = Math.abs(axis.y) > .92 ? new THREE.Vector3(1, 0, 0) : up;
+    const fanSide = axis.clone().cross(reference).normalize();
+    const fanNormal = axis.clone().cross(fanSide).normalize();
+    for (let bladeIndex = 0; bladeIndex < needleBladeCountPerCluster; bladeIndex++) {
+      const angle = twist + bladeIndex / needleBladeCountPerCluster * Math.PI * 2;
+      const spread = fanSide.clone().multiplyScalar(Math.cos(angle))
+        .addScaledVector(fanNormal, Math.sin(angle)).normalize();
+      const verticalBias = -.18 + (bladeIndex % 4) * .045;
+      const bladeDirection = axis.clone()
+        .addScaledVector(spread, .28 + (bladeIndex % 3) * .035)
+        .addScaledVector(up, verticalBias).normalize();
+      const bladeReference = Math.abs(bladeDirection.y) > .92 ? new THREE.Vector3(1, 0, 0) : up;
+      const bladeSide = bladeDirection.clone().cross(bladeReference).normalize();
+      const bladeNormal = bladeDirection.clone().cross(bladeSide).normalize();
+      const start = center.clone()
+        .addScaledVector(spread, width * .10)
+        .addScaledVector(bladeDirection, -length * .04);
+      const tip = start.clone().addScaledVector(bladeDirection, length);
+      const radius = width * (needleBaseRadiusRatio + (bladeIndex % 3) * .012);
+      const baseA = start.clone().addScaledVector(bladeSide, radius);
+      const baseB = start.clone().addScaledVector(bladeNormal, -radius * .5)
+        .addScaledVector(bladeSide, -radius * .8660254);
+      const baseC = start.clone().addScaledVector(bladeNormal, radius * .5)
+        .addScaledVector(bladeSide, -radius * .8660254);
+      const variation = .88 + Math.sin(twist * 2.1 + bladeIndex * 1.73) * .07;
+      // A three-sided tapered needle has a real base section and a pointed tip, not a broad leaf card.
+      appendNeedleTriangle(baseA, tip, baseB, tone, variation);
+      appendNeedleTriangle(baseB, tip, baseC, tone, variation * .985);
+      appendNeedleTriangle(baseC, tip, baseA, tone, variation * 1.015);
+      appendNeedleTriangle(baseA, baseB, baseC, tone, variation * .82);
+      needleBladeCount++;
     }
-    part.dispose();
+    needleClusters++;
   };
+
   for (let tierIndex = 0; tierIndex < tiers.length; tierIndex++) {
     const tier = tiers[tierIndex];
-    appendCone(tier.radius, tier.height, 7, new THREE.Vector3(0, tier.y, 0), up, tier.light * .88, 1);
     for (let branchIndex = 0; branchIndex < tier.branches; branchIndex++) {
-      const angle = branchIndex / tier.branches * Math.PI * 2 + tierIndex * .19;
+      const phase = Math.sin(branchIndex * 2.399 + tierIndex * 1.71);
+      const angle = branchIndex / tier.branches * Math.PI * 2 + tierIndex * .31 + phase * .045;
       const radial = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
-      const origin = new THREE.Vector3(radial.x * .12, tier.y - tier.height * .25, radial.z * .12);
-      const branchVector = new THREE.Vector3(
-        radial.x * tier.branchLength,
-        tier.branchRise,
-        radial.z * tier.branchLength
-      );
-      const branchLength = branchVector.length();
-      const branchDirection = branchVector.normalize();
-      appendCone(
-        tier.branchRadius,
-        branchLength,
-        5,
-        origin.clone().addScaledVector(branchDirection, branchLength * .5),
-        branchDirection,
-        tier.light * .74,
-        .96
-      );
+      const lateral = new THREE.Vector3(-radial.z, 0, radial.x);
+      const length = tier.branchLength * (.94 + phase * .06);
+      const origin = new THREE.Vector3(radial.x * .085, tier.y, radial.z * .085);
+      const p1 = origin.clone().addScaledVector(radial, length * .30)
+        .addScaledVector(up, tier.branchRise + phase * .020);
+      const p2 = origin.clone().addScaledVector(radial, length * .70)
+        .addScaledVector(up, tier.branchRise * .42 - tier.branchDrop * .20)
+        .addScaledVector(lateral, phase * .030);
+      const p3 = origin.clone().addScaledVector(radial, length)
+        .addScaledVector(up, tier.branchRise * .10 - tier.branchDrop)
+        .addScaledVector(lateral, phase * .050);
+      appendTaperedBranch(origin, p1, p2, p3, tier.branchRadius, tier.tone);
       branchArms++;
       for (let sprayIndex = 0; sprayIndex < needleSprays.length; sprayIndex++) {
         const spray = needleSprays[sprayIndex];
-        const center = origin.clone().addScaledVector(branchDirection, branchLength * spray.at);
-        appendNeedleCluster(
-          spray.length,
-          spray.width,
-          center,
-          branchDirection,
-          tier.light * spray.tone,
-          angle + sprayIndex * .71
-        );
-        needleClusters++;
+        const point = bezierPoint(origin, p1, p2, p3, spray.at);
+        const tangent = bezierTangent(origin, p1, p2, p3, spray.at);
+        const center = point.clone()
+          .addScaledVector(radial, spray.radialOffset)
+          .addScaledVector(up, spray.heightOffset);
+        const first = center.clone().addScaledVector(lateral, spray.sideOffset);
+        const second = center.clone().addScaledVector(lateral, -spray.sideOffset)
+          .addScaledVector(up, spray.heightOffset * .65);
+        appendNeedleCluster(spray.length, spray.width, first, tangent, tier.tone * spray.tone, angle + sprayIndex * .71);
+        appendNeedleCluster(spray.length * .92, spray.width * .94, second, tangent, tier.tone * spray.tone * .97, angle + sprayIndex * .71 + 1.13);
       }
     }
   }
-  needleClusterBase.dispose();
+
+  // Radial leader sprays wrap the central stem at four heights so the apex is covered from every RTS camera angle.
+  const leaderBase = new THREE.Vector3(0, 2.18, 0);
+  const leaderP1 = new THREE.Vector3(.010, 2.52, -.008);
+  const leaderP2 = new THREE.Vector3(-.010, 2.90, .010);
+  const leaderTip = new THREE.Vector3(0, 3.20, 0);
+  appendTaperedBranch(leaderBase, leaderP1, leaderP2, leaderTip, .034, 1.02);
+  const leaderSprays = [
+    { y: 2.30, length: .19, width: .052, tone: .98 },
+    { y: 2.53, length: .165, width: .048, tone: 1.01 },
+    { y: 2.77, length: .14, width: .044, tone: 1.04 },
+    { y: 3.00, length: .115, width: .040, tone: 1.08 }
+  ];
+  const leaderSprayLevels = leaderSprays.length;
+  const leaderDirectionsPerLevel = 4;
+  for (let level = 0; level < leaderSprays.length; level++) {
+    const spray = leaderSprays[level];
+    for (let directionIndex = 0; directionIndex < leaderDirectionsPerLevel; directionIndex++) {
+      const angle = directionIndex * Math.PI / 2 + level * .19;
+      const center = new THREE.Vector3(Math.cos(angle) * .018, spray.y, Math.sin(angle) * .018);
+      const direction = new THREE.Vector3(Math.cos(angle) * .82, .28, Math.sin(angle) * .82);
+      appendNeedleCluster(spray.length, spray.width, center, direction, spray.tone, angle + level * .31);
+    }
+  }
+
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
@@ -1426,12 +1863,28 @@ function createLayeredTreeFoliageGeometry() {
     branchArms,
     needleClusters,
     needleSpraysPerArm: needleSprays.length,
+    needleClustersPerArm: needleSprays.length * 2,
+    needleBladeCount,
+    needleBladeCountPerCluster,
+    needleBladeTrianglesPerCluster,
+    needleBaseRadiusRatio,
+    lowestBranchHeight: tiers[0].y,
+    lowerBranchDrop: tiers[0].branchDrop,
+    needleProfile: 'TAPERED_TRIAD_NEEDLES_V4',
+    leaderStemCount: 1,
+    leaderSprayLevels,
+    leaderDirectionsPerLevel,
+    leaderSprayClusters: leaderSprays.length * leaderDirectionsPerLevel,
+    leaderProfile: 'LAYERED_RADIAL_LEADER_V2',
+    branchTubeSegments: 6,
+    branchRadialSegments: 4,
+    canopyProfile: 'DROOPED_SPRUCE_CROWN_V5',
+    coreConeCount: 0,
     triangleCount: positions.length / 9
   };
   geometry.computeBoundingSphere();
   return geometry;
 }
-
 
 function createLegacyLayeredTreeFoliageGeometry() {
   const tiers = [
@@ -1466,12 +1919,38 @@ function createLegacyLayeredTreeFoliageGeometry() {
   return geometry;
 }
 
-const treeCapacity = isMobile ? 100 : 160;
-const treeTrunkGeometry = new THREE.CylinderGeometry(.10, .16, .85, 7);
-treeTrunkGeometry.translate(0, .425, 0);
+const treeCapacity = isMobile ? 80 : 128;
+function createEvergreenTrunkGeometry() {
+  const geometry = new THREE.CylinderGeometry(.075, .22, 2.65, 10, 8);
+  geometry.translate(0, 1.325, 0);
+  const position = geometry.getAttribute('position');
+  const colors = [];
+  for (let vertex = 0; vertex < position.count; vertex++) {
+    const y = position.getY(vertex);
+    const t = (y + 1.325) / 2.65;
+    const angle = Math.atan2(position.getZ(vertex), position.getX(vertex));
+    const ridge = 1 + Math.sin(angle * 7 + t * 2.6) * .035 + Math.sin(angle * 3 - t * 5.1) * .018;
+    position.setX(vertex, position.getX(vertex) * ridge + Math.sin(t * 1.5) * .045);
+    position.setZ(vertex, position.getZ(vertex) * ridge + Math.cos(t * 1.2) * .030);
+    const bark = .82 + Math.sin(angle * 5 + t * 11) * .10 + Math.sin(angle * 11 - t * 7) * .06;
+    colors.push(.34 * bark, .245 * bark, .155 * bark);
+  }
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeVertexNormals();
+  geometry.userData.profile = 'TAPERED_FLARED_BARK_V2';
+  geometry.computeBoundingBox();
+  return geometry;
+}
+const treeTrunkGeometry = createEvergreenTrunkGeometry();
+const treeTrunkMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffffff, vertexColors: true, roughness: .98, metalness: 0
+});
+const legacyTreeTrunkGeometry = new THREE.CylinderGeometry(.10, .16, .85, 7);
+legacyTreeTrunkGeometry.translate(0, .425, 0);
+const legacyTreeTrunkMaterial = mkMat(0x4a3820, .96, .01);
 const treeFoliageGeometry = createLayeredTreeFoliageGeometry();
 const treeTrunks = new THREE.InstancedMesh(
-  treeTrunkGeometry, mkMat(0x4a3820, .96, .01), treeCapacity
+  treeTrunkGeometry, treeTrunkMaterial, treeCapacity
 );
 treeTrunks.name = 'battlefield-trees-trunks-instanced';
 treeTrunks.castShadow = !isMobile;
@@ -1495,7 +1974,7 @@ for (let i = 0; i < treeCapacity; i++) {
   if (insideBuildZone(x, z, 0) || (Math.abs(x) < 55 && Math.abs(z) < 35) || insideIndustrialSet(x, z, 5)) continue;
   const scale = 0.5 + terrainRandom() * 1.4;
   if (!firstTreeFocus) firstTreeFocus = { x, z, scale };
-  treeDummy.position.set(x, 0, z);
+  treeDummy.position.set(x, terrainHeightAt(x,z), z);
   treeDummy.rotation.set(0, terrainHash(i, 181) * Math.PI * 2, 0);
   treeDummy.scale.setScalar(scale);
   treeDummy.updateMatrix();
@@ -1528,7 +2007,7 @@ for (let i = 0; i < rockCapacity; i++) {
   if (Math.abs(z) < 6 || insideBuildZone(x, z, 0) || insideIndustrialSet(x, z, 3)) continue;
   const radius = 0.15 + terrainRandom() * 0.45;
   const verticalScale = 0.4 + terrainRandom() * 0.5;
-  rockDummy.position.set(x, 0.1, z);
+  rockDummy.position.set(x, terrainHeightAt(x,z) + radius * verticalScale * 0.88, z);
   rockDummy.rotation.set(terrainRandom(), terrainRandom(), terrainRandom());
   rockDummy.scale.set(radius, radius * verticalScale, radius);
   rockDummy.updateMatrix();
@@ -1544,13 +2023,34 @@ scene.add(battlefieldRocks);
 window.__BLUE_ALERTS_VEGETATION = Object.freeze({
   seed: 0x424c5545,
   treeCount: placedTreeCount,
+  treeCapacity,
+  instancedFoliageTriangleBudget: treeFoliage.count * treeFoliageGeometry.userData.triangleCount,
   trunkInstances: treeTrunks.count,
   foliageInstances: treeFoliage.count,
   foliageTiers: treeFoliageGeometry.userData.branchWhorls,
   branchWhorls: treeFoliageGeometry.userData.branchWhorls,
   branchArms: treeFoliageGeometry.userData.branchArms,
+  lowestBranchHeight: treeFoliageGeometry.userData.lowestBranchHeight,
+  lowerBranchDrop: treeFoliageGeometry.userData.lowerBranchDrop,
+  needleBaseRadiusRatio: treeFoliageGeometry.userData.needleBaseRadiusRatio,
+  leaderSprayLevels: treeFoliageGeometry.userData.leaderSprayLevels,
+  leaderDirectionsPerLevel: treeFoliageGeometry.userData.leaderDirectionsPerLevel,
   needleClusters: treeFoliageGeometry.userData.needleClusters,
   needleSpraysPerArm: treeFoliageGeometry.userData.needleSpraysPerArm,
+  needleClustersPerArm: treeFoliageGeometry.userData.needleClustersPerArm,
+  needleBladeCount: treeFoliageGeometry.userData.needleBladeCount,
+  needleBladeCountPerCluster: treeFoliageGeometry.userData.needleBladeCountPerCluster,
+  needleBladeTrianglesPerCluster: treeFoliageGeometry.userData.needleBladeTrianglesPerCluster,
+  needleProfile: treeFoliageGeometry.userData.needleProfile,
+  leaderStemCount: treeFoliageGeometry.userData.leaderStemCount,
+  leaderSprayClusters: treeFoliageGeometry.userData.leaderSprayClusters,
+  leaderProfile: treeFoliageGeometry.userData.leaderProfile,
+  branchTubeSegments: treeFoliageGeometry.userData.branchTubeSegments,
+  branchRadialSegments: treeFoliageGeometry.userData.branchRadialSegments,
+  canopyProfile: treeFoliageGeometry.userData.canopyProfile,
+  coreConeCount: treeFoliageGeometry.userData.coreConeCount,
+  trunkProfile: treeTrunkGeometry.userData.profile,
+  trunkHeight: Number((treeTrunkGeometry.boundingBox.max.y - treeTrunkGeometry.boundingBox.min.y).toFixed(2)),
   foliageTriangles: treeFoliageGeometry.userData.triangleCount,
   rockInstances: battlefieldRocks.count,
   renderGroups: 3,
@@ -1560,7 +2060,7 @@ let legacyTreeFoliageGeometry = null;
 window.__BLUE_ALERTS_VEGETATION_QA = Object.freeze({
   focus() {
     if (!firstTreeFocus) throw new Error('No deterministic battlefield tree is available for visual QA');
-    camTarget.set(firstTreeFocus.x, 1.35, firstTreeFocus.z);
+    camTarget.set(firstTreeFocus.x, terrainHeightAt(firstTreeFocus.x,firstTreeFocus.z) + 1.35, firstTreeFocus.z);
     camYaw = .4;
     camPitch = .62;
     camDist = isMobile ? 6.2 : 7.2;
@@ -1575,9 +2075,13 @@ window.__BLUE_ALERTS_VEGETATION_QA = Object.freeze({
   setLegacy(enabled) {
     if (enabled) {
       if (!legacyTreeFoliageGeometry) legacyTreeFoliageGeometry = createLegacyLayeredTreeFoliageGeometry();
+      treeTrunks.geometry = legacyTreeTrunkGeometry;
+      treeTrunks.material = legacyTreeTrunkMaterial;
       treeFoliage.geometry = legacyTreeFoliageGeometry;
       return 'legacy';
     }
+    treeTrunks.geometry = treeTrunkGeometry;
+    treeTrunks.material = treeTrunkMaterial;
     treeFoliage.geometry = treeFoliageGeometry;
     if (legacyTreeFoliageGeometry) {
       legacyTreeFoliageGeometry.dispose();
@@ -1847,7 +2351,7 @@ rebuildNavGrid();
 
 /* ─── Ore fields ─────────────────────────────────────────── */
 function spawnOre(x, z, amount) {
-  const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+  const g = new THREE.Group(); g.position.set(x, terrainHeightAt(x,z), z); scene.add(g);
   if (BLUE_MODELS && BLUE_MODELS.createOreNode) {
     g.add(BLUE_MODELS.createOreNode(THREE, { seed: Math.round((x + 100) * 100 + z), scale: 0.92 }));
   } else {
@@ -1878,7 +2382,7 @@ spawnOre(52, 26, 2200);
 
 /* ─── Buildings ──────────────────────────────────────────── */
 function createBuilding(x, z, team, kind, visualScale = 1) {
-  const g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
+  const g = new THREE.Group(); g.position.set(x, terrainHeightAt(x,z), z); scene.add(g);
   const col = team === 1 ? MAT.blue : MAT.red;
   const trim = team === 1 ? MAT.blueG : MAT.gold;
   let hp = 400, radius = 3;
@@ -1894,6 +2398,8 @@ function createBuilding(x, z, team, kind, visualScale = 1) {
     // Keep the original gameplay footprint/health; swap only the visual mesh.
     g.add(model);
     g.userData.head = model.userData.rotatingGun || null;
+    g.userData.defenseTurretGeometryProfile = model.userData.defenseTurretGeometryProfile || null;
+    g.userData.defenseTurretStationCount = model.userData.defenseTurretStationCount || 0;
     if (kind === 'hq') { hp = 1000; radius = 3.5 * visualScale; }
     else if (kind === 'power') { hp = 350; radius = 2.6 * visualScale; }
     else if (kind === 'refinery') { hp = 550; radius = 3.3 * visualScale; }
@@ -1978,7 +2484,7 @@ function createHQMarker(hq) {
   );
   perimeter.name = 'player-hq-perimeter';
   perimeter.rotation.x = -Math.PI / 2;
-  perimeter.position.set(hq.x, 0.085, hq.z);
+  perimeter.position.set(hq.x, terrainHeightAt(hq.x,hq.z) + 0.085, hq.z);
   scene.add(perimeter);
 
   const canvas = document.createElement('canvas');
@@ -2021,7 +2527,7 @@ const citadel = createBuilding(48, -4, 2, 'citadel');
 
 /* ─── Units ──────────────────────────────────────────────── */
 function createUnit(x, z, team, kind) {
-  const g = new THREE.Group(); g.position.set(x, 0.04, z); scene.add(g);
+  const g = new THREE.Group(); g.position.set(x, terrainHeightAt(x,z) + 0.04, z); scene.add(g);
   const col = team === 1 ? MAT.blue : MAT.red;
   const accent = team === 1 ? MAT.blueG : MAT.gold;
 
@@ -2515,7 +3021,7 @@ function clearGhost() {
 }
 function updateGhost(wx, wz) {
   if (!ghostMesh || !placeKind) return;
-  ghostMesh.position.set(wx, 0, wz);
+  ghostMesh.position.set(wx, terrainHeightAt(wx,wz), wz);
   const verdict = validateBuildPlacement(wx, wz, placeKind);
   ghostMesh.userData.buildValid = verdict.ok;
   ghostMesh.userData.buildReason = verdict.reason;
@@ -2554,13 +3060,28 @@ if (new URLSearchParams(location.search).get('build-zone') === '1') {
       };
     },
     projectWorld(x, z) {
+      // Synchronize the camera from its controller state before projecting. QA camera
+      // probes can restore camTarget/camYaw/camPitch/camDist between animation frames.
+      const horizontalDistance = Math.cos(camPitch) * camDist;
+      const verticalDistance = Math.sin(camPitch) * camDist;
+      camera.position.set(
+        camTarget.x + Math.sin(camYaw) * horizontalDistance,
+        camTarget.y + verticalDistance,
+        camTarget.z + Math.cos(camYaw) * horizontalDistance
+      );
+      camera.lookAt(camTarget);
       camera.updateMatrixWorld(true);
       scene.updateMatrixWorld(true);
-      const point = new THREE.Vector3(x, 0, z).project(camera);
+      // Project the actual heightfield surface, not the old flat y=0 plane.
+      const worldY = terrainHeightAt(x, z);
+      const point = new THREE.Vector3(x, worldY, z).project(camera);
       const rect = viewport.getBoundingClientRect();
       return {
         x: rect.left + (point.x * 0.5 + 0.5) * rect.width,
         y: rect.top + (-point.y * 0.5 + 0.5) * rect.height,
+        worldY,
+        ndc: [point.x, point.y, point.z],
+        cameraDistance: camDist,
         visible: point.z > -1 && point.z < 1 &&
           point.x >= -1 && point.x <= 1 && point.y >= -1 && point.y <= 1
       };
@@ -2977,7 +3498,7 @@ function applyBuildingDamageVisuals(building, stage) {
     const mat = new THREE.MeshBasicMaterial({ color: 0x17130f, transparent: true, opacity: 0.34, depthWrite: false, side: THREE.DoubleSide });
     const scorch = new THREE.Mesh(geo, mat);
     scorch.rotation.x = -Math.PI / 2;
-    scorch.position.set(building.x, 0.035, building.z);
+    scorch.position.set(building.x, terrainHeightAt(building.x,building.z) + 0.035, building.z);
     scene.add(scorch);
     building.scorch = scorch;
   }
@@ -3958,6 +4479,7 @@ function tick() {
       // Clamp to map
       u.g.position.x = THREE.MathUtils.clamp(u.g.position.x, -85, 85);
       u.g.position.z = THREE.MathUtils.clamp(u.g.position.z, -65, 65);
+      u.g.position.y = terrainHeightAt(u.g.position.x,u.g.position.z) + 0.04;
 
       // Stuck-unit recovery: retry navigation after sustained lack of progress.
       // It also covers combat approaches, but never teleports a unit through geometry.
@@ -4287,6 +4809,28 @@ if (new URLSearchParams(location.search).get('combat-rig') === '1' || new URLSea
       probeTarget.atkTarget = null;
       return { shooterId: probeShooter.id, targetId: probeTarget.id };
     },
+    disarm() {
+      qaSuppressCombat = true;
+      if (probeShooter) {
+        probeShooter.atkTarget = null;
+        probeShooter.combatRouteGoal = null;
+        probeShooter.path = null;
+        probeShooter.pathIdx = 0;
+        probeShooter.dest = null;
+        probeShooter.flashT = 0;
+        const flash = probeShooter.g?.userData?.flash || null;
+        if (flash) setMuzzleFlashIntensity(flash, 0);
+      }
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state?.() || {};
+      return {
+        ...state,
+        probeDisarmed: !!probeShooter && probeShooter.atkTarget === null,
+        probeFlashHidden: !probeShooter?.g?.userData?.flash?.visible,
+        probeFlashTimer: probeShooter?.flashT ?? null,
+        probeShooterDead: !!probeShooter?.dead,
+        combatSuppressed: qaSuppressCombat
+      };
+    },
     snapshot() {
       if (!probeShooter || !probeTarget) return null;
       probeShooter.g.updateMatrixWorld(true);
@@ -4340,6 +4884,39 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       camVelX = 0;
       camVelZ = 0;
       return cameraQaSnapshot();
+    },
+    focusHeadquarters() {
+      const model = playerHQ?.g?.children?.find(child => child.userData?.buildingType === 'headquarters');
+      if (!model) throw new Error('The live player headquarters model is not available.');
+      camTarget.set(playerHQ.x, 2.25, playerHQ.z);
+      camYaw = 0.42;
+      camPitch = 0.76;
+      camDist = 16;
+      camVelX = 0;
+      camVelZ = 0;
+      const headquartersLabel = scene.getObjectByName('player-hq-label');
+      if (headquartersLabel) headquartersLabel.visible = false;
+      const mobileBadge = document.getElementById('mobileHQBadge');
+      if (mobileBadge) mobileBadge.style.display = 'none';
+      return {
+        ...cameraQaSnapshot(),
+        modelProfile: model.userData.commandCoreGeometryProfile || null,
+        profileVertexCount: model.userData.commandCoreProfileVertexCount || 0,
+        stationCount: model.userData.commandCoreStationCount || 0,
+        surfaceFinish: model.userData.surfaceFinish || null,
+        surfaceTextureCount: model.userData.surfaceTextureCount || 0,
+        surfaceTextureResolution: model.userData.surfaceTextureResolution || 0,
+        surfaceMaterialCount: model.userData.surfaceMaterialCount || 0,
+        surfaceDetailEnabled: model.userData.surfaceDetailEnabled === true,
+        surfaceMaterialBindingsActive: model.userData.surfaceMaterialBindingsActive || 0
+      };
+    },
+    setHeadquartersSurfaceDetail(enabled) {
+      const model = playerHQ?.g?.children?.find(child => child.userData?.buildingType === 'headquarters');
+      if (!model) throw new Error('The live player headquarters model is not available.');
+      const applied = BLUE_MODELS?.setBuildingSurfaceDetail?.(model, Boolean(enabled));
+      if (!applied) throw new Error('The live headquarters surface maps are unavailable.');
+      return {surfaceDetailEnabled:model.userData.surfaceDetailEnabled===true,surfaceTextureCount:model.userData.surfaceTextureCount||0,surfaceTextureResolution:model.userData.surfaceTextureResolution||0,surfaceMaterialCount:model.userData.surfaceMaterialCount||0,surfaceMaterialBindingsActive:model.userData.surfaceMaterialBindingsActive||0};
     }
   });
   const infantryProbe = () => {
@@ -4352,6 +4929,19 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     const unit = infantryProbe();
     if (!unit) return null;
     const rig = unit.g.userData.infantryRig;
+    unit.g.updateMatrixWorld(true);
+    const weaponForward = rig?.weapon ? new THREE.Vector3(1, 0, 0)
+      .applyQuaternion(rig.weapon.getWorldQuaternion(new THREE.Quaternion())).normalize() : null;
+    const unitForward = new THREE.Vector3(0, 0, 1)
+      .applyQuaternion(unit.g.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const leftHandWorld = new THREE.Vector3();
+    const rightHandWorld = new THREE.Vector3();
+    const leftGripWorld = new THREE.Vector3();
+    const rightGripWorld = new THREE.Vector3();
+    rig?.leftHand?.getWorldPosition(leftHandWorld);
+    rig?.rightHand?.getWorldPosition(rightHandWorld);
+    rig?.leftGrip?.getWorldPosition(leftGripWorld);
+    rig?.rightGrip?.getWorldPosition(rightGripWorld);
     return {
       profile: unit.g.userData.infantryProfile,
       position: [unit.g.position.x, unit.g.position.z],
@@ -4360,7 +4950,15 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       leftLeg: rig.leftLeg.rotation.x,
       rightLeg: rig.rightLeg.rotation.x,
       leftArm: rig.leftArm.rotation.x,
-      rightArm: rig.rightArm.rotation.x
+      rightArm: rig.rightArm.rotation.x,
+      weaponForwardAlignment: weaponForward ? weaponForward.dot(unitForward) : null,
+      leftGripError: rig?.leftHand && rig?.leftGrip ? leftHandWorld.distanceTo(leftGripWorld) : null,
+      rightGripError: rig?.rightHand && rig?.rightGrip ? rightHandWorld.distanceTo(rightGripWorld) : null,
+      leftHandPosition: [leftHandWorld.x, leftHandWorld.y, leftHandWorld.z],
+      leftGripPosition: [leftGripWorld.x, leftGripWorld.y, leftGripWorld.z],
+      rightHandPosition: [rightHandWorld.x, rightHandWorld.y, rightHandWorld.z],
+      rightGripPosition: [rightGripWorld.x, rightGripWorld.y, rightGripWorld.z],
+      weaponForwardAxis: rig?.weapon?.userData?.weaponForwardAxis || null
     };
   };
   window.__BLUE_ALERTS_INFANTRY_QA__ = Object.freeze({
@@ -4368,7 +4966,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     walkProbe() {
       const unit = infantryProbe();
       if (!unit) throw new Error('A live blue infantry model with an animation rig is required.');
-      unit.g.position.set(-70, 0.04, 50);
+      unit.g.position.set(-70, terrainHeightAt(-70,50) + 0.04, 50);
       unit.g.rotation.y = 0;
       unit.speed = 2.9;
       unit.dmg = 0;
@@ -4379,7 +4977,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       unit.combatRouteGoal = null;
       unit.stuckTime = 0;
       unit.dest = { x: -64, z: 50 };
-      camTarget.set(-70, 0, 50);
+      camTarget.set(-70, terrainHeightAt(-70,50) + 0.95, 50);
       camDist = 15;
       return infantrySnapshot();
     }
@@ -4398,6 +4996,45 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     }
     return count;
   };
+  let tankCameraRestore = null;
+  const liveTankModel = unit => unit?.g?.children?.find(child => child.userData?.hullNormalProfile) || null;
+  const tankArmorSnapshot = () => {
+    const unit = units.find(candidate => !candidate.dead && liveTankModel(candidate));
+    const model = liveTankModel(unit)?.userData;
+    if (!model) return null;
+    return {
+      factionProfile:model.factionProfile,
+      hullNormalProfile:model.hullNormalProfile,
+      hullNormalCreaseAngle:model.hullNormalCreaseAngle,
+      hullNormalVertexCount:model.hullNormalVertexCount,
+      hullNormalFinite:model.hullNormalFinite,
+      turretNormalProfile:model.turretNormalProfile,
+      turretNormalCreaseAngle:model.turretNormalCreaseAngle,
+      turretNormalVertexCount:model.turretNormalVertexCount,
+      turretNormalFinite:model.turretNormalFinite,
+      hullStationCount:model.hullStationCount,
+      turretStationCount:model.turretStationCount
+    };
+  };
+  window.__BLUE_ALERTS_TANK_QA__ = Object.freeze({
+    snapshot:tankArmorSnapshot,
+    focus() {
+      const unit = units.find(candidate => !candidate.dead && liveTankModel(candidate));
+      if (!unit || !liveTankModel(unit)) return null;
+      tankCameraRestore={target:camTarget.clone(),yaw:camYaw,pitch:camPitch,distance:camDist};
+      camTarget.set(unit.g.position.x,unit.g.position.y+0.65,unit.g.position.z);
+      camYaw=0.62; camPitch=0.88; camDist=isMobile?7.5:8.5;
+      camVelX=0; camVelZ=0;
+      return {...tankArmorSnapshot(),position:[unit.g.position.x,unit.g.position.y,unit.g.position.z]};
+    },
+    restore() {
+      if(!tankCameraRestore)return false;
+      camTarget.copy(tankCameraRestore.target);
+      camYaw=tankCameraRestore.yaw; camPitch=tankCameraRestore.pitch; camDist=tankCameraRestore.distance;
+      camVelX=0; camVelZ=0; tankCameraRestore=null;
+      return true;
+    }
+  });
   const combatState = () => ({
     activeProjectiles: projectiles.length,
     modelProjectiles: projectiles.filter(p => p.mesh?.userData?.kind === 'projectile').length,
@@ -4483,13 +5120,30 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
   const buildingDamageSnapshot = () => {
     const target = buildingProbeTarget;
     if (!target || target.dead) return null;
+    const targetProjectiles = projectiles.filter(p => p.target === target);
     return {
       targetId: target.id, kind: target.kind, hp: target.hp, maxHp: target.maxHp,
+      defenseTurretGeometryProfile: target.g.userData?.defenseTurretGeometryProfile || null,
+      defenseTurretStationCount: target.g.userData?.defenseTurretStationCount || 0,
       damageStage: target.damageStage || 0,
       smokeSpawned: target.smokeSpawned || 0,
       flamesSpawned: target.flamesSpawned || 0,
       scorchMark: !!target.scorch,
-      pendingProjectiles: projectiles.filter(p => p.target === target).length,
+      pendingProjectiles: targetProjectiles.length,
+      projectileDiagnostics: targetProjectiles.slice(0, 6).map(p => ({
+        life: Number.isFinite(p.life) ? Number(p.life.toFixed(3)) : null,
+        distance: Number.isFinite(p.pos?.distanceTo?.(p.dest)) ? Number(p.pos.distanceTo(p.dest).toFixed(3)) : null,
+        position: p.pos?.toArray?.() || null,
+        destination: p.dest?.toArray?.() || null,
+        start: p.start?.toArray?.() || null,
+        speed: p.speed
+      })),
+      gameFrame: qaFrameCount,
+      gameTime: Number(time.toFixed(3)),
+      started,
+      gameOver,
+      hasFocus: document.hasFocus(),
+      visibilityState: document.visibilityState,
       activeSmoke: fx.filter(e => e.kind === 'building-smoke').length,
       activeFlames: fx.filter(e => e.kind === 'building-flame').length
     };
@@ -4507,10 +5161,26 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       const shooter = units.find(u => !u.dead && u.team === 1 && u.kind === 'light' && u.dmg > 0 && u.g) ||
         units.find(u => !u.dead && u.team === 1 && u.dmg > 0 && u.g);
       if (!target || !shooter) throw new Error('Building damage QA requires a healthy enemy turret and a live blue combat unit.');
-      shooter.g.position.set(target.x - 6, 0.04, target.z + 1);
+      shooter.g.position.set(target.x - 4.5, 0.04, target.z);
       shooter.g.rotation.y = 0;
+      const turret = shooter.g.userData?.turret;
+      const dx = target.x - shooter.g.position.x;
+      const dz = target.z - shooter.g.position.z;
+      if (turret) turret.rotation.y = Math.atan2(dx, dz) - shooter.g.rotation.y;
       shooter.path = null; shooter.pathIdx = 0; shooter.dest = null;
       shooter.atkTarget = null; shooter.combatRouteGoal = null; shooter.speed = 0; shooter.cd = 999;
+      shooter.stuckTime = 0;
+      shooter.g.updateMatrixWorld(true);
+      const muzzleWorld = new THREE.Vector3();
+      const attachedMuzzle = shooter.g.userData?.flash || null;
+      if (attachedMuzzle) attachedMuzzle.getWorldPosition(muzzleWorld);
+      const targetWorld = target.g.getWorldPosition(new THREE.Vector3()).setY(1.1);
+      if (!attachedMuzzle) {
+        const origin = shooter.g.position.clone();
+        origin.y = shooter.kind === 'infantry' ? 0.95 : 1.45;
+        muzzleWorld.copy(origin).addScaledVector(targetWorld.clone().sub(origin).normalize(), 1.3);
+      }
+      const projectileStartDistance = muzzleWorld.distanceTo(targetWorld);
       camTarget.set(target.x, 0, target.z);
       camDist = Math.min(camDist, 20);
       const hpBefore = target.hp;
@@ -4520,7 +5190,12 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       const expectedHpAfter = hpBefore - shots * damagePerShot;
       if (expectedHpAfter <= 0) throw new Error('Building damage QA refuses a burst that would destroy the target before its damage state can be inspected.');
       for (let i = 0; i < shots; i++) fireProjectile(shooter, target);
-      return { stage, shooterKind: shooter.kind, shots, damagePerShot, hpBefore, expectedHpAfter, ...buildingDamageSnapshot() };
+      return {
+        stage, shooterKind: shooter.kind, shots, damagePerShot, hpBefore, expectedHpAfter,
+        projectileStartDistance: Number(projectileStartDistance.toFixed(3)),
+        muzzleWorld: muzzleWorld.toArray(), targetWorld: targetWorld.toArray(),
+        ...buildingDamageSnapshot()
+      };
     }
   });
 

@@ -82,6 +82,13 @@ def main():
         "new THREE.PerspectiveCamera",
         "function terrainHash",
         "function terrainNoise",
+        "function terrainHeightAt(x, z)",
+        "SCULPTED_BATTLEFIELD_HEIGHTFIELD_V3",
+        "TWO_UPLANDS_CENTRAL_SADDLE_V3",
+        "northwestUpland",
+        "northeastShoulder",
+        "const terrainSegmentsX = isMobile ? 120 : 160",
+        "const terrainSegmentsZ = isMobile ? 96 : 128",
         "createSeededTerrainRandom",
         "vertexColors: true",
         "terrain-ground",
@@ -90,12 +97,35 @@ def main():
         "terrainSurfaceTextures.albedo",
                         "textureResolution: terrainSurfaceTextures.size",
         "textureChecksum: terrainSurfaceTextures.checksum",
-        "surfaceMode: 'procedural-albedo-grain'",
+        "surfaceMode: 'procedural-albedo-normal-roughness'",
+        "terrainMaterial.normalMap = terrainSurfaceTextures.normal",
+        "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness",
+        "DOMAIN_WARPED_FIELD_STRATA_V1",
+        "terrainBaselineColors",
+        "terrainFieldColors",
+        "terrainZoneWeight",
+        "terrainFieldCoverage",
+        "setFieldStrata(enabled)",
+        "setMicroRelief(enabled)",
         "function createLayeredTreeFoliageGeometry",
+        "DROOPED_SPRUCE_CROWN_V5",
+        "TAPERED_FLARED_BARK_V2",
+        "coreConeCount: 0",
+        "needleClustersPerArm: needleSprays.length * 2",
+        "TAPERED_TRIAD_NEEDLES_V4",
+        "needleBladeCount",
+        "needleBladeTrianglesPerCluster",
+        "appendNeedleTriangle",
+        "branchTubeSegments: 6",
+        "branchRadialSegments: 4",
+        "createEvergreenTrunkGeometry",
         "battlefield-trees-trunks-instanced",
         "battlefield-trees-foliage-instanced",
         "battlefield-rocks-instanced",
         "window.__BLUE_ALERTS_VEGETATION",
+        "const treeCapacity = isMobile ? 80 : 128",
+        "treeCapacity,",
+        "instancedFoliageTriangleBudget: treeFoliage.count * treeFoliageGeometry.userData.triangleCount",
         "foliageTiers: treeFoliageGeometry.userData.branchWhorls",
         "branchWhorls: treeFoliageGeometry.userData.branchWhorls",
         "branchArms: treeFoliageGeometry.userData.branchArms",
@@ -117,10 +147,22 @@ def main():
         "start: start.clone()",
         "Math.atan2(dx, dz) - u.g.rotation.y",
         "window.__BLUE_ALERTS_COMBAT_QA",
+        "window.__BLUE_ALERTS_TANK_QA__",
     )
     missing = [feature for feature in required_combat_features if feature not in source]
     if missing:
         raise SystemExit("FAIL: 3D combat rig integration missing: " + ", ".join(missing))
+    required_tank_armor = ("hullNormalProfile", "turretNormalProfile", "liveTankModel", "camTarget.copy(tankCameraRestore.target)", "camDist=isMobile?7.5:8.5")
+    model_source = MODEL_LIBRARY.read_text(encoding="utf-8")
+    if "CREASED_HARD_SURFACE_V1" not in model_source:
+        raise SystemExit("FAIL: V94 tank model library must contain crease-aware hard-surface normals")
+    missing = [feature for feature in required_tank_armor if feature not in source]
+    if missing:
+        raise SystemExit("FAIL: live V94 tank armor crease-normal QA missing: " + ", ".join(missing))
+    required_infantry_grip = ("weaponForwardAlignment", "leftGripError", "rightGripError", "weaponForwardAxis")
+    missing = [name for name in required_infantry_grip if name not in source]
+    if missing:
+        raise SystemExit("FAIL: live V94 infantry forward weapon grip diagnostics missing: " + ", ".join(missing))
 
     required_live_vfx_features = (
         "BLUE_MODELS?.createProjectile",
@@ -153,7 +195,7 @@ def main():
         "instanced-hazard-barrels",
         "window.__BLUE_ALERTS_ENVIRONMENT",
         "function insideIndustrialSet(",
-        "exclusionZones:[",
+        "exclusionZones: INDUSTRIAL_CLEARANCE_ZONES,",
         "clearanceZones:industrialYard.exclusionZones.length",
         "runtimeIntegrated:true",
         "blocksMovement:false",
@@ -174,6 +216,10 @@ def main():
         "damageStage = stage",
         "scorchMark: !!target.scorch",
         "window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__",
+        "projectileDiagnostics",
+        "projectileStartDistance",
+        "turret.rotation.y = Math.atan2(dx, dz) - shooter.g.rotation.y",
+        "shooter.g.updateMatrixWorld(true)",
         "impactRings: fx.filter(e => e.kind === 'impact-ring').length",
         "buildingSmoke: fx.filter(e => e.kind === 'building-smoke').length",
     )
@@ -206,6 +252,48 @@ def main():
         raise SystemExit("FAIL: terrain must use deterministic vertex color variation")
     if "new THREE.DataTexture" not in terrain_section or "terrainMaterial.map = terrainSurfaceTextures.albedo" not in terrain_section:
         raise SystemExit("FAIL: terrain must use deterministic procedural albedo texture")
+    if "terrainMaterial.normalMap = terrainSurfaceTextures.normal" not in terrain_section or "terrainMaterial.roughnessMap = terrainSurfaceTextures.roughness" not in terrain_section:
+        raise SystemExit("FAIL: terrain must use deterministic procedural normal and roughness maps")
+    if "new THREE.PlaneGeometry(200, 160, terrainSegmentsX, terrainSegmentsZ)" not in terrain_section or "terrainPositions.setZ(i, height)" not in terrain_section or "terrainGeometry.computeVertexNormals()" not in terrain_section or "heightProfile = 'SCULPTED_BATTLEFIELD_HEIGHTFIELD_V3'" not in terrain_section:
+        raise SystemExit("FAIL: terrain must use a deterministic sculpted heightfield with computed normals and a bounded geometry profile")
+    if "terrainHeightAt(u.g.position.x,u.g.position.z) + 0.04" not in source or "treeDummy.position.set(x, terrainHeightAt(x,z), z)" not in source or "rockDummy.position.set(x, terrainHeightAt(x,z) + radius * verticalScale * 0.88, z)" not in source or "TERRAIN_FLAT_ZONES" not in terrain_section:
+        raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
+    if "unit.g.position.set(-70, terrainHeightAt(-70,50) + 0.04, 50)" not in source or "camTarget.set(-70, terrainHeightAt(-70,50) + 0.95, 50)" not in source:
+        raise SystemExit("FAIL: the live infantry gait probe must begin on the authored terrain and frame its actual elevation")
+    if "unit.g.position.set(-70,terrainHeightAt(-70,55) + 0.04,55)" not in source:
+        raise SystemExit("FAIL: the live terrain grounding probe must be placed on the north-west ridge at its sampled height")
+    if ("STRATIFIED_BEDROCK_SHOULDERS_V3" not in terrain_section or
+        "terrainRockExposureVertices" not in terrain_section or
+        "terrainSmoothstep(0.045, 0.13, slope) * 0.94" not in terrain_section or
+        "terrainSmoothstep(0.55, 1.45, terrainHeights[index]) * 0.72" not in terrain_section or
+        "Math.min(0.62, exposure * 0.72)" not in terrain_section):
+        raise SystemExit("FAIL: V3 terrain must expose deterministic slope- and elevation-stratified bedrock")
+    if ("DOMAIN_WARPED_FIELD_STRATA_V1" not in terrain_section or
+        "terrainBaselineColors" not in terrain_section or
+        "terrainFieldColors" not in terrain_section or
+        "terrainZoneWeight" not in terrain_section or
+        "TERRAIN_FLAT_ZONES" not in terrain_section or
+        "BUILD_ZONE.roadHalfWidth" not in terrain_section or
+        "terrainFieldCoverage" not in terrain_section or
+        "setFieldStrata(enabled)" not in terrain_section):
+        raise SystemExit("FAIL: terrain must expose deterministic domain-warped field strata while protecting roads and flat gameplay pads")
+    if ("Math.pow((x + 84) / 36, 2)" not in terrain_section or
+        "Math.pow((z - 68) / 32, 2)" not in terrain_section or
+        "Math.pow((x - 84) / 38, 2)" not in terrain_section or
+        "Math.pow((z - 68) / 34, 2)" not in terrain_section or
+        "Math.max(-3.6, Math.min(3.6," not in terrain_section):
+        raise SystemExit("FAIL: V3 twin northern uplands must use the authored bounded macro heightfield")
+    if "camYaw = 2.35; camPitch = 0.42; camDist = isMobile ? 22 : 30;" not in source:
+        raise SystemExit("FAIL: terrain evidence camera must approach the ridge face from the south-east")
+    if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
+        raise SystemExit("FAIL: units, vegetation and static gameplay pads must remain grounded on the authored terrain")
+    browser_source = BROWSER_TEST.read_text(encoding="utf-8")
+    if "async function captureViewport(page, path)" not in browser_source or "png.readUInt32BE(16)" not in browser_source or "png.readUInt32BE(20)" not in browser_source or "mobile-v94-sculpted-terrain-390x844.png" not in browser_source:
+        raise SystemExit("FAIL: desktop/mobile browser evidence must be fresh, viewport-sized PNG captures with dimensional assertions")
+    if "texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 2);" not in terrain_section:
+        raise SystemExit("FAIL: terrain PBR anisotropy must remain capped at 2 pending measured acceptance")
+    if "terrainMaterial.normalScale.set(1.15, 1.15)" not in terrain_section or "setMicroRelief(enabled)" not in terrain_section or "* 3.4;" not in terrain_section or "const soil = terrainSmoothstep(0.41, 0.63, broad * 0.64 + medium * 0.36);" not in terrain_section or "const roughness = channel(202 + soil * 24 + exposedStone * 26 -" not in terrain_section:
+        raise SystemExit("FAIL: terrain field albedo, roughness and tangent-space relief must remain deterministic and A/B switchable")
 
     tree_start = source.index("function createLayeredTreeFoliageGeometry()")
     tree_end = source.index("const treeCapacity", tree_start)
@@ -214,11 +302,39 @@ def main():
         "branchWhorls",
         "branchArms",
         "needleClusters",
-        "new THREE.Quaternion()",
-        "new THREE.ConeGeometry(radius, height, segments, 1)",
+        "const fanSide = axis.clone().cross(reference).normalize()",
+        "const bezierPoint = (a, b, c, d, t) =>",
+        "const appendTaperedBranch = (p0, p1, p2, p3, baseRadius, tone)",
         "const appendNeedleCluster = (",
-        "new THREE.DodecahedronGeometry(1, 0)",
+        "needleBladeCountPerCluster = 8",
+        "appendNeedleTriangle(baseA, tip, baseB",
+        "appendNeedleTriangle(baseB, tip, baseC",
+        "appendNeedleTriangle(baseC, tip, baseA",
+        "appendNeedleTriangle(baseA, baseB, baseC",
+        "needleBladeTrianglesPerCluster = needleBladeCountPerCluster * 4",
+        "const needleBaseRadiusRatio = 0.10",
+        "const leaderSprayLevels = leaderSprays.length",
+        "const leaderDirectionsPerLevel = 4",
+        "lowestBranchHeight: tiers[0].y",
+        "lowerBranchDrop: tiers[0].branchDrop",
+        "needleBaseRadiusRatio",
+        "leaderSprayLevels",
+        "TAPERED_TRIAD_NEEDLES_V4",
+        "LAYERED_RADIAL_LEADER_V2",
         "needleSpraysPerArm: needleSprays.length",
+        "needleClustersPerArm: needleSprays.length * 2",
+        "TAPERED_TRIAD_NEEDLES_V4",
+        "needleBladeCount",
+        "needleBladeTrianglesPerCluster",
+        "appendNeedleTriangle",
+        "const leaderBase = new THREE.Vector3(0, 2.18, 0)",
+        "leaderStemCount: 1",
+        "leaderSprayClusters: leaderSprays.length * leaderDirectionsPerLevel",
+        "leaderProfile: 'LAYERED_RADIAL_LEADER_V2'",
+        "branchTubeSegments: 6",
+        "branchRadialSegments: 4",
+        "canopyProfile: 'DROOPED_SPRUCE_CROWN_V5'",
+        "coreConeCount: 0",
         "geometry.userData",
         "function createLegacyLayeredTreeFoliageGeometry()",
     )
@@ -233,6 +349,10 @@ def main():
         raise SystemExit("FAIL: deterministic evergreen visual focus must track an accepted placed tree")
     required_tree_qa = (
         "setLegacy(enabled)",
+        "treeTrunks.geometry = legacyTreeTrunkGeometry",
+        "treeTrunks.material = legacyTreeTrunkMaterial",
+        "treeTrunks.geometry = treeTrunkGeometry",
+        "treeTrunks.material = treeTrunkMaterial",
         "treeFoliage.geometry = legacyTreeFoliageGeometry",
         "treeFoliage.geometry = treeFoliageGeometry",
     )
@@ -280,6 +400,22 @@ def main():
     if missing:
         raise SystemExit("FAIL: combat QA must track the exact death explosion and isolated combat state: " + ", ".join(missing))
 
+    combat_rig_start = source.index("if (new URLSearchParams(location.search).get('combat-rig') === '1'")
+    combat_rig_end = source.index("if (new URLSearchParams(location.search).get('qa') === '1')", combat_rig_start)
+    combat_rig_section = source[combat_rig_start:combat_rig_end]
+    required_combat_rig = (
+        "disarm()",
+        "qaSuppressCombat = true;",
+        "probeShooter.atkTarget = null;",
+        "probeShooter.flashT = 0;",
+        "setMuzzleFlashIntensity(flash, 0);",
+        "probeDisarmed:",
+        "probeFlashHidden:",
+    )
+    missing = [token for token in required_combat_rig if token not in combat_rig_section]
+    if missing:
+        raise SystemExit("FAIL: combat-rig QA must disarm its persistent target and hide its muzzle flash: " + ", ".join(missing))
+
     building_qa_start = source.index("window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__")
     building_qa_end = source.index("window.__BLUE_ALERTS_MISSION_QA__", building_qa_start)
     building_qa_section = source[building_qa_start:building_qa_end]
@@ -304,6 +440,10 @@ def main():
         "spawnedExplosionLife",
         "freezeNewCombat",
         "resumeCombat",
+        "window.__BLUE_ALERTS_COMBAT_QA?.disarm()",
+        "probeDisarmed",
+        "probeFlashHidden",
+        "DESKTOP_BUILDING_PREPARE_TIMEOUT",
         "desktopBuildingFreeze?.combatSuppressed === true",
         "mobileClean.combatSuppressed === true",
         "shooterKind",
@@ -313,6 +453,59 @@ def main():
         "resumeEconomyRewards",
         "desktopTreeBaseline",
         "mobileTreeBaseline",
+        "DROOPED_SPRUCE_CROWN_V5",
+        "TAPERED_FLARED_BARK_V2",
+        "needleClustersPerArm === 8",
+        "branchTubeSegments === 6",
+        "foliageTriangles === 6944",
+        "desktopMetrics.vegetation.canopyProfile === 'DROOPED_SPRUCE_CROWN_V5'",
+        "desktopMetrics.vegetation.treeCapacity === 128",
+        "desktopMetrics.vegetation.instancedFoliageTriangleBudget <= 900000",
+        "desktopMetrics.vegetation.lowestBranchHeight === 0.56",
+        "desktopMetrics.vegetation.lowerBranchDrop === 0.42",
+        "desktopMetrics.vegetation.needleBaseRadiusRatio === 0.1",
+        "desktopMetrics.vegetation.leaderSprayLevels === 4",
+        "desktopMetrics.vegetation.leaderDirectionsPerLevel === 4",
+        "mobileMetrics.vegetation.canopyProfile === 'DROOPED_SPRUCE_CROWN_V5'",
+        "mobileMetrics.vegetation.treeCapacity === 80",
+        "mobileMetrics.vegetation.instancedFoliageTriangleBudget <= 560000",
+        "mobileMetrics.vegetation.lowestBranchHeight === 0.56",
+        "mobileMetrics.vegetation.lowerBranchDrop === 0.42",
+        "mobileMetrics.vegetation.needleBaseRadiusRatio === 0.1",
+        "mobileMetrics.vegetation.leaderSprayLevels === 4",
+        "mobileMetrics.vegetation.leaderDirectionsPerLevel === 4",
+        "desktopMetrics.vegetation.needleClusters === 184",
+        "desktopTreeDetail.needleClusters === desktopTreeDetail.branchArms * 8 + desktopTreeDetail.leaderSprayClusters",
+        "mobileTreeDetail.needleClusters === mobileTreeDetail.branchArms * 8 + mobileTreeDetail.leaderSprayClusters",
+        "desktopTreeDetail.foliageTriangles === 6944",
+        "desktopTreeDetail.treeCapacity === 128",
+        "desktopTreeDetail.instancedFoliageTriangleBudget <= 900000",
+        "desktopTreeDetail.lowestBranchHeight === 0.56",
+        "desktopTreeDetail.lowerBranchDrop === 0.42",
+        "desktopTreeDetail.needleBaseRadiusRatio === 0.1",
+        "desktopTreeDetail.leaderSprayLevels === 4",
+        "desktopTreeDetail.leaderDirectionsPerLevel === 4",
+        "mobileTreeDetail.foliageTriangles === 6944",
+        "mobileTreeDetail.treeCapacity === 80",
+        "mobileTreeDetail.instancedFoliageTriangleBudget <= 560000",
+        "mobileTreeDetail.lowestBranchHeight === 0.56",
+        "mobileTreeDetail.lowerBranchDrop === 0.42",
+        "mobileTreeDetail.needleBaseRadiusRatio === 0.1",
+        "mobileTreeDetail.leaderSprayLevels === 4",
+        "mobileTreeDetail.leaderDirectionsPerLevel === 4",
+        "mobileMetrics.vegetation.needleClusters === 184",
+        "desktopMetrics.vegetation.needleBladeCount === 1472",
+        "mobileMetrics.vegetation.needleBladeCount === 1472",
+        "desktopMetrics.vegetation.needleBladeCountPerCluster === 8",
+        "mobileMetrics.vegetation.needleBladeCountPerCluster === 8",
+        "desktopMetrics.vegetation.needleBladeTrianglesPerCluster === 32",
+        "mobileMetrics.vegetation.needleBladeTrianglesPerCluster === 32",
+        "desktopMetrics.vegetation.leaderStemCount === 1",
+        "mobileMetrics.vegetation.leaderStemCount === 1",
+        "desktopMetrics.vegetation.leaderSprayClusters === 16",
+        "mobileMetrics.vegetation.leaderSprayClusters === 16",
+        "leaderProfile === 'LAYERED_RADIAL_LEADER_V2'",
+        "mobileMetrics.vegetation.foliageTiers === 5",
         "desktop-v94-woodland-tree-baseline.png",
         "mobile-v94-woodland-tree-baseline-390x844.png",
         "setLegacy(true)",
@@ -329,10 +522,45 @@ def main():
         "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
         "desktop-v94-industrial-yard.png",
         "desktop-v94-terrain-surface.png",
+        "setFieldStrata(false)",
+        "setFieldStrata(true)",
+        "desktop-v94-gameplay-field-baseline.png",
+        "desktop-v94-gameplay-field-detail.png",
+        "mobile-v94-gameplay-field-baseline-390x844.png",
+        "mobile-v94-gameplay-field-detail-390x844.png",
+        "desktopFieldDetail.colorChecksum !== desktopFieldBaseline?.colorChecksum",
+        "mobileFieldDetail.colorChecksum !== mobileFieldBaseline?.colorChecksum",
+        "focusHeadquarters",
+        "desktop-v94-headquarters-focus.png",
+        "mobile-v94-headquarters-focus-390x844.png",
+        "setHeadquartersSurfaceDetail",
+        "desktop-v94-headquarters-surface-baseline.png",
+        "desktop-v94-headquarters-surface-detail.png",
+        "mobile-v94-headquarters-surface-baseline-390x844.png",
+        "mobile-v94-headquarters-surface-detail-390x844.png",
+        "CAST_CONCRETE_PAINT_MICROWEAR_V1",
+        "surfaceTextureResolution",
+        "surfaceMaterialBindingsActive",
+        "ARMORED_BASTION_COMMAND_CORE_V3",
+        "desktopHeadquartersFocus?.stationCount, 6",
+        "mobileHeadquartersFocus?.stationCount, 6",
+        "mobileTerrainFocus",
+        "mobileTerrainBaseline",
+        "mobileTerrainDetail",
+        "const mobileCombatStart = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());",
+        "MOBILE_COMBAT_START ",
+        "mobileCombatBefore?.combatSuppressed",
+        "toast.style.opacity = '0'",
+        "mobile-v94-terrain-microrelief-baseline-390x844.png",
+        "mobile-v94-terrain-microrelief-detail-390x844.png",
+        "procedural-albedo-normal-roughness",
+        "normalStrength >= 1.15",
     )
     missing = [token for token in required_browser_test if token not in browser_test]
     if missing:
-        raise SystemExit("FAIL: desktop/mobile browser acceptance must verify a target-specific death explosion: " + ", ".join(missing))
+        raise SystemExit("FAIL: desktop/mobile browser acceptance is missing required assertions or screenshot evidence: " + ", ".join(missing))
+    if browser_test.count("{ timeout: 90000, polling: 50 }") != 3:
+        raise SystemExit("FAIL: desktop, isolated building and mobile VFX cleanup waits must allow slow software-WebGL frame cadence without changing the zero-effect acceptance condition")
 
     parser = ScriptCollector()
     parser.feed(source)
