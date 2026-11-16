@@ -90,6 +90,16 @@ try {
   await page.waitForFunction(()=>typeof window.__BLUE_ALERTS_PREVIEW__==='function' && window.__BLUE_ALERTS_PREVIEW__().drawCalls>0,null,{timeout:30000});
   const initial=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(initial.asset,'tank');
+  const timingStart = initial.previewElapsedSeconds;
+  await page.waitForTimeout(500);
+  const timingAfter = await page.evaluate(() => window.__BLUE_ALERTS_PREVIEW__());
+  const measuredPreviewSeconds = timingAfter.previewElapsedSeconds - timingStart;
+  assert.ok(Number.isFinite(measuredPreviewSeconds) && measuredPreviewSeconds >= 0.15 && measuredPreviewSeconds <= 1.5,
+    'preview animation clock must advance with real elapsed time across refresh rates: ' + measuredPreviewSeconds);
+  assert.ok(timingAfter.previewLastDeltaSeconds > 0 && timingAfter.previewLastDeltaSeconds <= 0.05,
+    'preview frame delta must be positive and capped at 50ms');
+  assert.ok(timingAfter.previewFrameCount > initial.previewFrameCount,
+    'preview animation loop must continue rendering frames');
   assert.ok(initial.meshCount>=30 && initial.meshCount<=45 && initial.triangleCount>0,'detailed faction tank must batch repeated geometry into a compact mesh set');
   assert.ok(initial.drawCalls<=60,'one tank preview must stay within the instanced draw-call budget');
   assert.ok(initial.environment,'procedural reflection environment must be assigned');
@@ -213,6 +223,37 @@ try {
   assert.equal(tower.genericDecorationCount,0,'control tower must not have detached rectangular-building details');
   await page.screenshot({path:output+'/desktop-control-tower.png',fullPage:true});
 
+  // Verify real transforms change in the live WebGL scene for aircraft and combat effects.
+  async function verifyMotion(asset,label,predicate){
+    await page.selectOption('#asset',asset);
+    await page.waitForFunction(expected=>window.__BLUE_ALERTS_PREVIEW__?.().asset===expected,asset,{timeout:10000});
+    await page.waitForTimeout(120);
+    const before=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+    await page.waitForTimeout(500);
+    const after=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+    const elapsedDelta=after.animationElapsed-before.animationElapsed;
+    assert.ok(Number.isFinite(elapsedDelta) && elapsedDelta>0 && elapsedDelta<=1.5 && after.previewFrameCount>before.previewFrameCount,
+      label+' animation clock must advance on rendered frames: '+JSON.stringify({before:before.animationElapsed,after:after.animationElapsed,elapsedDelta,framesBefore:before.previewFrameCount,framesAfter:after.previewFrameCount}));
+    assert.ok(predicate(before,after),label+' must visibly change its animated transform or effect state');
+    console.log('ANIMATION_RUNTIME_PASS '+label+' '+JSON.stringify({before,after}));
+    await page.screenshot({path:output+'/animation-'+asset+'.png',fullPage:true});
+  }
+  const changedNode=(before,after,name,field)=>{
+    const a=before.animatedNodes.find(node=>node.name===name);
+    const b=after.animatedNodes.find(node=>node.name===name);
+    return !!a && !!b && JSON.stringify(a[field])!==JSON.stringify(b[field]);
+  };
+  await verifyMotion('aircraft','aircraft banking and hover',(a,b)=>
+    JSON.stringify(a.rootRotation)!==JSON.stringify(b.rootRotation) ||
+    JSON.stringify(a.rootPosition)!==JSON.stringify(b.rootPosition));
+  await verifyMotion('helicopter','helicopter main rotor',(a,b)=>changedNode(a,b,'main-rotor','rotation'));
+  await verifyMotion('drone','drone propellers',(a,b)=>changedNode(a,b,'propeller-rotor','rotation'));
+  await verifyMotion('controlTower','control tower radar',(a,b)=>changedNode(a,b,'rotating-radar','rotation'));
+  await verifyMotion('explosion','explosion shockwave and sparks',(a,b)=>
+    changedNode(a,b,'shockwave-ring','scale') && changedNode(a,b,'explosion-spark','position'));
+  await verifyMotion('muzzleFlash','muzzle flash pulse',(a,b)=>
+    changedNode(a,b,'flash-core','scale') && changedNode(a,b,'flash-flare','opacity'));
+
   await page.setViewportSize({width:390,height:844});
   await page.selectOption('#asset','tank');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='tank' && window.__BLUE_ALERTS_PREVIEW__().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
@@ -267,7 +308,7 @@ try {
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
-  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
+  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','animation-aircraft.png','animation-helicopter.png','animation-drone.png','animation-controlTower.png','animation-explosion.png','animation-muzzleFlash.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
   for(const file of files) assert.ok((await stat(output+'/'+file)).size>10000,'screenshot must contain rendered evidence: '+file);
   console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files},null,2));
 } catch(error) {

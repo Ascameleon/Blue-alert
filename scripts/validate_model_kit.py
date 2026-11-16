@@ -48,6 +48,26 @@ def main():
     model = MODEL.read_text(encoding="utf-8")
     preview = PREVIEW.read_text(encoding="utf-8")
     game = GAME.read_text(encoding="utf-8")
+
+    required_preview_timing = (
+        "const previewClock = new THREE.Clock();",
+        "const PREVIEW_MAX_DELTA_SECONDS = 0.05;",
+        "Math.min(previewClock.getDelta(), PREVIEW_MAX_DELTA_SECONDS)",
+        "previewElapsedSeconds += delta;",
+        "previewLastDeltaSeconds = delta;",
+        "updateInfantryAnimation(current.userData.animationRig, delta, 0.85);",
+        "animationElapsed:previewElapsedSeconds",
+        "animatedNodes",
+        "current?.userData?.kind === 'aircraft'",
+        "current?.userData?.kind === 'helicopter'",
+        "current?.userData?.kind === 'drone'",
+        "object.name === 'shockwave-ring'",
+        "object.name === 'explosion-spark'",
+        "object.name === 'flash-core' || object.name === 'flash-flare' || object.name === 'flash-ray'",
+    )
+    missing = [feature for feature in required_preview_timing if feature not in preview]
+    if missing:
+        raise SystemExit("FAIL: preview animation must use bounded real frame delta: " + ", ".join(missing))
     missing = [name for name in REQUIRED_EXPORTS if f"export function {name}" not in model]
     if missing:
         raise SystemExit("FAIL: missing model exports: " + ", ".join(missing))
