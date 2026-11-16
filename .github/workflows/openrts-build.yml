@@ -96,6 +96,7 @@ jobs:
           path: |
             dist/BLUE_ALERTS_V94_BUILD_ZONE_JOUABLE.html
             dist/manifest.json
+            dist/THREE-LICENSE.txt
           if-no-files-found: error
           retention-days: 14
       - name: Build OpenRTS
