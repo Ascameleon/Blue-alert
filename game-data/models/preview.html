@@ -120,6 +120,17 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
       if(object.isMesh && (partName==='front-glacis' || partName==='engine-deck-grilles-instanced' || partName==='reactive-armor-tiles-instanced' || partName==='track-shoe-instanced' || partName==='wheel-bolts-instanced' || partName.includes('blue-sentinel') || partName==='blue-turret-cheeks-instanced' || partName.includes('red-bastion') || partName==='red-turret-cheeks-instanced' || partName==='red-bastion-side-plates-instanced' || partName==='heavy-turret-reinforcements-instanced')) signatureParts.push(partName);
     }
   });
+  const animatedNodes=[];
+  current?.traverse(object=>{
+    if(!['rotating-radar','main-rotor','tail-rotor','propeller-rotor','shockwave-ring','explosion-spark','flash-core','flash-flare','flash-ray'].includes(object.name))return;
+    animatedNodes.push({
+      name:object.name,
+      rotation:[object.rotation.x,object.rotation.y,object.rotation.z],
+      position:[object.position.x,object.position.y,object.position.z],
+      scale:[object.scale.x,object.scale.y,object.scale.z],
+      opacity:object.material?.opacity??null
+    });
+  });
   return {
     asset:document.querySelector('#asset').value,
     beveledArmorPartCount:beveledArmorParts.length,
@@ -151,6 +162,10 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     namedParts,
     hasAnimationRig:!!current?.userData?.animationRig,
     animationPhase:current?.userData?.animationRig?.phase??null,
+    animationElapsed:previewElapsedSeconds,
+    rootRotation:current?[current.rotation.x,current.rotation.y,current.rotation.z]:null,
+    rootPosition:current?[current.position.x,current.position.y,current.position.z]:null,
+    animatedNodes,
     previewElapsedSeconds,
     previewLastDeltaSeconds,
     previewFrameCount,
@@ -172,6 +187,7 @@ renderer.setAnimationLoop(() => {
   previewLastDeltaSeconds = delta;
   previewElapsedSeconds += delta;
   previewFrameCount += 1;
+  const pulse = 0.5 + 0.5 * Math.sin(previewElapsedSeconds * 5.5);
 
   if (current?.userData?.animationRig) {
     updateInfantryAnimation(current.userData.animationRig, delta, 0.85);
@@ -183,21 +199,63 @@ renderer.setAnimationLoop(() => {
     current.userData.rotatingGun.rotation.y += delta * 1.125;
   }
 
+  if (current?.userData?.kind === 'aircraft') {
+    current.userData.previewBaseY ??= current.position.y;
+    current.rotation.z = Math.sin(previewElapsedSeconds * 1.1) * 0.025;
+    current.position.y = current.userData.previewBaseY + Math.sin(previewElapsedSeconds * 2) * 0.035;
+  }
+  if (current?.userData?.kind === 'helicopter') {
+    current.userData.previewBaseY ??= current.position.y;
+    current.position.y = current.userData.previewBaseY + Math.sin(previewElapsedSeconds * 3) * 0.035;
+  }
+  if (current?.userData?.kind === 'drone') {
+    current.rotation.y += delta * 0.22;
+  }
+
   current?.traverse(object => {
     if (object.userData?.emissivePulse && object.material?.emissiveIntensity !== undefined) {
-      object.material.emissiveIntensity = 0.55 + Math.sin(previewElapsedSeconds * 3.2) * 0.45;
+      object.material.emissiveIntensity = 0.35 + pulse * 0.9;
+    }
+    if (object.name === 'main-rotor') object.rotation.y += delta * 17;
+    if (object.name === 'tail-rotor') object.rotation.x += delta * 23;
+    if (object.name === 'propeller-rotor') object.rotation.y += delta * 22;
+    if (object.name === 'ore-collection-drum') object.rotation.x += delta * 4.8;
+    if (object.name === 'reactor-energy-ring') object.rotation.z += delta * 0.5;
+    if (object.name === 'citadel-reactor-core') object.rotation.y += delta * 0.75;
+    if (object.name === 'capture-halo') object.rotation.z += delta * 0.5;
+    if (object.name === 'fireball-core') {
+      const scale = 1 + pulse * 0.13;
+      object.scale.set(scale, scale * 0.82, scale);
+    }
+    if (object.name === 'hot-core') {
+      const scale = 0.88 + pulse * 0.22;
+      object.scale.set(scale, scale * 0.9, scale);
+    }
+    if (object.name === 'shockwave-ring') {
+      const scale = 1 + ((previewElapsedSeconds * 1.15) % 1.2);
+      object.scale.setScalar(scale);
+      if (object.material?.opacity !== undefined) {
+        object.material.opacity = Math.max(0.08, 0.72 - ((scale - 1) / 1.2) * 0.62);
+      }
+    }
+    if (object.name === 'smoke-puff') {
+      object.userData.previewBaseY ??= object.position.y;
+      const phase = object.position.x * 1.7 + object.position.z * 2.3;
+      object.position.y = object.userData.previewBaseY + Math.sin(previewElapsedSeconds * 1.4 + phase) * 0.06;
+      if (object.material?.opacity !== undefined) object.material.opacity = 0.4 + pulse * 0.12;
+    }
+    if (object.name === 'explosion-spark') {
+      object.userData.previewBaseY ??= object.position.y;
+      const phase = object.position.x * 1.3 + object.position.z * 1.9;
+      object.position.y = object.userData.previewBaseY + Math.sin(previewElapsedSeconds * 3 + phase) * 0.1;
+      object.rotation.z += delta * 2.4;
+    }
+    if (object.name === 'flash-core' || object.name === 'flash-flare' || object.name === 'flash-ray') {
+      const scale = 0.78 + pulse * 0.42;
+      object.scale.set(scale, scale, scale);
+      if (object.material?.opacity !== undefined) object.material.opacity = 0.35 + pulse * 0.6;
     }
   });
-
-  if (current?.userData?.mainRotor) current.userData.mainRotor.rotation.y += delta * 17.5;
-  if (current?.userData?.tailRotor) current.userData.tailRotor.rotation.x += delta * 26.25;
-  if (current?.userData?.rotors) {
-    for (const rotor of current.userData.rotors) rotor.rotation.y += delta * 22.5;
-  }
-  if (current?.userData?.collectionDrum) current.userData.collectionDrum.rotation.x += delta * 5;
-  if (current?.userData?.reactorRing) current.userData.reactorRing.rotation.z += delta * 0.5;
-  if (current?.userData?.core) current.userData.core.rotation.y += delta * 0.75;
-  if (current?.userData?.captureHalo) current.userData.captureHalo.rotation.z += delta * 0.5;
 
   controls.update();
   renderer.render(scene, camera);
