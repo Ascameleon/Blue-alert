@@ -123,7 +123,16 @@ try {
   await page.selectOption('#asset','infantry');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='infantry' &&
     window.__BLUE_ALERTS_PREVIEW__().hasAnimationRig && window.__BLUE_ALERTS_PREVIEW__().meshCount>=25,null,{timeout:10000});
-  await page.waitForTimeout(450);
+  try {
+    await page.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_PREVIEW__?.();
+      return state && state.previewFrameCount >= 2 && state.animationPhase > 0 && state.walkAmount >= 0.8;
+    }, null, { timeout: 15000, polling: 50 });
+  } catch (error) {
+    const state = await page.evaluate(() => window.__BLUE_ALERTS_PREVIEW__?.());
+    console.log('BLUE_INFANTRY_GAIT_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
   const blueInfantry=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(blueInfantry.factionProfile,'BLUE_SENTINEL_RIFLEMAN','blue infantry must use the Sentinel faction profile');
   assert.equal(blueInfantry.surfaceFinish,'FIELDWEAVE_CERAMIC_MICROSCUFF_V2','blue infantry must render original fabric/ceramic surface maps');
