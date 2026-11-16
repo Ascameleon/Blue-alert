@@ -4451,8 +4451,23 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       if (!shooter || !target) throw new Error('Combat QA requires living blue and red combat units.');
       camTarget.set(shooter.g.position.x, 0, shooter.g.position.z);
       camDist = Math.min(camDist, 26);
+      const existingMuzzleEffects = new Set(fx.filter(effect => effect.kind === 'model-muzzle'));
       fireProjectile(shooter, target);
-      return { shooterKind: shooter.kind, targetKind: target.kind, ...combatState() };
+      const attachedFlash = shooter.g?.userData?.flash || null;
+      let attachedFlashOpacity = 0;
+      if (attachedFlash) {
+        attachedFlash.traverse(part => {
+          const materials = Array.isArray(part.material) ? part.material : [part.material];
+          for (const material of materials) {
+            if (material && Number.isFinite(material.opacity)) attachedFlashOpacity = Math.max(attachedFlashOpacity, material.opacity);
+          }
+        });
+      }
+      const muzzleFlashActive = !!(
+        (attachedFlash?.visible && attachedFlashOpacity > 0.05) ||
+        fx.some(effect => effect.kind === 'model-muzzle' && !existingMuzzleEffects.has(effect))
+      );
+      return { shooterKind: shooter.kind, targetKind: target.kind, muzzleFlashActive, ...combatState() };
     },
     destroyEnemyUnit() {
       const target = units.find(u => !u.dead && u.team === 2 && u.dmg > 0);
