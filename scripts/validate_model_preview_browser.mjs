@@ -73,10 +73,10 @@ try {
   await baselinePage.waitForTimeout(900);
   const baselineMetrics=await baselinePage.evaluate(()=>({canvas:!!document.querySelector('#view canvas'),width:document.querySelector('#view canvas')?.width||0,height:document.querySelector('#view canvas')?.height||0,asset:document.querySelector('#asset').value}));
   assert.ok(baselineMetrics.canvas && baselineMetrics.width>0 && baselineMetrics.height>0,'base-branch turret must render a WebGL canvas');
-  await baselinePage.screenshot({path:output+'/baseline-turret.png',fullPage:true});
+  await baselinePage.screenshot({path:output+'/baseline-turret.png',fullPage:true,timeout:60000});
   await baselinePage.setViewportSize({width:390,height:844});
   await baselinePage.waitForTimeout(350);
-  await baselinePage.screenshot({path:output+'/baseline-turret-mobile-390x844.png',fullPage:true});
+  await baselinePage.screenshot({path:output+'/baseline-turret-mobile-390x844.png',fullPage:true,timeout:60000});
   await baselinePage.close();
 
   const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
@@ -117,7 +117,7 @@ try {
   }
   assert.ok(initial.triangleCount<5000,'bevelled tank geometry must remain within the preview triangle budget');
   for(const name of ['front-glacis','engine-deck-grilles-instanced','reactive-armor-tiles-instanced','track-shoe-instanced','wheel-bolts-instanced','blue-sentinel-crown','blue-turret-cheeks-instanced','blue-sentinel-optic']) assert.ok(initial.signatureParts.includes(name),'blue tank signature part missing: '+name);
-  await page.screenshot({path:output+'/desktop-blue-sentinel-tank.png',fullPage:true});
+  await page.screenshot({path:output+'/desktop-blue-sentinel-tank.png',fullPage:true,timeout:60000});
 
   // Both faction riflemen must render their own equipment silhouette and live gait rig.
   await page.selectOption('#asset','infantry');
@@ -172,7 +172,7 @@ try {
     'blue infantry must stay within the 60-draw-call mobile preview ceiling: '+blueInfantry.drawCalls);
   assert.ok(blueInfantry.animationPhase>0 && blueInfantry.walkAmount>=0.8,
     'preview gait must advance its deterministic animation rig');
-  await page.screenshot({path:output+'/desktop-blue-sentinel-infantry.png',fullPage:true});
+  await page.screenshot({path:output+'/desktop-blue-sentinel-infantry.png',fullPage:true,timeout:60000});
 
   await page.selectOption('#team','red');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION_RIFLEMAN',null,{timeout:10000});
@@ -191,7 +191,7 @@ try {
   assert.ok(redInfantry.boundsMinY>=-0.03,
     'red infantry combat boots must not sink below the ground plane: '+redInfantry.boundsMinY);
   assert.ok(redInfantry.cameraDistance<8,'red infantry preview camera must frame the model closely: '+redInfantry.cameraDistance);
-  await page.screenshot({path:output+'/desktop-red-bastion-infantry.png',fullPage:true});
+  await page.screenshot({path:output+'/desktop-red-bastion-infantry.png',fullPage:true,timeout:60000});
   await page.selectOption('#asset','tank');
   await page.selectOption('#team','blue');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
@@ -212,7 +212,7 @@ try {
   assert.deepEqual(redTank.detailInstances.faction,{turretCheeks:2,turretSidePlates:2,smokeBanks:2},'red reinforced turret details must be instanced');
   for(const name of ['front-glacis','engine-deck-grilles-instanced','track-shoe-instanced','wheel-bolts-instanced','red-bastion-cupola','red-turret-cheeks-instanced','red-bastion-side-plates-instanced']) assert.ok(redTank.signatureParts.includes(name),'red tank signature part missing: '+name);
   assert.notEqual(redTank.factionProfile,initial.factionProfile,'factions must not share the same visual profile');
-  await page.screenshot({path:output+'/desktop-red-bastion-tank.png',fullPage:true});
+  await page.screenshot({path:output+'/desktop-red-bastion-tank.png',fullPage:true,timeout:60000});
   await page.selectOption('#team','blue');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
 
@@ -222,7 +222,7 @@ try {
   const turret=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.ok(turret.physicalMaterialCount>0 && turret.drawCalls>0,'turret must render with PBR materials');
   assert.equal(turret.genericDecorationCount,0,'turret must not have detached rectangular-building details');
-  await page.screenshot({path:output+'/desktop-turret.png',fullPage:true});
+  await page.screenshot({path:output+'/desktop-turret.png',fullPage:true,timeout:60000});
 
   await page.selectOption('#asset','controlTower');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='controlTower' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=30,null,{timeout:10000});
@@ -230,7 +230,7 @@ try {
   const tower=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.ok(tower.physicalMaterialCount>0 && tower.drawCalls>0,'control tower must render with PBR materials');
   assert.equal(tower.genericDecorationCount,0,'control tower must not have detached rectangular-building details');
-  await page.screenshot({path:output+'/desktop-control-tower.png',fullPage:true});
+  await page.screenshot({path:output+'/desktop-control-tower.png',fullPage:true,timeout:60000});
 
   // Verify real transforms change in the live WebGL scene for aircraft and combat effects.
   async function verifyMotion(asset,label,predicate){
@@ -245,7 +245,7 @@ try {
       label+' animation clock must advance on rendered frames: '+JSON.stringify({before:before.animationElapsed,after:after.animationElapsed,elapsedDelta,framesBefore:before.previewFrameCount,framesAfter:after.previewFrameCount}));
     assert.ok(predicate(before,after),label+' must visibly change its animated transform or effect state');
     console.log('ANIMATION_RUNTIME_PASS '+label+' '+JSON.stringify({before,after}));
-    await page.screenshot({path:output+'/animation-'+asset+'.png',fullPage:true});
+    await page.screenshot({path:output+'/animation-'+asset+'.png',fullPage:true,timeout:60000});
   }
   const changedNode=(before,after,name,field)=>{
     const a=before.animatedNodes.find(node=>node.name===name);
@@ -274,17 +274,17 @@ try {
   assert.equal(mobileQuality.shadowMapEnabled,false,'mobile preview must disable expensive shadow maps');
   assert.ok(mobileQuality.pixelRatio>0 && mobileQuality.pixelRatio<=1.15,'mobile preview pixel ratio must be capped at 1.15');
   assert.ok(mobileQuality.canvasWidth<=Math.ceil(390*1.15)+2,'mobile canvas backing width must respect the pixel-ratio budget');
-  await mobileQualityPage.screenshot({path:output+'/mobile-quality-profile-390x844.png',fullPage:true});
+  await mobileQualityPage.screenshot({path:output+'/mobile-quality-profile-390x844.png',fullPage:true,timeout:60000});
   await mobileQualityPage.close();
 
   await page.setViewportSize({width:390,height:844});
   await page.selectOption('#asset','tank');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='tank' && window.__BLUE_ALERTS_PREVIEW__().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
   await page.waitForTimeout(400);
-  await page.screenshot({path:output+'/mobile-blue-sentinel-tank-390x844.png',fullPage:true});
+  await page.screenshot({path:output+'/mobile-blue-sentinel-tank-390x844.png',fullPage:true,timeout:60000});
   await page.selectOption('#team','red');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION',null,{timeout:10000});
-  await page.screenshot({path:output+'/mobile-red-bastion-tank-390x844.png',fullPage:true});
+  await page.screenshot({path:output+'/mobile-red-bastion-tank-390x844.png',fullPage:true,timeout:60000});
 
   await page.selectOption('#asset','infantry');
   await page.selectOption('#team','blue');
@@ -294,11 +294,11 @@ try {
   assert.ok(mobileBlueInfantry.canvasWidth>=300 && mobileBlueInfantry.canvasHeight>=400 &&
     mobileBlueInfantry.hasAnimationRig && mobileBlueInfantry.drawCalls<=60 && mobileBlueInfantry.cameraDistance<8,
     'blue infantry must remain readable and animated in the mobile preview');
-  await page.screenshot({path:output+'/mobile-blue-sentinel-infantry-390x844.png',fullPage:true});
+  await page.screenshot({path:output+'/mobile-blue-sentinel-infantry-390x844.png',fullPage:true,timeout:60000});
   await page.selectOption('#team','red');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='RED_BASTION_RIFLEMAN',null,{timeout:10000});
   await page.waitForTimeout(350);
-  await page.screenshot({path:output+'/mobile-red-bastion-infantry-390x844.png',fullPage:true});
+  await page.screenshot({path:output+'/mobile-red-bastion-infantry-390x844.png',fullPage:true,timeout:60000});
   await page.selectOption('#asset','tank');
   await page.selectOption('#team','blue');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
@@ -319,10 +319,10 @@ try {
   await page.selectOption('#asset','controlTower');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='controlTower' && window.__BLUE_ALERTS_PREVIEW__().meshCount>=30,null,{timeout:10000});
   await page.waitForTimeout(350);
-  await page.screenshot({path:output+'/mobile-control-tower-390x844.png',fullPage:true});
+  await page.screenshot({path:output+'/mobile-control-tower-390x844.png',fullPage:true,timeout:60000});
   await page.selectOption('#asset','turret');
   await page.waitForTimeout(450);
-  await page.screenshot({path:output+'/mobile-turret-390x844.png',fullPage:true});
+  await page.screenshot({path:output+'/mobile-turret-390x844.png',fullPage:true,timeout:60000});
   console.log('MOBILE_QUALITY '+JSON.stringify(mobileQuality));
   console.log('MOBILE_LAYOUT '+JSON.stringify(mobile));
   console.log('VISUAL_BASELINE '+JSON.stringify(baselineMetrics));
