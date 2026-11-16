@@ -448,7 +448,7 @@ try {
       const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
       return state && state.damageStage === 1 && state.hp <= state.maxHp * 0.55 &&
         state.hp > state.maxHp * 0.25 && state.smokeSpawned > 0;
-    }, null, { timeout: 7000, polling: 50 });
+    }, null, { timeout: 20000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
     console.log('DESKTOP_BUILDING_STAGE1_TIMEOUT ' + JSON.stringify({ start: desktopBuildingStart, state }));
@@ -467,7 +467,7 @@ try {
       const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
       return state && state.damageStage === 2 && state.hp <= state.maxHp * 0.25 &&
         state.hp > 0 && state.scorchMark && state.flamesSpawned > 0;
-    }, null, { timeout: 7000, polling: 50 });
+    }, null, { timeout: 20000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
     console.log('DESKTOP_BUILDING_STAGE2_TIMEOUT ' + JSON.stringify({ start: desktopBuildingCriticalStart, state }));
@@ -929,7 +929,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
       return state && state.damageStage === 1 && state.hp <= state.maxHp * 0.55 &&
         state.hp > state.maxHp * 0.25 && state.smokeSpawned > 0;
-    }, null, { timeout: 7000, polling: 50 });
+    }, null, { timeout: 20000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
     console.log('MOBILE_BUILDING_STAGE1_TIMEOUT ' + JSON.stringify({ start: mobileBuildingStart, state }));
@@ -948,7 +948,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
       const state = window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot();
       return state && state.damageStage === 2 && state.hp <= state.maxHp * 0.25 &&
         state.hp > 0 && state.scorchMark && state.flamesSpawned > 0;
-    }, null, { timeout: 7000, polling: 50 });
+    }, null, { timeout: 20000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__?.snapshot());
     console.log('MOBILE_BUILDING_STAGE2_TIMEOUT ' + JSON.stringify({ start: mobileBuildingCriticalStart, state }));
