@@ -79,8 +79,256 @@ const addMarking = (THREE, group, x, y, z, team) => {
   stripe.rotation.y = Math.PI/2; return stripe;
 };
 
+const TANK_TRACK_GEOMETRY_CACHE = new WeakMap();
+const TANK_TRACK_QA_GEOMETRY_CACHE = new WeakMap();
+const createTankTrackGeometrySet = (THREE) => {
+  const cached = TANK_TRACK_GEOMETRY_CACHE.get(THREE);
+  if (cached) return cached;
+  const halfLength = 0.98, outerRadius = 0.28, innerRadius = 0.17, depth = 0.22;
+  const straightSegments = 10, arcSegments = 12;
+  const samples = [];
+  const push = (outer, inner) => samples.push({ outer, inner });
+  for (let i = 0; i < straightSegments; i++) {
+    const x = -halfLength + 2 * halfLength * i / straightSegments;
+    push([x, outerRadius], [x, innerRadius]);
+  }
+  for (let i = 0; i < arcSegments; i++) {
+    const angle = Math.PI / 2 - Math.PI * i / (arcSegments - 1);
+    push(
+      [halfLength + Math.cos(angle) * outerRadius, Math.sin(angle) * outerRadius],
+      [halfLength + Math.cos(angle) * innerRadius, Math.sin(angle) * innerRadius]
+    );
+  }
+  for (let i = 1; i <= straightSegments; i++) {
+    const x = halfLength - 2 * halfLength * i / straightSegments;
+    push([x, -outerRadius], [x, -innerRadius]);
+  }
+  for (let i = 1; i < arcSegments - 1; i++) {
+    const angle = -Math.PI / 2 - Math.PI * i / (arcSegments - 1);
+    push(
+      [-halfLength + Math.cos(angle) * outerRadius, Math.sin(angle) * outerRadius],
+      [-halfLength + Math.cos(angle) * innerRadius, Math.sin(angle) * innerRadius]
+    );
+  }
+
+  const count = samples.length;
+  const positions = [], uvs = [], indices = [];
+  const addStrip = (a, b, reverse = false) => {
+    const base = positions.length / 3;
+    for (let i = 0; i < count; i++) {
+      positions.push(a[i][0], a[i][1], a[i][2], b[i][0], b[i][1], b[i][2]);
+      uvs.push(i / count, 0, i / count, 1);
+    }
+    for (let i = 0; i < count; i++) {
+      const next = (i + 1) % count;
+      const a0 = base + i * 2, b0 = a0 + 1, a1 = base + next * 2, b1 = a1 + 1;
+      if (reverse) indices.push(a0, b1, a1, a0, b0, b1);
+      else indices.push(a0, a1, b1, a0, b1, b0);
+    }
+  };
+  const outerFront = samples.map(s => [s.outer[0], s.outer[1], -depth / 2]);
+  const innerFront = samples.map(s => [s.inner[0], s.inner[1], -depth / 2]);
+  const outerBack = samples.map(s => [s.outer[0], s.outer[1], depth / 2]);
+  const innerBack = samples.map(s => [s.inner[0], s.inner[1], depth / 2]);
+  addStrip(outerFront, innerFront, false);
+  addStrip(outerBack, innerBack, true);
+  addStrip(outerFront, outerBack, true);
+  addStrip(innerFront, innerBack, false);
+
+  const loopGeometry = new THREE.BufferGeometry();
+  loopGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  loopGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  loopGeometry.setIndex(indices);
+  loopGeometry.computeVertexNormals();
+  loopGeometry.computeBoundingBox();
+  loopGeometry.computeBoundingSphere();
+  loopGeometry.userData.trackLoopProfile = 'ROUNDED_CONTINUOUS_TRACK_V1';
+  loopGeometry.userData.trackLoopSegments = count;
+  loopGeometry.userData.trackLoopWidth = depth;
+  loopGeometry.userData.trackLoopHeight = outerRadius * 2;
+
+  const result = {
+    loopGeometry,
+    shoeGeometry: beveledBoxGeometry(THREE, [0.18, 0.065, 0.18], 0.012),
+    grouserGeometry: beveledBoxGeometry(THREE, [0.12, 0.024, 0.12], 0.004),
+    samples,
+    profile: 'ROUNDED_CONTINUOUS_TRACK_V1',
+    segments: count,
+    width: depth,
+    height: outerRadius * 2
+  };
+  TANK_TRACK_GEOMETRY_CACHE.set(THREE, result);
+  return result;
+};
+const createTankTrackQaGeometrySet = (THREE) => {
+  let cached = TANK_TRACK_QA_GEOMETRY_CACHE.get(THREE);
+  if (!cached) {
+    cached = {
+      belt: new THREE.BoxGeometry(2.68, 0.48, 0.22),
+      shoe: new THREE.BoxGeometry(0.105, 0.29, 0.035)
+    };
+    TANK_TRACK_QA_GEOMETRY_CACHE.set(THREE, cached);
+  }
+  return cached;
+};
+
+
+
+const TANK_SURFACE_TEXTURE_CACHE = new WeakMap();
+const createTankSurfaceTextures = (THREE, isRed) => {
+  if (typeof document === 'undefined') return null;
+  let factionCache = TANK_SURFACE_TEXTURE_CACHE.get(THREE);
+  if (!factionCache) {
+    factionCache = new Map();
+    TANK_SURFACE_TEXTURE_CACHE.set(THREE, factionCache);
+  }
+  const faction = isRed ? 'red' : 'blue';
+  if (factionCache.has(faction)) return factionCache.get(faction);
+  let seed = (isRed ? 0xBA571510 : 0x5E471E11) >>> 0;
+  const random = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const makeTexture = (name, paint, srgb = false) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const context = canvas.getContext('2d');
+    if (!context) return null;
+    paint(context);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.name = name;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = 3;
+    if (srgb && THREE.SRGBColorSpace) texture.colorSpace = THREE.SRGBColorSpace;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.needsUpdate = true;
+    return texture;
+  };
+  const armorMap = makeTexture(faction + '-armour-fieldwear-albedo', ctx => {
+    ctx.fillStyle = '#ededed';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 74; i++) {
+      const x = random() * 256, y = random() * 256;
+      ctx.globalAlpha = .035 + random() * .085;
+      ctx.fillStyle = random() > .5 ? '#68665e' : '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(x, y, 3 + random() * 16, 2 + random() * 8, random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let i = 0; i < 168; i++) {
+      const x = random() * 256, y = random() * 256;
+      ctx.globalAlpha = .12 + random() * .2;
+      ctx.strokeStyle = random() > .48 ? '#484b48' : '#ffffff';
+      ctx.lineWidth = .35 + random() * 1.1;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (random() - .5) * 24, y + (random() - .5) * 5);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = .10;
+    ctx.strokeStyle = '#343a38';
+    ctx.lineWidth = .8;
+    for (let y = 28; y < 256; y += 64) {
+      for (let x = 0; x < 256; x += 64) {
+        if (random() < .24) continue;
+        ctx.beginPath();
+        ctx.moveTo(x + 5 + random() * 12, y);
+        ctx.lineTo(x + 38 + random() * 20, y + (random() - .5) * 2);
+        ctx.stroke();
+      }
+    }
+    for (let i = 0; i < 90; i++) {
+      ctx.globalAlpha = .12 + random() * .18;
+      ctx.fillStyle = random() > .5 ? '#424642' : '#ffffff';
+      ctx.fillRect(random() * 256, random() * 256, .7 + random() * 1.5, .7 + random() * 1.2);
+    }
+    ctx.globalAlpha = 1;
+  }, true);
+  const metalMap = makeTexture(faction + '-machined-steel-albedo', ctx => {
+    ctx.fillStyle = '#eeeeee';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 230; i++) {
+      const y = random() * 256;
+      ctx.globalAlpha = .07 + random() * .15;
+      ctx.strokeStyle = random() > .5 ? '#555a58' : '#ffffff';
+      ctx.lineWidth = .3 + random() * .9;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y + (random() - .5) * 4);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }, true);
+  const roughnessMap = makeTexture(faction + '-armour-roughness', ctx => {
+    ctx.fillStyle = '#d8d8d8';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 5600; i++) {
+      const value = Math.round(150 + random() * 92);
+      ctx.fillStyle = 'rgb(' + value + ',' + value + ',' + value + ')';
+      ctx.fillRect(random() * 256, random() * 256, .8 + random() * 1.5, .8 + random() * 1.5);
+    }
+  });
+  const armorBump = makeTexture(faction + '-armour-micro-relief', ctx => {
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 230; i++) {
+      const x = random() * 256, y = random() * 256;
+      ctx.globalAlpha = .2 + random() * .24;
+      ctx.strokeStyle = random() > .5 ? '#c1c1c1' : '#4d4d4d';
+      ctx.lineWidth = .4 + random() * .9;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (random() - .5) * 18, y + (random() - .5) * 4);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = .13;
+    ctx.strokeStyle = '#555555';
+    for (let y = 24; y < 256; y += 48) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y + 1);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+  const metalBump = makeTexture(faction + '-steel-brush-relief', ctx => {
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.globalAlpha = .2;
+    ctx.strokeStyle = '#bcbcbc';
+    ctx.lineWidth = .6;
+    for (let y = 0; y < 256; y += 3) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y + 1);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+  const rubberBump = makeTexture(faction + '-track-rubber-relief', ctx => {
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let x = -256; x < 512; x += 12) {
+      ctx.globalAlpha = .24;
+      ctx.strokeStyle = x % 24 === 0 ? '#b8b8b8' : '#4f4f4f';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + 256, 256);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  });
+  const maps = { armorMap, metalMap, roughnessMap, armorBump, metalBump, rubberBump };
+  factionCache.set(faction, maps);
+  return maps;
+};
+
 export function createTank(THREE, options={}) {
-  const { team='blue', variant='main-battle-tank', scale=1 } = options;
+  const { team='blue', variant='main-battle-tank', scale=1, qaTrackCompare=false } = options;
   const isRed = team === 'red';
   const isHeavy = variant === 'heavy';
   const factionProfile = isRed ? 'RED_BASTION' : 'BLUE_SENTINEL';
@@ -95,6 +343,28 @@ export function createTank(THREE, options={}) {
   const optics = mat(THREE, isRed ? 0xf0a45e : 0x83d9ed, .2, .7);
   const rubber = mat(THREE, 0x1d2527, .96, .02);
   const heavyArmor = mat(THREE, isRed ? 0x897463 : 0x87908a, .66, .32);
+  const surfaceMaps = createTankSurfaceTextures(THREE, isRed);
+  const bindTankSurface = (material, map, bumpMap, bumpScale) => {
+    if (!surfaceMaps) return;
+    const binding = {
+      map: map || null,
+      roughnessMap: surfaceMaps.roughnessMap || null,
+      bumpMap: bumpMap || null,
+      bumpScale
+    };
+    material.userData.tankSurfaceMaps = binding;
+    Object.assign(material, binding);
+    material.needsUpdate = true;
+  };
+  if (surfaceMaps) {
+    bindTankSurface(hull, surfaceMaps.armorMap, surfaceMaps.armorBump, .014);
+    bindTankSurface(armor, surfaceMaps.armorMap, surfaceMaps.armorBump, .012);
+    bindTankSurface(heavyArmor, surfaceMaps.armorMap, surfaceMaps.armorBump, .014);
+    bindTankSurface(metal, surfaceMaps.metalMap, surfaceMaps.metalBump, .008);
+    bindTankSurface(edge, surfaceMaps.metalMap, surfaceMaps.metalBump, .006);
+    bindTankSurface(rubber, null, surfaceMaps.rubberBump, .006);
+  }
+  const surfaceMaterials = [hull, armor, heavyArmor, metal, edge, rubber];
 
   const addInstances=(parent,name,geometry,material,transforms)=>{
     const mesh=new THREE.InstancedMesh(geometry,material,transforms.length);
@@ -153,11 +423,44 @@ export function createTank(THREE, options={}) {
   sphere(THREE,g,'gunner-optic',.075,[.36,1.18,.28],optics,[1,.55,.7]);
   cylinder(THREE,g,'radio-antenna',.018,.018,.72,[-.86,1.42,-.35],dark,6);
 
-  // Track belts, road wheels, hubs and tread shoes are batched by part type.
+  // Continuous rounded track loops wrap both idlers and the complete road-wheel run.
+  // Tread plates and raised grousers follow the same closed path. The old straight
+  // belt remains available only to the exact-head browser A/B probe.
+  const trackGeometrySet = createTankTrackGeometrySet(THREE);
+  const trackPathPoints = trackGeometrySet.samples.map(sample => sample.outer);
+  const trackPathLengths = trackPathPoints.map((point, index) => {
+    const next = trackPathPoints[(index + 1) % trackPathPoints.length];
+    return Math.hypot(next[0] - point[0], next[1] - point[1]);
+  });
+  const trackPathLength = trackPathLengths.reduce((sum, length) => sum + length, 0);
+  const buildTrackTransforms = (side, count, radialOffset) => {
+    const transforms = [];
+    for (let k = 0; k < count; k++) {
+      let remaining = trackPathLength * k / count;
+      let segment = 0;
+      while (segment < trackPathLengths.length - 1 && remaining > trackPathLengths[segment]) {
+        remaining -= trackPathLengths[segment];
+        segment++;
+      }
+      const next = (segment + 1) % trackPathPoints.length;
+      const length = trackPathLengths[segment] || 1;
+      const t = Math.max(0, Math.min(1, remaining / length));
+      const a = trackPathPoints[segment], b = trackPathPoints[next];
+      const x = a[0] + (b[0] - a[0]) * t;
+      const y = a[1] + (b[1] - a[1]) * t;
+      const dx = b[0] - a[0], dy = b[1] - a[1];
+      const nx = -dy / length, ny = dx / length;
+      transforms.push({
+        position:[x + nx * radialOffset, .38 + y + ny * radialOffset, side * .80],
+        rotation:[0,0,Math.atan2(dy,dx)]
+      });
+    }
+    return transforms;
+  };
   const beltTransforms=[],wheelTransforms=[],hubTransforms=[],capTransforms=[];
-  const shoeTransforms=[],boltTransforms=[];
+  const trackShoeTransforms=[],trackGrouserTransforms=[],baselineTrackShoeTransforms=[],boltTransforms=[];
   for(const side of [-1,1]){
-    beltTransforms.push({position:[0,.39,side*.79]});
+    beltTransforms.push({position:[0,.38,side*.79]});
     for(let i=0;i<6;i++){
       const x=-.98+i*.39;
       wheelTransforms.push({position:[x,.38,side*.84],rotation:[Math.PI/2,0,0]});
@@ -171,17 +474,52 @@ export function createTank(THREE, options={}) {
         });
       }
     }
-    for(let i=0;i<18;i++) shoeTransforms.push({
+    trackShoeTransforms.push(...buildTrackTransforms(side,28,.02));
+    trackGrouserTransforms.push(...buildTrackTransforms(side,28,.058));
+    if(qaTrackCompare) for(let i=0;i<18;i++) baselineTrackShoeTransforms.push({
       position:[-1.18+i*.139,.39,side*.925],
       rotation:[0,0,(i%2===0?-.025:.025)]
     });
   }
-  addInstances(g,'track-belts-instanced',new THREE.BoxGeometry(2.68,.48,.22),rubber,beltTransforms);
+  const trackBeltMesh=addInstances(g,'track-belts-instanced',trackGeometrySet.loopGeometry,rubber,beltTransforms);
   addInstances(g,'road-wheels-instanced',new THREE.CylinderGeometry(.19,.19,.13,16),metal,wheelTransforms);
   addInstances(g,'wheel-hubs-instanced',new THREE.CylinderGeometry(.085,.085,.145,12),dark,hubTransforms);
   addInstances(g,'wheel-hub-caps-instanced',new THREE.CylinderGeometry(.045,.045,.155,10),edge,capTransforms);
-  addInstances(g,'track-shoe-instanced',new THREE.BoxGeometry(.105,.29,.035),mat(THREE,0x56605d,.88,.28),shoeTransforms);
+  const trackShoeMesh=addInstances(g,'track-shoe-instanced',trackGeometrySet.shoeGeometry,mat(THREE,0x56605d,.82,.34),trackShoeTransforms);
+  const trackGrouserMesh=addInstances(g,'track-grouser-instanced',trackGeometrySet.grouserGeometry,metal,trackGrouserTransforms);
   addInstances(g,'wheel-bolts-instanced',new THREE.CylinderGeometry(.018,.018,.026,6),mat(THREE,0xc1c6bd,.42,.72),boltTransforms);
+
+  const qaTrackGeometrySet=qaTrackCompare?createTankTrackQaGeometrySet(THREE):null;
+  const applyTrackTransforms=(mesh,transforms)=>{
+    mesh.count=transforms.length;
+    const dummy=new THREE.Object3D();
+    transforms.forEach((item,index)=>{
+      dummy.position.set(...(item.position||[0,0,0]));
+      dummy.rotation.set(...(item.rotation||[0,0,0]));
+      dummy.scale.set(...(item.scale||[1,1,1]));
+      dummy.updateMatrix();
+      mesh.setMatrixAt(index,dummy.matrix);
+    });
+    mesh.instanceMatrix.needsUpdate=true;
+    mesh.computeBoundingSphere();
+  };
+  const trackRig=qaTrackCompare?{
+    set(enabled){
+      const active=!!enabled;
+      trackBeltMesh.geometry=active?trackGeometrySet.loopGeometry:qaTrackGeometrySet.belt;
+      trackBeltMesh.computeBoundingSphere();
+      trackShoeMesh.geometry=active?trackGeometrySet.shoeGeometry:qaTrackGeometrySet.shoe;
+      applyTrackTransforms(trackShoeMesh,active?trackShoeTransforms:baselineTrackShoeTransforms);
+      trackGrouserMesh.visible=active;
+      trackGrouserMesh.count=active?trackGrouserTransforms.length:0;
+      if(active) applyTrackTransforms(trackGrouserMesh,trackGrouserTransforms);
+      else trackGrouserMesh.computeBoundingSphere();
+      g.userData.trackLoopEnabled=active;
+      g.userData.activeTrackShoeCount=trackShoeMesh.count;
+      g.userData.activeTrackGrouserCount=trackGrouserMesh.count;
+      return {enabled:active,trackShoeCount:trackShoeMesh.count,trackGrouserCount:trackGrouserMesh.count};
+    }
+  }:null;
 
   // The two factions have distinct turret silhouettes, not just different paint.
   const turret=new THREE.Group();
@@ -248,7 +586,23 @@ export function createTank(THREE, options={}) {
 
   g.userData={
     kind:'vehicle',unitType:variant,team,turret,factionProfile,
-    trackShoeInstances:shoeTransforms.length,
+    surfaceFinish:surfaceMaps?'SENTINEL_BASTION_ARMOR_FIELDWEAR_V1':'UNTEXTURED_FALLBACK',
+    surfaceTextureCount:Object.values(surfaceMaps||{}).filter(Boolean).length,
+    surfaceMaterialCount:surfaceMaterials.filter(material=>material.map||material.roughnessMap||material.bumpMap).length,
+    surfaceTextureResolution:surfaceMaps?256:0,
+    surfaceMapsEnabled:!!surfaceMaps,
+    surfaceTextureNames:Object.values(surfaceMaps||{}).filter(Boolean).map(texture=>texture.name),
+    surfaceMaterialRefs:surfaceMaterials,
+    trackLoopProfile:trackGeometrySet.profile,
+    trackLoopSegments:trackGeometrySet.segments,
+    trackLoopWidth:trackGeometrySet.width,
+    trackLoopHeight:trackGeometrySet.height,
+    trackLoopEnabled:true,
+    trackShoeInstances:trackShoeTransforms.length,
+    trackGrouserInstances:trackGrouserTransforms.length,
+    activeTrackShoeCount:trackShoeTransforms.length,
+    activeTrackGrouserCount:trackGrouserTransforms.length,
+    trackRig,
     wheelBoltInstances:boltTransforms.length,
     detailInstances:{
       engineGrilles:grilleTransforms.length,
@@ -258,6 +612,7 @@ export function createTank(THREE, options={}) {
       wheelHubs:hubTransforms.length,
       wheelHubCaps:capTransforms.length,
       smokeDischargers:smokeTransforms.length,
+      trackGrousers:trackGrouserTransforms.length,
       faction: factionDetailCounts
     }
   };
