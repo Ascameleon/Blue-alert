@@ -90,6 +90,16 @@ try {
   await page.waitForFunction(()=>typeof window.__BLUE_ALERTS_PREVIEW__==='function' && window.__BLUE_ALERTS_PREVIEW__().drawCalls>0,null,{timeout:30000});
   const initial=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
   assert.equal(initial.asset,'tank');
+  const timingStart = initial.previewElapsedSeconds;
+  await page.waitForTimeout(500);
+  const timingAfter = await page.evaluate(() => window.__BLUE_ALERTS_PREVIEW__());
+  const measuredPreviewSeconds = timingAfter.previewElapsedSeconds - timingStart;
+  assert.ok(Number.isFinite(measuredPreviewSeconds) && measuredPreviewSeconds >= 0.15 && measuredPreviewSeconds <= 1.5,
+    'preview animation clock must advance with real elapsed time across refresh rates: ' + measuredPreviewSeconds);
+  assert.ok(timingAfter.previewLastDeltaSeconds > 0 && timingAfter.previewLastDeltaSeconds <= 0.05,
+    'preview frame delta must be positive and capped at 50ms');
+  assert.ok(timingAfter.previewFrameCount > initial.previewFrameCount,
+    'preview animation loop must continue rendering frames');
   assert.ok(initial.meshCount>=30 && initial.meshCount<=45 && initial.triangleCount>0,'detailed faction tank must batch repeated geometry into a compact mesh set');
   assert.ok(initial.drawCalls<=60,'one tank preview must stay within the instanced draw-call budget');
   assert.ok(initial.environment,'procedural reflection environment must be assigned');
