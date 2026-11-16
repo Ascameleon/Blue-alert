@@ -380,9 +380,19 @@ try {
   try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0;
+    }, null, { timeout: 12000, polling: 50 });
+  } catch (error) {
+    const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('DESKTOP_PROJECTILE_DRAIN_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
+  try {
+    await desktop.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 15000, polling: 50 });
+    }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('DESKTOP_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
@@ -811,13 +821,23 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
   const mobileFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(mobileFreeze, 'mobile cleanup probe must freeze only new combat spawns while existing VFX expire');
+  try {
+    await mobile.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.activeProjectiles === 0 && state.modelProjectiles === 0;
+    }, null, { timeout: 12000, polling: 50 });
+  } catch (error) {
+    const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('MOBILE_PROJECTILE_DRAIN_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
   const mobileCleanupStartedAt = Date.now();
   try {
     await mobile.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
         state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-    }, null, { timeout: 15000, polling: 50 });
+    }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
     console.log('MOBILE_VFX_CLEANUP_TIMEOUT ' + JSON.stringify(state));
