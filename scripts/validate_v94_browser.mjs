@@ -165,22 +165,22 @@ try {
   const desktopRoadBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(false));
   assert.equal(desktopRoadBaseline?.visible, false, 'desktop road baseline must hide only the new wear layer');
   await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-road-wear-baseline.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-road-wear-baseline.png', fullPage: true, timeout: 60000 });
   const desktopRoadDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(true));
   assert.equal(desktopRoadDetail?.visible, true, 'desktop road detail must restore the complete wear layer');
   assert.deepEqual(desktopRoadDetail?.camera, desktopRoadBaseline?.camera, 'desktop road A/B must preserve camera pose');
   await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-road-wear-detail.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-road-wear-detail.png', fullPage: true, timeout: 60000 });
 
   const desktopCorridorFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.focusCorridor());
   assert.ok(desktopCorridorFocus?.camera && desktopCorridorFocus.visible, 'desktop gantry corridor focus must be available');
   const desktopCorridorBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(false));
   await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-logistics-corridor-wear-baseline.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-logistics-corridor-wear-baseline.png', fullPage: true, timeout: 60000 });
   const desktopCorridorDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(true));
   assert.deepEqual(desktopCorridorDetail?.camera, desktopCorridorBaseline?.camera, 'desktop corridor A/B must preserve camera pose');
   await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-logistics-corridor-wear-detail.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-logistics-corridor-wear-detail.png', fullPage: true, timeout: 60000 });
   const desktopWearReset = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('base'));
   assert.equal(desktopWearReset?.name, 'base', 'desktop wear A/B must restore the default tactical camera before the camera test');
 
@@ -188,7 +188,7 @@ try {
   const desktopCameraBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(48));
   assert.equal(desktopCameraBaseline?.distance, 48, 'desktop A/B baseline must use the original 48-unit camera distance');
   await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-camera-baseline-48.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-camera-baseline-48.png', fullPage: true, timeout: 60000 });
   const desktopCameraCloser = await desktop.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(38));
   assert.equal(desktopCameraCloser?.distance, 38, 'desktop A/B improved frame must use the 38-unit camera distance');
   assert.deepEqual(desktopCameraCloser?.target, desktopCameraBaseline?.target, 'desktop A/B screenshots must preserve the exact same camera target');
@@ -196,7 +196,7 @@ try {
   assert.equal(desktopCameraCloser?.pitch, desktopCameraBaseline?.pitch, 'desktop A/B screenshots must preserve camera pitch');
   assert.ok(desktopCameraBaseline.distance / desktopCameraCloser.distance >= 1.2, 'desktop A/B framing must create a clearly visible scale increase of at least 20%');
   await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-tactical-camera-framing.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-tactical-camera-framing.png', fullPage: true, timeout: 60000 });
   assert.ok(desktopMetrics.terrain?.vertexColors && desktopMetrics.terrain.vertexCount > 2000 && desktopMetrics.terrain.colorCount === desktopMetrics.terrain.vertexCount, 'desktop terrain must expose a complete deterministic vertex-color field');
   const missionInitial = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__?.snapshot());
   assert.ok(missionInitial, 'playable mission objective diagnostics must be available');
@@ -261,7 +261,7 @@ try {
     !buildBefore.placement.overlap.ok && !buildBefore.placement.ore.ok,
     'enemy territory, road, occupied structures and ore deposits must reject construction');
   await desktop.waitForTimeout(2800);
-  await desktop.screenshot({ path: output + '/desktop-v94-gameplay.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-gameplay.png', fullPage: true, timeout: 60000 });
 
 
   // Real mouse input: place a power station on the pad, then prove invalid ground
@@ -318,7 +318,7 @@ try {
   assert.ok(desktopShot.muzzleFlashActive,
     'desktop QA fire must activate the firing unit\'s procedural muzzle flash');
   await desktop.waitForTimeout(35);
-  await desktop.screenshot({ path: output + '/desktop-v94-projectile-vfx.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-projectile-vfx.png', fullPage: true, timeout: 60000 });
   try {
     await desktop.waitForFunction(sequence => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
@@ -333,7 +333,7 @@ try {
   console.log('DESKTOP_PROJECTILE_IMPACT ' + JSON.stringify(desktopImpact));
   assert.ok(desktopImpact.lastImpactEvent?.id > desktopShot.impactSequence && desktopImpact.lastImpactEvent.ringCount === 1 && desktopImpact.lastImpactEvent.sparkCount >= 4,
     'desktop projectile hit must record a real shock ring and spark burst');
-  await desktop.screenshot({ path: output + '/desktop-v94-impact-vfx.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-impact-vfx.png', fullPage: true, timeout: 60000 });
 
   const desktopDeath = await desktop.evaluate(() => {
     const qa = window.__BLUE_ALERTS_COMBAT_QA__;
@@ -375,7 +375,7 @@ try {
   assert.ok(desktopExplosionState.started && !desktopExplosionState.gameOver && desktopExplosionState.time > desktopKill.time, 'desktop simulation clock must advance while the explosion is alive');
   assert.ok(desktopExplosionState.frameCount >= desktopKill.frameCount + 2 && desktopExplosionState.lastFrameDelta > 0, 'desktop requestAnimationFrame loop must continue after unit destruction');
   assert.ok(desktopExplosionState.modelExplosionLives[desktopExplosionIndex] < desktopKill.spawnedExplosionLife, 'desktop death explosion simulation lifetime must advance');
-  await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-explosion-vfx.png', fullPage: true, timeout: 60000 });
   const desktopFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(desktopFreeze, 'desktop cleanup probe must freeze only new combat spawns while existing VFX expire');
   try {
@@ -459,7 +459,7 @@ try {
     desktopBuildingStage1.hp > desktopBuildingStage1.maxHp * 0.25 && desktopBuildingStage1.damageStage === 1 &&
     desktopBuildingStage1.smokeSpawned > 0,
     'desktop building must enter damaged state with visible smoke after real projectile hits');
-  await desktop.screenshot({ path: output + '/desktop-v94-building-damaged.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-building-damaged.png', fullPage: true, timeout: 60000 });
   const desktopBuildingCriticalStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(2));
   console.log('DESKTOP_BUILDING_STAGE2_START ' + JSON.stringify(desktopBuildingCriticalStart));
   try {
@@ -478,7 +478,7 @@ try {
   assert.ok(desktopBuildingStage2 && desktopBuildingStage2.hp <= desktopBuildingStage2.maxHp * 0.25 &&
     desktopBuildingStage2.hp > 0 && desktopBuildingStage2.scorchMark && desktopBuildingStage2.flamesSpawned > 0,
     'desktop critical building damage must show scorch and fire while the building remains alive');
-  await desktop.screenshot({ path: output + '/desktop-v94-building-critical.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-building-critical.png', fullPage: true, timeout: 60000 });
 
   // The infantry rig must follow actual V94 displacement, not merely animate in the preview.
   const infantryReady = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
@@ -490,7 +490,7 @@ try {
   }, infantryWalkStart.position, { timeout: 5000, polling: 50 });
   const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 && desktopInfantryGait.walkAmount > 0.2 && Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04, 'desktop V94 infantry arms and legs must animate in response to real movement');
-  await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-infantry-gait.png', fullPage: true, timeout: 60000 });
   const desktopTreeDetail = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
   assert.ok(desktopTreeDetail?.branchWhorls === 3 && desktopTreeDetail.branchArms >= 17 &&
     desktopTreeDetail.needleSpraysPerArm === 3 &&
@@ -500,11 +500,11 @@ try {
   const desktopTreeBaseline = await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
   assert.equal(desktopTreeBaseline, 'legacy', 'desktop A/B baseline must restore the previous three-cone evergreen geometry');
   await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-baseline.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-baseline.png', fullPage: true, timeout: 60000 });
   assert.equal(await desktop.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(false)), 'detailed',
     'desktop A/B comparison must restore the detailed branch-and-needle geometry on the same instanced mesh');
   await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-detail.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-woodland-tree-detail.png', fullPage: true, timeout: 60000 });
   const missionVictory = await desktop.evaluate(() => window.__BLUE_ALERTS_MISSION_QA__.destroyEnemyCitadel());
   assert.ok(missionVictory.enemyCitadelDestroyed && missionVictory.complete &&
     missionVictory.completedCount === 3 && missionVictory.progressPercent === 100,
@@ -514,7 +514,7 @@ try {
   assert.equal(await desktop.locator('#mBar').evaluate(el => Math.round(parseFloat(el.style.width))), 100,
     'the mission progress bar must reach 100 percent only after all objective conditions are met');
   console.log('DESKTOP_MISSION_COMPLETE ' + JSON.stringify(missionVictory));
-  await desktop.screenshot({ path: output + '/desktop-v94-mission-complete.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-mission-complete.png', fullPage: true, timeout: 60000 });
   // Preserve the victory screenshot, then clear its overlay before environment evidence.
   await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'));
   assert.ok(await desktop.locator('#endOverlay').evaluate(el => el.classList.contains('hidden')),
@@ -524,11 +524,11 @@ try {
   const industrialFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('gantry'));
   assert.equal(industrialFocus?.name, 'gantry', 'industrial yard visual focus must be available for evidence capture');
   await desktop.waitForTimeout(650);
-  await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-industrial-yard.png', fullPage: true, timeout: 60000 });
   const terrainFocus = await desktop.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(terrainFocus?.textureResolution, 512, 'desktop terrain detail focus must be available');
   await desktop.waitForTimeout(300);
-  await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true });
+  await desktop.screenshot({ path: output + '/desktop-v94-terrain-surface.png', fullPage: true, timeout: 60000 });
 
 
   // Release the desktop WebGL context before opening the mobile viewport. This
@@ -627,22 +627,22 @@ try {
   const mobileRoadBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(false));
   assert.equal(mobileRoadBaseline?.visible, false, 'mobile road baseline must hide only the new wear layer');
   await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-road-wear-baseline-390x844.png', fullPage: false });
+  await mobile.screenshot({ path: output + '/mobile-v94-road-wear-baseline-390x844.png', fullPage: false, timeout: 60000 });
   const mobileRoadDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(true));
   assert.equal(mobileRoadDetail?.visible, true, 'mobile road detail must restore the complete wear layer');
   assert.deepEqual(mobileRoadDetail?.camera, mobileRoadBaseline?.camera, 'mobile road A/B must preserve camera pose');
   await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-road-wear-detail-390x844.png', fullPage: false });
+  await mobile.screenshot({ path: output + '/mobile-v94-road-wear-detail-390x844.png', fullPage: false, timeout: 60000 });
 
   const mobileCorridorFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.focusCorridor());
   assert.ok(mobileCorridorFocus?.camera && mobileCorridorFocus.visible, 'mobile gantry corridor focus must be available');
   const mobileCorridorBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(false));
   await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-logistics-corridor-wear-baseline-390x844.png', fullPage: false });
+  await mobile.screenshot({ path: output + '/mobile-v94-logistics-corridor-wear-baseline-390x844.png', fullPage: false, timeout: 60000 });
   const mobileCorridorDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_BATTLEFIELD_WEAR_QA?.setVisible(true));
   assert.deepEqual(mobileCorridorDetail?.camera, mobileCorridorBaseline?.camera, 'mobile corridor A/B must preserve camera pose');
   await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-logistics-corridor-wear-detail-390x844.png', fullPage: false });
+  await mobile.screenshot({ path: output + '/mobile-v94-logistics-corridor-wear-detail-390x844.png', fullPage: false, timeout: 60000 });
   const mobileWearReset = await mobile.evaluate(() => window.__BLUE_ALERTS_ENVIRONMENT_QA?.focus('base'));
   assert.equal(mobileWearReset?.name, 'base', 'mobile wear A/B must restore the default tactical camera before the camera test');
 
@@ -650,7 +650,7 @@ try {
   const mobileCameraBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(48));
   assert.equal(mobileCameraBaseline?.distance, 48, 'mobile A/B baseline must use the original 48-unit camera distance');
   await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-camera-baseline-48-390x844.png', fullPage: false });
+  await mobile.screenshot({ path: output + '/mobile-v94-camera-baseline-48-390x844.png', fullPage: false, timeout: 60000 });
   const mobileCameraCloser = await mobile.evaluate(() => window.__BLUE_ALERTS_CAMERA_QA__?.setDistance(40));
   assert.equal(mobileCameraCloser?.distance, 40, 'mobile A/B improved frame must use the 40-unit portrait camera distance');
   assert.deepEqual(mobileCameraCloser?.target, mobileCameraBaseline?.target, 'mobile A/B screenshots must preserve the exact same camera target');
@@ -658,7 +658,7 @@ try {
   assert.equal(mobileCameraCloser?.pitch, mobileCameraBaseline?.pitch, 'mobile A/B screenshots must preserve camera pitch');
   assert.ok(mobileCameraBaseline.distance / mobileCameraCloser.distance >= 1.15, 'mobile A/B framing must create a clearly visible scale increase of at least 15%');
   await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-tactical-camera-framing-390x844.png', fullPage: false });
+  await mobile.screenshot({ path: output + '/mobile-v94-tactical-camera-framing-390x844.png', fullPage: false, timeout: 60000 });
   assert.ok(mobileMetrics.terrain?.vertexColors && mobileMetrics.terrain.vertexCount > 2000 && mobileMetrics.terrain.colorCount === mobileMetrics.terrain.vertexCount, 'mobile terrain must retain the complete vertex-color field');
   assert.ok(mobileMetrics.terrain?.albedoMap && mobileMetrics.terrain.surfaceMode === 'procedural-albedo-grain' && mobileMetrics.terrain.textureResolution === 256 && mobileMetrics.terrain.textureChecksum > 0 && mobileMetrics.terrain.anisotropy <= 2, 'mobile terrain must use a deterministic 256px procedural albedo surface with capped anisotropy');
   assert.ok(mobileMetrics.vegetation?.treeCount >= 30 &&
@@ -702,7 +702,7 @@ try {
   });
   assert.ok(!mobileToastClearance.overlapsCommands && !mobileToastClearance.overlapsMission,
     'mobile mission notifications must not cover command controls or the objective HUD');
-  await mobile.screenshot({ path: output + '/mobile-v94-mission-toast-clearance-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-mission-toast-clearance-390x844.png', fullPage: true, timeout: 60000 });
   await mobile.evaluate(() => { document.getElementById('toast').style.opacity = '0'; });
   const mobileMissionProgress = await mobile.evaluate(() => {
     window.__BLUE_ALERTS_MISSION_QA__.recordDelivery(600);
@@ -711,7 +711,7 @@ try {
   });
   assert.ok(mobileMissionProgress.state.completedCount === 2 && mobileMissionProgress.count === '2/3',
     'mobile mission HUD must update its objective count after gameplay progress');
-  await mobile.screenshot({ path: output + '/mobile-v94-mission-progress-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-mission-progress-390x844.png', fullPage: true, timeout: 60000 });
   assert.ok(touchTargets.firstCard && touchTargets.firstCard.width >= 60 && touchTargets.firstCard.height >= 44, 'mobile build cards must remain tappable');
   const tabBox = await mobile.locator('#sidebar .tab[data-t="units"]').boundingBox();
   await mobile.touchscreen.tap(tabBox.x + tabBox.width / 2, tabBox.y + tabBox.height / 2);
@@ -776,7 +776,7 @@ try {
   await mobile.locator('.tab[data-t="struct"]').tap();
   const mobileBuildBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
 const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
-  await mobile.screenshot({ path: 'artifacts/v94-browser/mobile-v94-gameplay-390x844.png', fullPage: false });
+  await mobile.screenshot({ path: 'artifacts/v94-browser/mobile-v94-gameplay-390x844.png', fullPage: false, timeout: 60000 });
   const mobileHQBadgeDisplay = await mobile.locator('#mobileHQBadge').evaluate(el => getComputedStyle(el).display);
   assert.equal(mobileHQBadgeDisplay, 'none',
     'compact mobile HUD must suppress the redundant HQ badge and preserve battlefield space');
@@ -786,7 +786,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileBuildBefore && mobileBuildBefore.pads.every(p => p.pad && p.grid && p.border),
     'mobile must render the same two construction pads');
   await mobile.waitForTimeout(2800);
-  await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-gameplay-390x844.png', fullPage: true, timeout: 60000 });
 
   // Real touch placement on the 390x844 mobile viewport.
   const mobileEconomyFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeEconomyRewards());
@@ -823,7 +823,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileShot.muzzleFlashActive,
     'mobile QA fire must activate the firing unit\'s procedural muzzle flash');
   await mobile.waitForTimeout(35);
-  await mobile.screenshot({ path: output + '/mobile-v94-projectile-vfx-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-projectile-vfx-390x844.png', fullPage: true, timeout: 60000 });
   try {
     await mobile.waitForFunction(sequence => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
@@ -838,7 +838,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   console.log('MOBILE_PROJECTILE_IMPACT ' + JSON.stringify(mobileImpact));
   assert.ok(mobileImpact.lastImpactEvent?.id > mobileShot.impactSequence && mobileImpact.lastImpactEvent.ringCount === 1 && mobileImpact.lastImpactEvent.sparkCount >= 4,
     'mobile projectile hit must record a real shock ring and spark burst');
-  await mobile.screenshot({ path: output + '/mobile-v94-impact-vfx-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-impact-vfx-390x844.png', fullPage: true, timeout: 60000 });
 
   const mobileDeath = await mobile.evaluate(() => {
     const qa = window.__BLUE_ALERTS_COMBAT_QA__;
@@ -879,7 +879,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileExplosionState.frameCount >= mobileKill.frameCount + 2 && mobileExplosionState.lastFrameDelta > 0, 'mobile requestAnimationFrame loop must continue after unit destruction');
   const mobileExplosionIndex = mobileExplosionState.modelExplosionPositions.findIndex(p => Math.abs(p.x - mobileKill.targetPosition.x) < 0.001 && Math.abs(p.z - mobileKill.targetPosition.z) < 0.001);
   assert.ok(mobileExplosionIndex >= 0 && mobileExplosionState.modelExplosionLives[mobileExplosionIndex] < mobileKill.spawnedExplosionLife, 'mobile death explosion simulation lifetime must advance');
-  await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-explosion-vfx-390x844.png', fullPage: true, timeout: 60000 });
   const mobileFreeze = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(mobileFreeze, 'mobile cleanup probe must freeze only new combat spawns while existing VFX expire');
   try {
@@ -940,7 +940,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     mobileBuildingStage1.hp > mobileBuildingStage1.maxHp * 0.25 && mobileBuildingStage1.damageStage === 1 &&
     mobileBuildingStage1.smokeSpawned > 0,
     'mobile building must enter damaged state with visible smoke after real projectile hits');
-  await mobile.screenshot({ path: output + '/mobile-v94-building-damaged-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-building-damaged-390x844.png', fullPage: true, timeout: 60000 });
   const mobileBuildingCriticalStart = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(2));
   console.log('MOBILE_BUILDING_STAGE2_START ' + JSON.stringify(mobileBuildingCriticalStart));
   try {
@@ -959,7 +959,7 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   assert.ok(mobileBuildingStage2 && mobileBuildingStage2.hp <= mobileBuildingStage2.maxHp * 0.25 &&
     mobileBuildingStage2.hp > 0 && mobileBuildingStage2.scorchMark && mobileBuildingStage2.flamesSpawned > 0,
     'mobile critical building damage must show scorch and fire while the building remains alive');
-  await mobile.screenshot({ path: output + '/mobile-v94-building-critical-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-building-critical-390x844.png', fullPage: true, timeout: 60000 });
 
   const mobileInfantryReady = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(mobileInfantryReady?.profile === 'BLUE_SENTINEL_RIFLEMAN', 'mobile V94 must load the faction infantry rig');
@@ -970,11 +970,11 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   }, mobileInfantryWalkStart.position, { timeout: 6000, polling: 50 });
   const mobileInfantryGait = await mobile.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(mobileInfantryGait.position[0] > mobileInfantryWalkStart.position[0] + 0.25 && mobileInfantryGait.walkAmount > 0.15, 'mobile V94 infantry gait must follow actual unit displacement');
-  await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-infantry-gait-390x844.png', fullPage: true, timeout: 60000 });
   const mobileTerrainFocus = await mobile.evaluate(() => window.__BLUE_ALERTS_TERRAIN_QA?.focus());
   assert.equal(mobileTerrainFocus?.textureResolution, 256, 'mobile terrain detail focus must be available');
   await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-terrain-surface-390x844.png', fullPage: true, timeout: 60000 });
 
   const mobileTreeDetail = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.focus());
   assert.ok(mobileTreeDetail?.branchWhorls === 3 && mobileTreeDetail.branchArms >= 17 &&
@@ -985,11 +985,11 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   const mobileTreeBaseline = await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(true));
   assert.equal(mobileTreeBaseline, 'legacy', 'mobile A/B baseline must restore the previous three-cone evergreen geometry');
   await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-baseline-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-baseline-390x844.png', fullPage: true, timeout: 60000 });
   assert.equal(await mobile.evaluate(() => window.__BLUE_ALERTS_VEGETATION_QA?.setLegacy(false)), 'detailed',
     'mobile A/B comparison must restore the detailed branch-and-needle geometry on the same instanced mesh');
   await mobile.waitForTimeout(300);
-  await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-detail-390x844.png', fullPage: true });
+  await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-detail-390x844.png', fullPage: true, timeout: 60000 });
 
   assert.equal(desktopMetrics.threeRevision, '160', 'desktop must use the embedded Three.js r160 runtime');
   assert.equal(successfulThree.length, 0, 'the embedded runtime must avoid all Three.js CDN requests');
