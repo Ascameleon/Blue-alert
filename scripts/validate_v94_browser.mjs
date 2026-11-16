@@ -314,8 +314,9 @@ try {
   });
   assert.equal(desktopShot.modelProjectiles, desktopShot.baseline.modelProjectiles + 1,
     'desktop QA fire must add exactly one procedural projectile to the live simulation');
-  assert.equal(desktopShot.modelMuzzleFlashes, desktopShot.baseline.modelMuzzleFlashes + 1,
-    'desktop QA fire must add one procedural muzzle flash to the live simulation');
+  // Attached tank flashes are reused, so active-flash count is not a monotonic event counter.
+  assert.ok(desktopShot.muzzleFlashActive,
+    'desktop QA fire must activate the firing unit\'s procedural muzzle flash');
   await desktop.waitForTimeout(35);
   await desktop.screenshot({ path: output + '/desktop-v94-projectile-vfx.png', fullPage: true });
   try {
@@ -759,8 +760,9 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   });
   assert.equal(mobileShot.modelProjectiles, mobileShot.baseline.modelProjectiles + 1,
     'mobile QA fire must add exactly one procedural projectile to the live simulation');
-  assert.equal(mobileShot.modelMuzzleFlashes, mobileShot.baseline.modelMuzzleFlashes + 1,
-    'mobile QA fire must add one procedural muzzle flash to the live simulation');
+  // Attached tank flashes are reused, so active-flash count is not a monotonic event counter.
+  assert.ok(mobileShot.muzzleFlashActive,
+    'mobile QA fire must activate the firing unit\'s procedural muzzle flash');
   await mobile.waitForTimeout(35);
   await mobile.screenshot({ path: output + '/mobile-v94-projectile-vfx-390x844.png', fullPage: true });
   try {
