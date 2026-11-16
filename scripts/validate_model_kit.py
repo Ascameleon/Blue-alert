@@ -56,6 +56,14 @@ def main():
         "previewElapsedSeconds += delta;",
         "previewLastDeltaSeconds = delta;",
         "updateInfantryAnimation(current.userData.animationRig, delta, 0.85);",
+        "animationElapsed:previewElapsedSeconds",
+        "animatedNodes",
+        "current?.userData?.kind === 'aircraft'",
+        "current?.userData?.kind === 'helicopter'",
+        "current?.userData?.kind === 'drone'",
+        "object.name === 'shockwave-ring'",
+        "object.name === 'explosion-spark'",
+        "object.name === 'flash-core' || object.name === 'flash-flare' || object.name === 'flash-ray'",
     )
     missing = [feature for feature in required_preview_timing if feature not in preview]
     if missing:
