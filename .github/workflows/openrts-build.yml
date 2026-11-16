@@ -79,6 +79,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Validate GitHub Pages bundle with offline runtime assets
+        run: |
+          bash scripts/prepare-pages-site.sh pages-site
+          node -e "const THREE = require('./pages-site/public/vendor/three.min.js'); if (THREE.REVISION !== '160') throw new Error('Expected Three.js r160, got ' + THREE.REVISION)"
+      - name: Upload validated GitHub Pages bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: blue-alerts-pages-bundle
+          path: pages-site/
+          if-no-files-found: error
+          retention-days: 14
       - name: Install Playwright Chromium
         run: |
           npm install --no-save --no-package-lock playwright
