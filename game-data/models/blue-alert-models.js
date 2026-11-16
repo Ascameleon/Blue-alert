@@ -19,6 +19,98 @@ const mat = (THREE, color, roughness=0.82, metalness=0.12) =>
     reflectivity: 0.62,
     envMapIntensity: metalness > 0.35 ? 1.25 : 0.8
   });
+
+
+const BUILDING_SURFACE_TEXTURE_CACHE = new WeakMap();
+const createBuildingSurfaceTextures = THREE => {
+  if (typeof document === 'undefined') return null;
+  const resolution = typeof window !== 'undefined' && window.innerWidth < 700 ? 256 : 512;
+  let resolutionCache = BUILDING_SURFACE_TEXTURE_CACHE.get(THREE);
+  if (!resolutionCache) {
+    resolutionCache = new Map();
+    BUILDING_SURFACE_TEXTURE_CACHE.set(THREE, resolutionCache);
+  }
+  const cached = resolutionCache.get(resolution);
+  if (cached) return cached;
+  let seed = 0xB17D1A5;
+  const random = () => { seed = (Math.imul(seed,1664525)+1013904223)>>>0; return seed/4294967296; };
+  const makeTexture = (name,paint,colorMap=false,repeat=1.2) => {
+    const canvas=document.createElement('canvas'); canvas.width=canvas.height=resolution;
+    const context=canvas.getContext('2d'); if(!context) return null;
+    paint(context,resolution,random);
+    const texture=new THREE.CanvasTexture(canvas); texture.name=name;
+    texture.wrapS=texture.wrapT=THREE.RepeatWrapping; texture.repeat.set(repeat,repeat);
+    texture.anisotropy=2;
+    if(colorMap&&THREE.SRGBColorSpace) texture.colorSpace=THREE.SRGBColorSpace;
+    texture.generateMipmaps=true; texture.minFilter=THREE.LinearMipmapLinearFilter;
+    texture.magFilter=THREE.LinearFilter; texture.needsUpdate=true; return texture;
+  };
+  const concreteMap=makeTexture('blue-alert-hq-cast-concrete-albedo',(ctx,size,rand)=>{
+    ctx.fillStyle='#e4e3dc';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<1900;i++){const v=Math.round(176+rand()*78);ctx.globalAlpha=.07+rand()*.16;ctx.fillStyle='rgb('+v+','+v+','+Math.max(0,v-3)+')';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,.55+rand()*3.2,.45+rand()*2.5,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<150;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.12+rand()*.20;ctx.fillStyle=rand()>.5?'#b7b9b0':'#f8f8f1';ctx.beginPath();ctx.ellipse(x,y,2+rand()*7,1.5+rand()*5,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    for(let i=0;i<110;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.10+rand()*.15;ctx.strokeStyle=rand()>.5?'#666a64':'#ffffff';ctx.lineWidth=.45+rand()*.9;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*34,y+(rand()-.5)*7);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },true,1.15);
+  const concreteBumpMap=makeTexture('blue-alert-hq-cast-concrete-pore-relief',(ctx,size,rand)=>{
+    ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<4200;i++){const v=Math.round(64+rand()*128);ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.globalAlpha=.30+rand()*.48;ctx.fillRect(rand()*size,rand()*size,.65+rand()*2.7,.6+rand()*2.2);}
+    for(let i=0;i<150;i++){ctx.globalAlpha=.25+rand()*.22;ctx.strokeStyle=rand()>.5?'#c4c4c4':'#414141';ctx.lineWidth=.5+rand()*1.1;const x=rand()*size,y=rand()*size;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*22,y+(rand()-.5)*4);ctx.stroke();}
+    for(let i=0;i<90;i++){const v=Math.round(88+rand()*92);ctx.globalAlpha=.18+rand()*.24;ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,1.4+rand()*4.5,.9+rand()*3.2,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;
+  },false,1.15);
+  const paintMap=makeTexture('blue-alert-hq-painted-armor-wear',(ctx,size,rand)=>{
+    ctx.fillStyle='#eeeeee';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<125;i++){const x=rand()*size,y=rand()*size;ctx.globalAlpha=.24+rand()*.34;ctx.strokeStyle=rand()>.5?'#606762':'#ffffff';ctx.lineWidth=.55+rand()*1.35;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*28,y+(rand()-.5)*5);ctx.stroke();}
+    for(let i=0;i<72;i++){ctx.globalAlpha=.22+rand()*.32;ctx.fillStyle=rand()>.5?'#656d66':'#ffffff';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,.9+rand()*3.8,.65+rand()*2.3,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;
+  },true,1.25);
+  const paintBumpMap=makeTexture('blue-alert-hq-painted-armor-microrelief',(ctx,size,rand)=>{
+    ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<180;i++){ctx.globalAlpha=.30+rand()*.35;ctx.strokeStyle=rand()>.5?'#c7c7c7':'#444444';ctx.lineWidth=.55+rand()*1.35;const x=rand()*size,y=rand()*size;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand()-.5)*22,y+(rand()-.5)*4);ctx.stroke();}
+    for(let i=0;i<70;i++){const v=rand()>.5?168:91;ctx.globalAlpha=.25+rand()*.3;ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.beginPath();ctx.ellipse(rand()*size,rand()*size,1+rand()*3,1+rand()*2,rand()*Math.PI,0,Math.PI*2);ctx.fill();}
+    ctx.globalAlpha=1;
+  },false,1.25);
+  const metalMap=makeTexture('blue-alert-hq-brushed-metal-albedo',(ctx,size,rand)=>{
+    ctx.fillStyle='#e8e8e8';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<420;i++){const y=rand()*size;ctx.globalAlpha=.12+rand()*.20;ctx.strokeStyle=rand()>.5?'#666666':'#ffffff';ctx.lineWidth=.4+rand()*.9;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y+(rand()-.5)*5);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },true,1.1);
+  const metalBumpMap=makeTexture('blue-alert-hq-brushed-metal-relief',(ctx,size,rand)=>{
+    ctx.fillStyle='#808080';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<620;i++){const y=rand()*size;ctx.globalAlpha=.22+rand()*.25;ctx.strokeStyle=rand()>.5?'#c2c2c2':'#454545';ctx.lineWidth=.35+rand()*.7;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(size,y+(rand()-.5)*2.5);ctx.stroke();}
+    ctx.globalAlpha=1;
+  },false,1.1);
+  const roughnessMap=makeTexture('blue-alert-hq-material-roughness',(ctx,size,rand)=>{
+    ctx.fillStyle='#d2d2d2';ctx.fillRect(0,0,size,size);
+    for(let i=0;i<5200;i++){const v=Math.round(105+rand()*145);ctx.fillStyle='rgb('+v+','+v+','+v+')';ctx.globalAlpha=.30+rand()*.48;ctx.fillRect(rand()*size,rand()*size,.8+rand()*2,.8+rand()*1.8);}
+    ctx.globalAlpha=1;
+  },false,1.15);
+  const result={concreteMap,concreteBumpMap,paintMap,paintBumpMap,metalMap,metalBumpMap,roughnessMap,resolution};
+  resolutionCache.set(resolution,result);
+  return result;
+};
+export function setBuildingSurfaceDetail(building,enabled=true){
+  const bindings=building?.userData?.surfaceMaterialBindings||[];if(!bindings.length)return false;
+  const active=Boolean(enabled);let verified=0;
+  for(const binding of bindings){
+    binding.material.map=active?binding.map:null;
+    binding.material.bumpMap=active?binding.bumpMap:null;
+    binding.material.roughnessMap=active?binding.roughnessMap:null;
+    binding.material.bumpScale=active?binding.bumpScale:0;
+    binding.material.needsUpdate=true;
+    const matches=active
+      ? binding.material.map===binding.map&&binding.material.bumpMap===binding.bumpMap&&binding.material.roughnessMap===binding.roughnessMap&&binding.material.bumpScale===binding.bumpScale
+      : binding.material.map===null&&binding.material.bumpMap===null&&binding.material.roughnessMap===null&&binding.material.bumpScale===0;
+    if(matches)verified++;
+  }
+  building.userData.surfaceDetailEnabled=active&&verified===bindings.length;
+  building.userData.surfaceMaterialBindingsActive=active?verified:0;
+  return verified===bindings.length;
+}
+
+
+
 const box = (THREE, parent, name, size, position, material, rotation) => {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
   mesh.name = name; mesh.position.set(...position);
@@ -79,6 +171,286 @@ const addMarking = (THREE, group, x, y, z, team) => {
   stripe.rotation.y = Math.PI/2; return stripe;
 };
 
+const createArmoredProfileGeometry = (THREE, points, depth, bevel = 0.04) => {
+  const shape = new THREE.Shape();
+  points.forEach(([x, y], index) => {
+    if (index === 0) shape.moveTo(x, y);
+    else shape.lineTo(x, y);
+  });
+  shape.closePath();
+  const b = Math.min(bevel, depth * 0.12);
+  const innerDepth = Math.max(0.02, depth - 2 * b);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: innerDepth, bevelEnabled: true, bevelSegments: 3,
+    steps: 1, bevelSize: b, bevelThickness: b, curveSegments: 4
+  });
+  geometry.translate(0, 0, -innerDepth / 2);
+  geometry.computeVertexNormals();
+  geometry.userData.beveledArmor = true;
+  geometry.userData.armoredProfile = true;
+  return geometry;
+};
+
+const createArmoredProfileMesh = (THREE, parent, name, points, depth, material, position, bevel = 0.04) => {
+  const mesh = new THREE.Mesh(createArmoredProfileGeometry(THREE, points, depth, bevel), material);
+  mesh.name = name;
+  mesh.position.set(...position);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.armoredProfile = true;
+  parent.add(mesh);
+  return mesh;
+};
+
+const createTrackLoopGeometry = (THREE, halfStraight, radius, depth) => {
+  const shape = new THREE.Shape();
+  shape.moveTo(-halfStraight, -radius);
+  shape.lineTo(halfStraight, -radius);
+  shape.absarc(halfStraight, 0, radius, -Math.PI / 2, Math.PI / 2, false);
+  shape.lineTo(-halfStraight, radius);
+  shape.absarc(-halfStraight, 0, radius, Math.PI / 2, Math.PI * 1.5, false);
+  shape.closePath();
+  const bevel = 0.018;
+  const innerDepth = Math.max(0.02, depth - bevel * 2);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: innerDepth, bevelEnabled: true, bevelSegments: 2,
+    steps: 1, bevelSize: bevel, bevelThickness: bevel, curveSegments: 8
+  });
+  geometry.translate(0, 0, -innerDepth / 2);
+  geometry.computeVertexNormals();
+  geometry.userData.beveledArmor = true;
+  geometry.userData.armoredTrackLoop = true;
+  return geometry;
+};
+
+const createCastHullGeometry = (THREE, stations) => {
+  const ringSize = 6;
+  const positions = [];
+  const uvs = [];
+  const hullIndices = [];
+  const glacisIndices = [];
+  const ringFor = station => {
+    const [x,bottomY,bottomWidth,shoulderY,shoulderWidth,deckY,deckWidth] = station;
+    return [
+      [x,bottomY,-bottomWidth],
+      [x,bottomY,bottomWidth],
+      [x,shoulderY,shoulderWidth],
+      [x,deckY,deckWidth],
+      [x,deckY,-deckWidth],
+      [x,shoulderY,-shoulderWidth]
+    ];
+  };
+  for (const station of stations) {
+    const x = station[0];
+    ringFor(station).forEach((point,index) => {
+      positions.push(...point);
+      uvs.push((x + 1.4) / 2.8, index / ringSize);
+    });
+  }
+  const capCenters = [stations[0],stations[stations.length - 1]].map(station => {
+    const ring = ringFor(station);
+    const y = ring.reduce((sum,point) => sum + point[1],0) / ring.length;
+    const z = ring.reduce((sum,point) => sum + point[2],0) / ring.length;
+    positions.push(station[0],y,z);
+    uvs.push((station[0] + 1.4) / 2.8,0.5);
+    return positions.length / 3 - 1;
+  });
+  for (let segment = 0; segment < stations.length - 1; segment++) {
+    for (let edgeIndex = 0; edgeIndex < ringSize; edgeIndex++) {
+      const a = segment * ringSize + edgeIndex;
+      const b = segment * ringSize + (edgeIndex + 1) % ringSize;
+      const c = (segment + 1) * ringSize + (edgeIndex + 1) % ringSize;
+      const d = (segment + 1) * ringSize + edgeIndex;
+      const target = edgeIndex === 3 && segment >= 4 ? glacisIndices : hullIndices;
+      target.push(a,c,b,a,d,c);
+    }
+  }
+  const endBase = (stations.length - 1) * ringSize;
+  for (let edgeIndex = 0; edgeIndex < ringSize; edgeIndex++) {
+    const next = (edgeIndex + 1) % ringSize;
+    hullIndices.push(capCenters[0],edgeIndex,next);
+    hullIndices.push(capCenters[1],endBase + next,endBase + edgeIndex);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setIndex([...hullIndices,...glacisIndices]);
+  geometry.addGroup(0,hullIndices.length,0);
+  geometry.addGroup(hullIndices.length,glacisIndices.length,1);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  geometry.userData.beveledArmor = true;
+  geometry.userData.armoredProfile = true;
+  geometry.userData.castHullShell = true;
+  geometry.userData.hullStationCount = stations.length;
+  return geometry;
+};
+
+const createCastTurretGeometry = (THREE, stations) => {
+  const ringSize = 8;
+  const positions = [];
+  const uvs = [];
+  const shellIndices = [];
+  const roofIndices = [];
+  const ringFor = station => {
+    const [x,bottomY,bottomWidth,shoulderY,shoulderWidth,roofY,roofWidth,bevelY] = station;
+    return [
+      [x,bottomY,-bottomWidth],
+      [x,bottomY,bottomWidth],
+      [x,shoulderY,shoulderWidth],
+      [x,bevelY,roofWidth],
+      [x,roofY,roofWidth*.72],
+      [x,roofY,-roofWidth*.72],
+      [x,bevelY,-roofWidth],
+      [x,shoulderY,-shoulderWidth]
+    ];
+  };
+  for (const station of stations) {
+    ringFor(station).forEach((point,index) => {
+      positions.push(...point);
+      uvs.push((station[0]+.9)/1.8,index/ringSize);
+    });
+  }
+  const capCenters = [stations[0],stations[stations.length-1]].map(station => {
+    const ring = ringFor(station);
+    const y = ring.reduce((sum,point)=>sum+point[1],0)/ring.length;
+    const z = ring.reduce((sum,point)=>sum+point[2],0)/ring.length;
+    positions.push(station[0],y,z);
+    uvs.push((station[0]+.9)/1.8,.5);
+    return positions.length/3-1;
+  });
+  for (let segment=0;segment<stations.length-1;segment++) {
+    for (let edgeIndex=0;edgeIndex<ringSize;edgeIndex++) {
+      const a=segment*ringSize+edgeIndex;
+      const b=(segment+1)*ringSize+edgeIndex;
+      const c=(segment+1)*ringSize+(edgeIndex+1)%ringSize;
+      const d=segment*ringSize+(edgeIndex+1)%ringSize;
+      const target=edgeIndex===4?roofIndices:shellIndices;
+      target.push(a,c,d,a,b,c);
+    }
+  }
+  const endBase=(stations.length-1)*ringSize;
+  for(let edgeIndex=0;edgeIndex<ringSize;edgeIndex++){
+    const next=(edgeIndex+1)%ringSize;
+    shellIndices.push(capCenters[0],edgeIndex,next);
+    shellIndices.push(capCenters[1],endBase+next,endBase+edgeIndex);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setIndex([...shellIndices,...roofIndices]);
+  geometry.addGroup(0,shellIndices.length,0);
+  geometry.addGroup(shellIndices.length,roofIndices.length,1);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  geometry.userData.beveledArmor=true;
+  geometry.userData.castTurretShell=true;
+  geometry.userData.turretStationCount=stations.length;
+  return geometry;
+};
+
+
+const applyCreasedNormals = (THREE, geometry, angleDegrees = 34) => {
+  const position = geometry.getAttribute('position');
+  const index = geometry.index;
+  if (!position || !index || index.count % 3 !== 0) return geometry;
+  const faceCount = index.count / 3;
+  const incidentFaces = Array.from({ length: position.count }, () => []);
+  const faces = new Array(faceCount);
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+  const ab = new THREE.Vector3(), ac = new THREE.Vector3(), faceNormal = new THREE.Vector3();
+  for (let face = 0; face < faceCount; face++) {
+    const offset = face * 3;
+    const ia = index.getX(offset), ib = index.getX(offset + 1), ic = index.getX(offset + 2);
+    a.fromBufferAttribute(position, ia); b.fromBufferAttribute(position, ib); c.fromBufferAttribute(position, ic);
+    ab.subVectors(b, a); ac.subVectors(c, a); faceNormal.crossVectors(ab, ac);
+    const area = faceNormal.length();
+    if (area > 1e-10) faceNormal.multiplyScalar(1 / area);
+    else faceNormal.set(0, 1, 0);
+    faces[face] = { normal: faceNormal.clone(), area: Math.max(area, 1e-10) };
+    incidentFaces[ia].push(face); incidentFaces[ib].push(face); incidentFaces[ic].push(face);
+  }
+  const threshold = Math.cos(THREE.MathUtils.degToRad(angleDegrees));
+  const uv = geometry.getAttribute('uv');
+  const positions = [], normals = [], uvs = [];
+  const point = new THREE.Vector3();
+  let invalidNormals = 0;
+  for (let face = 0; face < faceCount; face++) {
+    const faceOffset = face * 3, reference = faces[face].normal;
+    for (let corner = 0; corner < 3; corner++) {
+      const sourceIndex = index.getX(faceOffset + corner);
+      point.fromBufferAttribute(position, sourceIndex);
+      positions.push(point.x, point.y, point.z);
+      if (uv) uvs.push(uv.getX(sourceIndex), uv.getY(sourceIndex));
+      const normal = new THREE.Vector3();
+      for (const adjacentFace of incidentFaces[sourceIndex]) {
+        const candidate = faces[adjacentFace];
+        if (reference.dot(candidate.normal) >= threshold) normal.addScaledVector(candidate.normal, candidate.area);
+      }
+      if (normal.lengthSq() < 1e-12) normal.copy(reference);
+      normal.normalize();
+      const magnitude = normal.length();
+      if (!Number.isFinite(normal.x) || !Number.isFinite(normal.y) ||
+          !Number.isFinite(normal.z) || Math.abs(magnitude - 1) > 1e-4) invalidNormals++;
+      normals.push(normal.x, normal.y, normal.z);
+    }
+  }
+  const creased = new THREE.BufferGeometry();
+  creased.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  creased.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  if (uv) creased.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  for (const group of geometry.groups) creased.addGroup(group.start, group.count, group.materialIndex);
+  creased.setDrawRange(geometry.drawRange.start, geometry.drawRange.count);
+  creased.computeBoundingBox(); creased.computeBoundingSphere();
+  creased.userData = {...geometry.userData,normalProfile:'CREASED_HARD_SURFACE_V1',normalCreaseAngle:angleDegrees,
+    normalSourceVertexCount:position.count,normalFaceCount:faceCount,normalVertexCount:index.count,normalFinite:invalidNormals===0};
+  geometry.dispose();
+  return creased;
+};
+
+const createCommandBunkerGeometry = (THREE, profile, stations) => {
+  const ringSize = profile.length, positions = [], uvs = [], shellIndices = [], crownIndices = [];
+  const ringFor = station => {
+    const [z, widthScale, heightScale] = station;
+    return profile.map(([x, y]) => [x * widthScale, y * heightScale, z]);
+  };
+  for (const station of stations) ringFor(station).forEach(point => {
+    positions.push(...point); uvs.push((point[0] + 1.4) / 2.8, point[1] / 1.8);
+  });
+  const capCenters = [stations[0], stations[stations.length - 1]].map(station => {
+    const ring = ringFor(station);
+    positions.push(ring.reduce((sum,p)=>sum+p[0],0)/ring.length,
+      ring.reduce((sum,p)=>sum+p[1],0)/ring.length,station[0]);
+    uvs.push(.5,.5); return positions.length/3-1;
+  });
+  for(let segment=0;segment<stations.length-1;segment++) for(let edgeIndex=0;edgeIndex<ringSize;edgeIndex++){
+    const a=segment*ringSize+edgeIndex,b=segment*ringSize+(edgeIndex+1)%ringSize;
+    const c=(segment+1)*ringSize+(edgeIndex+1)%ringSize,d=(segment+1)*ringSize+edgeIndex;
+    const target=edgeIndex>=5&&edgeIndex<=7?crownIndices:shellIndices;
+    target.push(a,c,d,a,b,c);
+  }
+  const endBase=(stations.length-1)*ringSize;
+  for(let edgeIndex=0;edgeIndex<ringSize;edgeIndex++){
+    const next=(edgeIndex+1)%ringSize;
+    shellIndices.push(capCenters[0],next,edgeIndex);
+    shellIndices.push(capCenters[1],endBase+edgeIndex,endBase+next);
+  }
+  const geometry=new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  geometry.setIndex([...shellIndices,...crownIndices]);
+  geometry.addGroup(0,shellIndices.length,0);
+  geometry.addGroup(shellIndices.length,crownIndices.length,1);
+  geometry.computeVertexNormals(); geometry.computeBoundingBox(); geometry.computeBoundingSphere();
+  geometry.userData.beveledArmor=true;
+  geometry.userData.castCommandBunker=true;
+  geometry.userData.commandCoreStationCount=stations.length;
+  geometry.userData.commandCoreProfileVertexCount=profile.length;
+  return geometry;
+};
+
 export function createTank(THREE, options={}) {
   const { team='blue', variant='main-battle-tank', scale=1 } = options;
   const isRed = team === 'red';
@@ -115,10 +487,25 @@ export function createTank(THREE, options={}) {
     return mesh;
   };
 
-  // Layered hull: lower chassis, raised crew cell and a sloped forward glacis.
-  beveledBox(THREE,g,'lower-hull',[2.62,.48,1.5],[0,.55,0],hull,null,.055);
-  beveledBox(THREE,g,'upper-hull',[1.9,.35,1.22],[-.12,.91,0],armor,null,.045);
-  beveledBox(THREE,g,'front-glacis',[.72,.2,1.22],[.82,.72,0],heavyArmor,[0,0,-.34],.028);
+  // A single cast shell replaces the stacked hull blocks. Seven longitudinal
+  // stations form the rear taper, shoulder transitions and integrated front glacis.
+  const hullStations = [
+    [-1.38,.20,.56,.56,.65,.82,.48],
+    [-1.20,.20,.64,.67,.73,1.03,.55],
+    [-.88,.20,.68,.72,.76,1.12,.57],
+    [-.42,.20,.69,.74,.77,1.13,.58],
+    [.50,.20,.69,.74,.77,1.13,.58],
+    [.82,.20,.67,.65,.74,.94,.54],
+    [1.32,.20,.62,.30,.66,.36,.42]
+  ];
+  const hullGeometry = applyCreasedNormals(THREE,createCastHullGeometry(THREE,hullStations),34);
+  const hullShell = new THREE.Mesh(hullGeometry,[hull,heavyArmor]);
+  hullShell.name = 'cast-hull-shell';
+  hullShell.userData.mergedPartNames = ['cast-hull-shell','front-glacis'];
+  hullShell.userData.mergedBeveledPartNames = ['cast-hull-shell','front-glacis'];
+  hullShell.castShadow = true;
+  hullShell.receiveShadow = true;
+  g.add(hullShell);
   beveledBox(THREE,g,'engine-deck',[.76,.13,.98],[-.82,1.105,0],dark,null,.018);
 
   const grilleTransforms=Array.from({length:7},(_,i)=>({position:[-1.12+i*.1,1.18,0]}));
@@ -153,11 +540,16 @@ export function createTank(THREE, options={}) {
   sphere(THREE,g,'gunner-optic',.075,[.36,1.18,.28],optics,[1,.55,.7]);
   cylinder(THREE,g,'radio-antenna',.018,.018,.72,[-.86,1.42,-.35],dark,6);
 
-  // Track belts, road wheels, hubs and tread shoes are batched by part type.
-  const beltTransforms=[],wheelTransforms=[],hubTransforms=[],capTransforms=[];
+  // A continuous stadium belt now wraps every wheel; 64 visible tread shoes
+  // follow its complete perimeter instead of stopping at the sides.
+  const wheelTransforms=[],hubTransforms=[],capTransforms=[];
   const shoeTransforms=[],boltTransforms=[];
+  const trackHalfStraight=1.0, trackRadius=.24, trackLinkCount=32;
+  const lowerStraight=trackHalfStraight*2;
+  const rightArc=Math.PI*trackRadius;
+  const upperStraightEnd=lowerStraight+rightArc+trackHalfStraight*2;
+  const trackPerimeter=upperStraightEnd+rightArc;
   for(const side of [-1,1]){
-    beltTransforms.push({position:[0,.39,side*.79]});
     for(let i=0;i<6;i++){
       const x=-.98+i*.39;
       wheelTransforms.push({position:[x,.38,side*.84],rotation:[Math.PI/2,0,0]});
@@ -171,28 +563,76 @@ export function createTank(THREE, options={}) {
         });
       }
     }
-    for(let i=0;i<18;i++) shoeTransforms.push({
-      position:[-1.18+i*.139,.39,side*.925],
-      rotation:[0,0,(i%2===0?-.025:.025)]
-    });
+    for(let i=0;i<trackLinkCount;i++){
+      const distance=i*trackPerimeter/trackLinkCount;
+      let x,y,angle;
+      if(distance<lowerStraight){
+        x=-trackHalfStraight+distance; y=-trackRadius; angle=0;
+      }else if(distance<lowerStraight+rightArc){
+        const arc=-Math.PI/2+(distance-lowerStraight)/trackRadius;
+        x=trackHalfStraight+trackRadius*Math.cos(arc);
+        y=trackRadius*Math.sin(arc);
+        angle=arc+Math.PI/2;
+      }else if(distance<upperStraightEnd){
+        const along=distance-(lowerStraight+rightArc);
+        x=trackHalfStraight-along; y=trackRadius; angle=Math.PI;
+      }else{
+        const arc=Math.PI/2+(distance-upperStraightEnd)/trackRadius;
+        x=-trackHalfStraight+trackRadius*Math.cos(arc);
+        y=trackRadius*Math.sin(arc);
+        angle=arc+Math.PI/2;
+      }
+      shoeTransforms.push({position:[x,.39+y,side*.925],rotation:[0,0,angle]});
+    }
   }
-  addInstances(g,'track-belts-instanced',new THREE.BoxGeometry(2.68,.48,.22),rubber,beltTransforms);
+  const trackBeltGeometry=createTrackLoopGeometry(THREE,trackHalfStraight,trackRadius,.22);
+  for(const side of [-1,1]){
+    const belt=new THREE.Mesh(trackBeltGeometry,rubber);
+    belt.name=side<0?'track-belt-loop-left':'track-belt-loop-right';
+    belt.position.set(0,.39,side*.79);
+    belt.castShadow=true; belt.receiveShadow=true; g.add(belt);
+  }
   addInstances(g,'road-wheels-instanced',new THREE.CylinderGeometry(.19,.19,.13,16),metal,wheelTransforms);
   addInstances(g,'wheel-hubs-instanced',new THREE.CylinderGeometry(.085,.085,.145,12),dark,hubTransforms);
   addInstances(g,'wheel-hub-caps-instanced',new THREE.CylinderGeometry(.045,.045,.155,10),edge,capTransforms);
-  addInstances(g,'track-shoe-instanced',new THREE.BoxGeometry(.105,.29,.035),mat(THREE,0x56605d,.88,.28),shoeTransforms);
+  addInstances(g,'track-shoe-instanced',new THREE.BoxGeometry(.15,.065,.04),mat(THREE,0x56605d,.88,.28),shoeTransforms);
   addInstances(g,'wheel-bolts-instanced',new THREE.CylinderGeometry(.018,.018,.026,6),mat(THREE,0xc1c6bd,.42,.72),boltTransforms);
 
-  // The two factions have distinct turret silhouettes, not just different paint.
+  // A continuous cast turret uses seven longitudinal stations and an integrated roof.
+  // The two factions retain different roof height, shoulder width and nose taper.
   const turret=new THREE.Group();
   turret.name='rotating-turret';
   turret.position.set(.05,1.12,0);
   g.add(turret);
   cylinder(THREE,turret,'turret-ring',.54,.58,.13,[0,0,0],dark,18);
+  const turretStations = isRed ? [
+    [-.82,.10,.30,.24,.44,.56,.36,.51],
+    [-.68,.10,.39,.31,.54,.66,.43,.61],
+    [-.42,.10,.45,.34,.60,.71,.46,.66],
+    [.12,.10,.46,.34,.61,.70,.46,.65],
+    [.50,.10,.42,.29,.56,.62,.42,.57],
+    [.72,.10,.35,.23,.47,.49,.35,.44],
+    [.84,.10,.26,.18,.36,.37,.27,.32]
+  ] : [
+    [-.78,.10,.28,.22,.43,.43,.34,.385],
+    [-.66,.10,.35,.29,.52,.54,.40,.49],
+    [-.42,.10,.40,.31,.56,.58,.42,.53],
+    [.08,.10,.42,.30,.55,.56,.41,.51],
+    [.42,.10,.39,.26,.51,.49,.38,.44],
+    [.64,.10,.33,.22,.44,.40,.32,.35],
+    [.76,.10,.24,.18,.34,.31,.25,.27]
+  ];
+  const turretGeometry = applyCreasedNormals(THREE,createCastTurretGeometry(THREE,turretStations),34);
+  const turretShell=new THREE.Mesh(turretGeometry,[hull,armor]);
+  turretShell.name='turret-body';
+  const roofAlias=isRed?'red-bastion-roof-plate':'blue-sentinel-crown';
+  turretShell.userData.mergedPartNames=['turret-body',roofAlias];
+  turretShell.userData.mergedBeveledPartNames=['turret-body',roofAlias];
+  turretShell.castShadow=true;
+  turretShell.receiveShadow=true;
+  turret.add(turretShell);
   let factionDetailCounts={};
   if(isRed){
-    beveledBox(THREE,turret,'turret-body',[1.3,.5,1.08],[0,.29,0],hull,null,.055);
-    beveledBox(THREE,turret,'red-bastion-roof-plate',[.82,.12,.84],[-.08,.57,0],armor,null,.018);
     const redCheeks=[],redSidePlates=[],redSmoke=[];
     for(const side of [-1,1]){
       redCheeks.push({position:[-.12,.24,side*.59],rotation:[0,0,side*.09]});
@@ -206,8 +646,6 @@ export function createTank(THREE, options={}) {
     addInstances(turret,'red-bastion-smoke-banks-instanced',new THREE.CylinderGeometry(.055,.06,.22,8),dark,redSmoke);
     factionDetailCounts={turretCheeks:2,turretSidePlates:2,smokeBanks:2};
   }else{
-    beveledBox(THREE,turret,'turret-body',[1.22,.36,.96],[0,.24,0],hull,null,.045);
-    beveledBox(THREE,turret,'blue-sentinel-crown',[.78,.12,.8],[-.12,.47,0],armor,null,.018);
     const blueCheeks=[];
     for(const side of [-1,1]) blueCheeks.push({
       position:[.16,.2,side*.53],rotation:[0,0,side*.13]
@@ -218,6 +656,9 @@ export function createTank(THREE, options={}) {
     beveledBox(THREE,turret,'blue-sentinel-rear-sensor',[.25,.12,.32],[-.42,.43,0],dark,null,.012);
     factionDetailCounts={turretCheeks:2,turretSidePlates:0,smokeBanks:0};
   }
+  createArmoredProfileMesh(THREE,turret,'cannon-mantlet',[
+    [-.18,.08],[.18,.08],[.22,.18],[.14,.28],[-.14,.28],[-.22,.18]
+  ],.58,heavyArmor,[.62,.17,0],.02);
   if(isHeavy){
     const reinforcementTransforms=[];
     for(const side of [-1,1]) reinforcementTransforms.push({
@@ -248,6 +689,21 @@ export function createTank(THREE, options={}) {
 
   g.userData={
     kind:'vehicle',unitType:variant,team,turret,factionProfile,
+    hullGeometryProfile:'CAST_MULTI_STATION_HULL_V2',
+    hullStationCount:hullStations.length,
+    hullNormalProfile:hullGeometry.userData.normalProfile,
+    hullNormalCreaseAngle:hullGeometry.userData.normalCreaseAngle,
+    hullNormalVertexCount:hullGeometry.userData.normalVertexCount,
+    hullNormalFinite:hullGeometry.userData.normalFinite,
+    trackGeometryProfile:'CLOSED_STADIUM_TREAD_LOOP_V1',
+    turretGeometryProfile:'MULTI_STATION_CAST_TURRET_V2',
+    turretStationProfile:'CAST_TURRET_STATIONS_V2',
+    turretStationCount:turretStations.length,
+    turretNormalProfile:turretGeometry.userData.normalProfile,
+    turretNormalCreaseAngle:turretGeometry.userData.normalCreaseAngle,
+    turretNormalVertexCount:turretGeometry.userData.normalVertexCount,
+    turretNormalFinite:turretGeometry.userData.normalFinite,
+    trackLinkCount:shoeTransforms.length,
     trackShoeInstances:shoeTransforms.length,
     wheelBoltInstances:boltTransforms.length,
     detailInstances:{
@@ -258,12 +714,14 @@ export function createTank(THREE, options={}) {
       wheelHubs:hubTransforms.length,
       wheelHubCaps:capTransforms.length,
       smokeDischargers:smokeTransforms.length,
+      trackLinks:shoeTransforms.length,
+      closedTrackBelts:2,
       faction: factionDetailCounts
     }
   };
   const beveledArmorParts = [];
   g.traverse(object => {
-    if (object.isMesh && object.geometry?.userData?.beveledArmor) beveledArmorParts.push(object.name);
+    if (object.isMesh && object.geometry?.userData?.beveledArmor) beveledArmorParts.push(...(object.userData?.mergedBeveledPartNames || [object.name]));
   });
   g.userData.beveledArmorPartCount = beveledArmorParts.length;
   g.userData.beveledArmorParts = beveledArmorParts;
@@ -556,6 +1014,27 @@ export function createInfantry(THREE, options={}) {
   const accent = mat(THREE, isRed ? 0xd7834f : 0x65bcd6, .42, .36);
   const rifleMat = mat(THREE, 0x242b2d, .76, .32);
   const rubber = mat(THREE, 0x171d20, .98, .01);
+  // Hero-scale forms use a smoother surface; tiny fingers retain the lighter helper.
+  const heroSphere = (parent, name, radius, position, material, scale=[1,1,1]) => {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 8), material);
+    mesh.name = name; mesh.position.set(...position); mesh.scale.set(...scale);
+    mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+  };
+  // Compact smooth-shaded geometry for optics, palms and individual glove digits.
+  const detailSphere = (parent, name, radius, position, material, scale=[1,1,1]) => {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 8, 6), material);
+    mesh.name = name; mesh.position.set(...position); mesh.scale.set(...scale);
+    mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+  };
+  let curvedArmorPlateCount = 0;
+  const curvedPlate = (parent, name, size, position, material, rotation=[0,0,0]) => {
+    curvedArmorPlateCount++;
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), material);
+    mesh.name = name; mesh.position.set(...position);
+    mesh.scale.set(size[0] * .5, size[1] * .5, size[2] * .5);
+    mesh.rotation.set(...rotation); mesh.castShadow = true; mesh.receiveShadow = true;
+    mesh.userData.compositeArmor = true; parent.add(mesh); return mesh;
+  };
   const surfaceTextures = createInfantrySurfaceTextures(THREE, isRed);
   if (surfaceTextures) {
     const applySurface = (material, map, bumpMap, bumpScale) => {
@@ -598,20 +1077,20 @@ export function createInfantry(THREE, options={}) {
   torso.position.y = 0.80;
   g.add(torso);
   const anatomicalTorso = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-    [-.25,.135,.10],[-.20,.16,.115],[-.07,.175,.125],
-    [.07,.195,.13],[.18,.21,.12],[.24,.175,.105]
-  ], 18), uniform);
+    [-.25,.13,.10],[-.20,.155,.112],[-.14,.17,.12],[-.07,.178,.126],
+    [0,.188,.132],[.08,.202,.134],[.15,.207,.126],[.21,.19,.115],[.25,.165,.105]
+  ], 16), uniform);
   anatomicalTorso.name = 'anatomical-torso-loft';
   anatomicalTorso.castShadow = true; anatomicalTorso.receiveShadow = true; torso.add(anatomicalTorso);
   cylinder(THREE, torso, 'armored-neck-collar', .078,.088,.13,[0,.255,0],dark,12);
-  beveledBox(THREE, torso, 'reinforced-chest-carrier', [.37,.29,.085], [0,.035,.132], armor, [0,0,0], .022);
+  curvedPlate(torso, 'reinforced-chest-carrier', [.39,.30,.105], [0,.035,.145], armor);
   beveledBox(THREE, torso, 'upper-chest-split-plate', [.295,.13,.06], [0,.145,.172], cloth, [0,0,0], .014);
-  beveledBox(THREE, torso, 'lower-abdominal-armor', [.30,.105,.07], [0,-.17,.142], armor, [0,0,0], .014);
+  curvedPlate(torso, 'lower-abdominal-armor', [.31,.12,.082], [0,-.17,.145], armor);
   for(const side of [-1,1]) {
-    beveledBox(THREE,torso,'rib-side-armor', [.085,.20,.105], [side*.17,-.015,.025], armor, [0,0,side*.12], .014);
-    beveledBox(THREE,torso,'upper-chest-shoulder-lock', [.10,.075,.06], [side*.135,.17,.145], metal, [0,0,side*-.16], .01);
+    curvedPlate(torso,'rib-side-armor', [.105,.22,.12], [side*.17,-.015,.025], armor, [0,0,side*.12]);
+    curvedPlate(torso,'upper-chest-shoulder-lock', [.115,.085,.07], [side*.135,.17,.15], metal, [0,0,side*-.16]);
   }
-  beveledBox(THREE, torso, 'lower-abdomen-plate', [.29,.105,.075], [0,-.195,.12], cloth, [0,0,0], .012);
+  curvedPlate(torso, 'lower-abdomen-plate', [.30,.11,.075], [0,-.195,.13], cloth);
   box(THREE, torso, 'belt-webbing', [.36, .06, .22], [0, -.205, .015], dark);
   box(THREE, torso, 'belt-buckle', [.075, .07, .03], [0, -.205, .14], metal);
   box(THREE, torso, 'sternum-rail', [.035, .20, .026], [0, .035, .18], dark);
@@ -631,11 +1110,11 @@ export function createInfantry(THREE, options={}) {
   // Helmet and face have faction-specific silhouettes, not just recoloured cloth.
   const head = new THREE.Group();
   head.name = 'infantry-head-rig';
-  head.position.set(0, 1.17, 0);
-  g.add(head);
-  sphere(THREE, head, 'head', .13, [0, 0, 0], dark, [.86, 1.02, .88]);
+  head.position.set(0, .37, 0);
+  torso.add(head);
+  heroSphere(head, 'head', .13, [0, 0, 0], dark, [.86, 1.02, .88]);
   // Sculpted helmet shell: faceted crown, raised brow and side protection.
-  const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 16, 10), cloth);
+  const helmetShell = new THREE.Mesh(new THREE.SphereGeometry(.17, 24, 16), cloth);
   helmetShell.name = 'faceted-helmet-shell'; helmetShell.position.set(0,.105,-.015); helmetShell.scale.set(1.04,.76,1.0); helmetShell.castShadow=true; head.add(helmetShell);
   beveledBox(THREE, head, 'helmet-front-brow-armor', [.30,.085,.075], [0,.018,.132], armor, [-.08,0,0], .014);
   for (const side of [-1,1]) beveledBox(THREE, head, 'helmet-temple-armor', [.105,.17,.18], [side*.155,-.025,.005], armor, [0,0,side*.08], .016);
@@ -657,7 +1136,7 @@ export function createInfantry(THREE, options={}) {
   beveledBox(THREE, head, 'gas-mask-faceplate', [.22,.18,.075], [0,-.07,.155], dark, [0,0,0], .018);
   beveledBox(THREE, head, 'gas-mask-brow-bridge', [.085,.075,.065], [0,.005,.18], armor, [0,0,0], .012);
   for (const side of [-1,1]) {
-    sphere(THREE, head, 'gas-mask-optic-lens', .034, [side*.063,.018,.195], optic, [1,.9,.34]);
+    detailSphere(head, 'gas-mask-optic-lens', .034, [side*.063,.018,.195], optic, [1,.9,.34]);
     cylinder(THREE, head, 'respirator-filter-housing', .05,.058,.06, [side*.09,-.09,.19], metal, 12).rotation.x=Math.PI/2;
     cylinder(THREE, head, 'respirator-filter-cap', .036,.036,.014, [side*.09,-.09,.228], dark, 12).rotation.x=Math.PI/2;
     for(let vent=0;vent<3;vent++) box(THREE,head,'respirator-filter-vent',[.009,.032,.007],[side*.09+(vent-1)*.017,-.09,.241],accent);
@@ -683,33 +1162,42 @@ export function createInfantry(THREE, options={}) {
   const makeArm = (side, label) => {
     const pivot = new THREE.Group();
     pivot.name = label + '-arm-pivot';
-    pivot.position.set(side * .215, .99, .015);
-    g.add(pivot);
-    sphere(THREE, pivot, label + '-shoulder-pad', .105, [0, -.045, .015], armor, [.95, .78, 1.02]);
+    pivot.position.set(side * .215, .19, .015);
+    torso.add(pivot);
+    const supportReach = side < 0 ? .19 : 0;
+    heroSphere(pivot, label + '-shoulder-pad', .105, [0, -.045, .015], armor, [.95, .78, 1.02]);
     beveledBox(THREE,pivot,label+'-angular-pauldron',[.17,.12,.17],[side*.01,-.045,.025],armor,[0,0,side*-.08],.018);
     const upperArm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-      [-.01,.066,.064],[-.06,.071,.067],[-.12,.062,.059],[-.18,.05,.048]
+      [-.01,.066,.064,0,0],[-.045,.071,.068,-side*.025,supportReach*.08],
+      [-.09,.069,.064,-side*.06,supportReach*.24],[-.135,.058,.056,-side*.105,supportReach*.48],
+      [-.18,.05,.048,-side*.13,supportReach*.8]
     ],14), uniform);
     upperArm.name = label + '-upper-arm-loft';
     upperArm.position.set(side*.01,0,.015); upperArm.castShadow=true; upperArm.receiveShadow=true; pivot.add(upperArm);
     const elbow = new THREE.Group();
     elbow.name = label + '-elbow-pivot';
-    elbow.position.set(side*.01,-.18,.035);
+    elbow.position.set(-side*.13,-.18,.035+supportReach*.8);
     pivot.add(elbow);
-    sphere(THREE, elbow, label + '-elbow-joint', .052, [0,0,0], armor, [.92,.9,1]);
+    heroSphere(elbow, label + '-elbow-joint', .052, [0,0,0], armor, [.92,.9,1]);
     const forearm = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-      [-.01,.052,.052],[-.05,.061,.058],[-.12,.052,.049],[-.18,.043,.043]
+      [-.01,.052,.052],[-.045,.06,.058],[-.09,.058,.054],[-.14,.049,.047],[-.18,.043,.043]
     ],14), cloth);
     forearm.name = label + '-forearm-loft';
     forearm.position.set(0,0,.065); forearm.rotation.x=-.86;
     forearm.castShadow=true; forearm.receiveShadow=true; elbow.add(forearm);
     beveledBox(THREE, elbow, label + '-wrist-guard', [.125,.065,.13], [0,-.13,.16], armor, [0,0,0], .012);
-    sphere(THREE, elbow, label + '-glove-palm', .057, [0,-.16,.19], rubber, [.92,.72,1.18]);
+    // Keep a non-rendering hand anchor outside static-mesh batching so QA and the
+    // weapon grip retain a live world-space reference after draw-call optimization.
+    const palm = new THREE.Group();
+    palm.name = label + '-glove-palm-anchor';
+    palm.position.set(0,-.16,.19);
+    elbow.add(palm);
+    detailSphere(palm, label + '-glove-palm', .057, [0,0,0], rubber, [.92,.72,1.18]);
     for(let finger=0;finger<4;finger++) {
-      sphere(THREE, elbow, label + '-glove-finger', .021,
+      detailSphere(elbow, label + '-glove-finger', .021,
         [(finger-1.5)*.025,-.198,.235], rubber, [.82,1.25,.78]);
     }
-    sphere(THREE, elbow, label + '-glove-thumb', .026, [side*-.06,-.165,.19], rubber, [.9,1.1,.85]);
+    detailSphere(elbow, label + '-glove-thumb', .026, [side*-.06,-.165,.19], rubber, [.9,1.1,.85]);
     if (isRed) {
       beveledBox(THREE, pivot, label + '-bastion-pauldron', [.17,.095,.15],
         [side*.012,-.035,.025], accent, [0,0,side*-.08], .012);
@@ -717,7 +1205,7 @@ export function createInfantry(THREE, options={}) {
       box(THREE, pivot, label + '-sentinel-shoulder-mark', [.10,.045,.022],
         [side*.012,-.045,.13], accent);
     }
-    return { pivot, elbow };
+    return { pivot, elbow, palm };
   };
   const leftArm = makeArm(-1, 'left');
   const rightArm = makeArm(1, 'right');
@@ -725,10 +1213,10 @@ export function createInfantry(THREE, options={}) {
   const makeLeg = (side, label) => {
     const pivot = new THREE.Group();
     pivot.name = label + '-leg-pivot';
-    pivot.position.set(side * .105, .75, 0);
-    g.add(pivot);
+    pivot.position.set(side * .105, -.05, 0);
+    torso.add(pivot);
     const thigh = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-      [-.01,.078,.076],[-.08,.085,.082],[-.18,.075,.073],[-.28,.06,.06]
+      [-.01,.078,.076],[-.055,.085,.083],[-.11,.084,.08],[-.17,.075,.073],[-.23,.067,.066],[-.28,.06,.06]
     ],14), cloth);
     thigh.name = label + '-thigh-loft';
     thigh.castShadow=true; thigh.receiveShadow=true; pivot.add(thigh);
@@ -736,15 +1224,19 @@ export function createInfantry(THREE, options={}) {
     knee.name = label + '-knee-pivot';
     knee.position.set(0,-.28,.005);
     pivot.add(knee);
-    sphere(THREE, knee, label + '-knee-joint', .057, [0,0,0], dark, [1,.9,1]);
-    beveledBox(THREE,knee,label+'-articulated-knee-guard',[.17,.13,.18],[0,-.005,.065],armor,[0,0,0],.016);
+    heroSphere(knee, label + '-knee-joint', .057, [0,0,0], dark, [1,.9,1]);
+    curvedPlate(knee,label+'-articulated-knee-guard',[.18,.14,.095],[0,-.005,.072],armor);
     const calf = new THREE.Mesh(createInfantryLoftGeometry(THREE, [
-      [-.01,.061,.064],[-.08,.068,.068],[-.19,.057,.059],[-.28,.047,.05]
+      [-.01,.061,.064],[-.055,.068,.069],[-.11,.065,.066],[-.17,.058,.06],[-.23,.052,.055],[-.28,.047,.05]
     ],14), uniform);
     calf.name = label + '-calf-loft';
     calf.position.z=.005; calf.castShadow=true; calf.receiveShadow=true; knee.add(calf);
     beveledBox(THREE,knee,label+'-shin-armor',[.13,.19,.065],[0,-.15,.078],armor,[0,0,0],.012);
-    beveledBox(THREE,knee,label+'-reinforced-combat-boot',[.17,.13,.24],[0,-.31,.085],rubber,[0,0,0],.016);
+    beveledBox(THREE,knee,label+'-reinforced-combat-boot',[.17,.12,.22],[0,-.305,.075],rubber,[0,0,0],.022);
+    beveledBox(THREE,knee,label+'-boot-tread-sole',[.18,.045,.25],[0,-.365,.075],dark,[0,0,0],.012);
+    curvedPlate(knee,label+'-boot-toe-cap',[.16,.075,.12],[0,-.31,.17],dark);
+    beveledBox(THREE,knee,label+'-boot-ankle-cuff',[.15,.085,.14],[0,-.225,.02],armor,[0,0,0],.012);
+    for(let lace=0;lace<3;lace++) box(THREE,knee,label+'-boot-lace',[.085,.012,.012],[0,-.255-lace*.025,.19],metal);
     return { pivot, knee };
   };
   const leftLeg = makeLeg(-1, 'left');
@@ -753,8 +1245,8 @@ export function createInfantry(THREE, options={}) {
   // A compact assault pack, radio, antenna and field canteen finish the rear silhouette.
   const pack = new THREE.Group();
   pack.name = 'infantry-field-pack';
-  pack.position.set(0, .79, -.17);
-  g.add(pack);
+  pack.position.set(0, -.01, -.17);
+  torso.add(pack);
   box(THREE, pack, 'radio-backpack', [.25, .34, .16], [0, 0, 0], cloth);
   box(THREE, pack, 'backpack-top-flap', [.23, .075, .17], [0, .16, 0], armor);
   for (const side of [-1, 1]) {
@@ -768,8 +1260,20 @@ export function createInfantry(THREE, options={}) {
   const rifleGroup = new THREE.Group();
   rifleGroup.name = 'infantry-assault-rifle';
   rifleGroup.userData.keepSeparateForCombat = true;
-  rifleGroup.position.set(.05, .73, .29);
-  g.add(rifleGroup);
+  rifleGroup.position.set(0, -.15, .24);
+  rifleGroup.rotation.y = -Math.PI / 2; // local +X barrel becomes soldier-forward +Z.
+  rifleGroup.userData.weaponForwardAxis = 'POSITIVE_Z';
+  rifleGroup.userData.gripProfile = 'TWO_HAND_FORWARD_READY_V2';
+  torso.add(rifleGroup);
+  const rightGrip = new THREE.Group();
+  rightGrip.name = 'rifle-trigger-grip';
+  rightGrip.position.set(0, 0, -.085);
+  rifleGroup.add(rightGrip);
+  const leftGrip = new THREE.Group();
+  leftGrip.name = 'rifle-support-grip';
+  leftGrip.position.set(.152, 0, .085);
+  rifleGroup.add(leftGrip);
+  rifleGroup.userData.gripPoints = { left: leftGrip, right: rightGrip };
   const rifle = box(THREE, rifleGroup, 'rifle-receiver', [.48, .06, .075], [0, 0, 0], rifleMat);
   box(THREE, rifleGroup, 'rifle-stock', [.18, .085, .095], [-.3, -.005, -.005], dark);
   beveledBox(THREE, rifleGroup, 'rifle-handguard', [.22,.085,.095], [.18,0,0], armor, [0,0,0], .012);
@@ -792,16 +1296,23 @@ export function createInfantry(THREE, options={}) {
     leftElbow:leftArm.elbow, rightElbow:rightArm.elbow,
     leftLeg:leftLeg.pivot, rightLeg:rightLeg.pivot,
     leftKnee:leftLeg.knee, rightKnee:rightLeg.knee,
+    leftHand:leftArm.palm, rightHand:rightArm.palm,
+    leftGrip, rightGrip, weapon:rifleGroup,
     torso, head, phase:0, walkAmount:0
   };
   g.userData = {
     kind: 'infantry', role, team, factionProfile, weapon: rifle,
     animationRig,
-    renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V3',
-    bodyGeometryProfile:'ELLIPTIC_LOFT_HUMAN_PROPORTIONS_V1',
-    animationJointProfile:'SHOULDER_ELBOW_HIP_KNEE_V1',
-    weaponGripProfile:'TWO_HAND_FORWARD_READY_V1',
+    renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V4',
+    bodyGeometryProfile:'ANATOMICAL_HARDSHELL_FIELDWEAVE_V2',
+    armorGeometryProfile:'CONVEX_COMPOSITE_CERAMIC_V2',
+    bootGeometryProfile:'REINFORCED_TREAD_AND_TOE_CAP_V2',
+    geometryBudgetProfile:'MOBILE_RTS_SOLDIER_GEOMETRY_V2',
+    animationJointProfile:'TORSO_PARENTED_SHOULDER_ELBOW_HIP_KNEE_V2',
+    weaponGripProfile:'TWO_HAND_FORWARD_READY_V2',
+    weaponForwardAxis:'POSITIVE_Z',
     armorDetailParts: renderOptimization.sourceMeshCount,
+    curvedArmorPlateCount,
     surfaceFinish: surfaceTextures ? 'FIELDWEAVE_CERAMIC_MICROSCUFF_V2' : 'UNTEXTURED_FALLBACK',
     surfaceTextureCount: surfaceTextures ? Object.values(surfaceTextures).filter(Boolean).length : 0,
     surfaceMaterialCount: surfaceTextures ? [uniform,cloth,armor,metal,rifleMat].filter(material => material.map && material.bumpMap && material.roughnessMap).length : 0,
@@ -824,10 +1335,12 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
   rig.rightLeg.rotation.x = -swing + idle;
   rig.leftKnee.rotation.x = Math.max(0, Math.sin(rig.phase + .35)) * .46 * intensity;
   rig.rightKnee.rotation.x = Math.max(0, Math.sin(rig.phase + Math.PI + .35)) * .46 * intensity;
-  rig.leftArm.rotation.x = -swing * .24 - .04 + idle;
-  rig.rightArm.rotation.x = swing * .24 - .04 - idle;
-  rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.045*intensity;
-  rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.045*intensity;
+  // A rifleman keeps both hands on the forward weapon while the legs carry the gait.
+  // Small counter-swing preserves life in the upper body without breaking the grip.
+  rig.leftArm.rotation.x = -swing * .08 - .02 + idle;
+  rig.rightArm.rotation.x = swing * .08 - .02 - idle;
+  rig.leftElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase))*.012*intensity;
+  rig.rightElbow.rotation.x = -.025 - Math.max(0,Math.sin(rig.phase+Math.PI))*.012*intensity;
   rig.torso.rotation.z = idle * .55;
   rig.head.rotation.x = idle * .25;
   rig.walkAmount = intensity;
@@ -835,16 +1348,82 @@ export function updateInfantryAnimation(rig, deltaSeconds, movement=0) {
 }
 
 export function createBuilding(THREE, type='barracks', options={}) {
-  const {team='blue',scale=1}=options, g=new THREE.Group(); g.name='BA_Building_'+type;
-  let rotatingGun = null;
+  const {team='blue',scale=1,surfaceDetail=true}=options, g=new THREE.Group(); g.name='BA_Building_'+type;
+  let rotatingGun = null, defenseTurretGeometryProfile = null, defenseTurretStationCount = 0;
+  let commandCoreGeometryProfile = null, commandCoreProfileVertexCount = 0, commandCoreStationCount = 0;
+  let surfaceTextures = null;
+  const surfaceMaterialBindings = [];
   const faction=teamColor(THREE,team), concrete=mat(THREE,PALETTE.concrete), dark=mat(THREE,PALETTE.dark), glass=mat(THREE,PALETTE.glass), roof=mat(THREE,0x454d49);
   const metal=mat(THREE,PALETTE.metal,0.38,0.72);
   box(THREE,g,'foundation',[3.5,.22,2.8],[0,.11,0],dark);
   if(type==='headquarters') {
-    box(THREE,g,'command-core',[2.35,1.55,1.7],[0,1,0],concrete);
-    box(THREE,g,'command-roof',[2.55,.2,1.9],[0,1.83,0],faction);
-    box(THREE,g,'front-window',[1.45,.38,.035],[0,1.3,.87],glass);
-    // Sculpted communications tower replacing the old square mast.
+    surfaceTextures=createBuildingSurfaceTextures(THREE);
+    if(surfaceTextures){
+      const bindSurface=(material,map,bumpMap,bumpScale)=>{if(map&&bumpMap&&surfaceTextures.roughnessMap)surfaceMaterialBindings.push({material,map,bumpMap,roughnessMap:surfaceTextures.roughnessMap,bumpScale});};
+      bindSurface(concrete,surfaceTextures.concreteMap,surfaceTextures.concreteBumpMap,.045);
+      bindSurface(roof,surfaceTextures.paintMap,surfaceTextures.paintBumpMap,.018);
+      bindSurface(faction,surfaceTextures.paintMap,surfaceTextures.paintBumpMap,.018);
+      bindSurface(metal,surfaceTextures.metalMap,surfaceTextures.metalBumpMap,.008);
+    }
+    // One continuous depth-lofted cast shell creates a real 3D shoulder break:
+    // nose and rear taper in plan, while the roof shoulders descend toward both
+    // armored end caps. The original foundation footprint, root transform,
+    // collision envelope and front-facing service interfaces remain fixed.
+    const commandCoreProfile = [
+      [-1.18,0],[1.18,0],[1.18,.28],[1.08,.42],[1.08,1.08],
+      [.96,1.31],[.78,1.54],[-.78,1.54],[-.96,1.31],[-1.08,1.08],
+      [-1.08,.42],[-1.18,.28]
+    ];
+    const commandCoreStations = [
+      [-.89,.80,.90],[-.72,.91,.97],[-.46,1,1],
+      [.46,1,1],[.72,.91,.97],[.89,.80,.90]
+    ];
+    const commandCore = new THREE.Mesh(
+      createCommandBunkerGeometry(THREE,commandCoreProfile,commandCoreStations),[concrete,roof]
+    );
+    commandCore.name='command-core-cast-shell';
+    commandCore.position.set(0,.22,0);
+    commandCore.castShadow=true; commandCore.receiveShadow=true;
+    commandCoreGeometryProfile='ARMORED_BASTION_COMMAND_CORE_V3';
+    commandCoreProfileVertexCount=commandCoreProfile.length;
+    commandCoreStationCount=commandCoreStations.length;
+    commandCore.userData.commandCoreGeometryProfile=commandCoreGeometryProfile;
+    commandCore.userData.commandCoreProfileVertexCount=commandCoreProfileVertexCount;
+    commandCore.userData.commandCoreStationCount=commandCoreStationCount;
+    g.add(commandCore);
+
+    // A layered overhanging roof and parapet give the bunker a clear military silhouette.
+    beveledBox(THREE,g,'command-roof',[2.52,.18,1.94],[0,1.82,0],faction,[0,0,0],.045);
+    beveledBox(THREE,g,'command-roof-parapet',[2.12,.10,1.56],[0,1.94,0],roof,[0,0,0],.025);
+    for(const side of [-1,1]) {
+      beveledBox(THREE,g,side<0?'command-buttress-left':'command-buttress-right',
+        [.22,1.22,1.82],[side*1.12,.82,0],roof,[0,0,side*-.035],.035);
+    }
+
+    // Deep-set three-pane command glazing with a metal sill, lintel and mullions.
+    beveledBox(THREE,g,'command-window-recess',[1.72,.46,.075],[0,1.20,.925],dark,[0,0,0],.018);
+    beveledBox(THREE,g,'command-window-lintel',[1.86,.075,.12],[0,1.475,.925],metal,[0,0,0],.012);
+    beveledBox(THREE,g,'command-window-sill',[1.86,.075,.12],[0,.925,.925],metal,[0,0,0],.012);
+    for(const [index,x] of [-.51,0,.51].entries()) {
+      beveledBox(THREE,g,'command-glass-pane-'+index,[.43,.29,.028],[x,1.20,.977],glass,[0,0,0],.01);
+    }
+    for(const x of [-.255,.255]) box(THREE,g,'command-window-mullion',[.025,.36,.035],[x,1.20,.99],metal);
+
+    // Recessed armored entrance and low access step, aligned to the playable front.
+    beveledBox(THREE,g,'command-entry-frame',[.76,.78,.10],[0,.59,.925],metal,[0,0,0],.02);
+    beveledBox(THREE,g,'command-entry-door',[.52,.62,.035],[0,.58,.99],dark,[0,0,0],.012);
+    beveledBox(THREE,g,'command-entry-vision-slit',[.25,.11,.018],[0,.73,1.014],glass,[0,0,0],.006);
+    beveledBox(THREE,g,'command-entry-step',[.92,.10,.34],[0,.27,1.04],concrete,[0,0,0],.018);
+    beveledBox(THREE,g,'command-faction-crest',[.22,.16,.05],[-.83,.58,.945],faction,[0,0,0],.014);
+
+    // A faceted service annex is integrated into the right flank, not floated off the wall.
+    beveledBox(THREE,g,'command-annex',[.64,.82,1.26],[1.36,.64,-.20],roof,[0,0,-.035],.035);
+    beveledBox(THREE,g,'command-annex-vent-recess',[.055,.40,.44],[1.704,.65,-.20],dark,[0,0,0],.012);
+    for(let i=0;i<4;i++) {
+      box(THREE,g,'command-annex-vent-louver',[.025,.035,.34],[1.722,.51+i*.09,-.20],metal);
+    }
+
+    // The existing communications mast, radar cabin and rotating dish are retained.
     cylinder(THREE,g,'comms-tower-shaft',.2,.34,1.25,[-.72,2.48,-.42],roof,10);
     cylinder(THREE,g,'comms-platform',.58,.58,.12,[-.72,3.12,-.42],metal,12);
     cylinder(THREE,g,'radar-cabin',.43,.43,.46,[-.72,3.42,-.42],glass,12);
@@ -852,7 +1431,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
     for(let i=0;i<8;i++){const a=i*Math.PI/4;const mullion=box(THREE,g,'radar-cabin-mullion',[.035,.4,.035],[-.72+Math.cos(a)*.42,3.42,-.42+Math.sin(a)*.42],dark);mullion.rotation.y=-a;}
     cylinder(THREE,g,'radar-mast',.025,.025,.58,[-.72,4.02,-.42],dark,8);
     const dish=cylinder(THREE,g,'radar-dish',.28,.28,.045,[-.72,4.26,-.42],glass,16);dish.rotation.x=Math.PI/2.7;
-    box(THREE,g,'side-wing',[.65,.85,1.25],[1.35,.6,-.28],roof);
+    commandCoreGeometryProfile = commandCoreGeometryProfile;
   } else if(type==='barracks') {
     box(THREE,g,'main-hall',[2.85,1.25,2.05],[0,.76,0],concrete);
     box(THREE,g,'roof',[3,.18,2.2],[0,1.48,0],faction);
@@ -907,7 +1486,26 @@ export function createBuilding(THREE, type='barracks', options={}) {
     cylinder(THREE,g,'rotating-platform',.82,.9,.2,[0,1.08,0],faction,16);
     const head=new THREE.Group();head.name='rotating-gun';head.position.y=1.18;g.add(head);
     cylinder(THREE,head,'cupola-lower-ring',.72,.78,.2,[0,.08,0],edge,16);
-    const dome=new THREE.Mesh(new THREE.SphereGeometry(.68,16,10,0,Math.PI*2,0,Math.PI*.58),armor);dome.name='armored-cupola';dome.position.y=.34;dome.scale.y=.82;dome.castShadow=true;dome.receiveShadow=true;head.add(dome);
+    // One continuous cast cupola: seven longitudinal stations shape the front glacis,
+    // shoulder break and low roof without a spherical placeholder or stacked boxes.
+    const cupolaStations = [
+      [-.78,.12,.34,.30,.48,.60,.37,.54],
+      [-.62,.12,.44,.38,.60,.72,.45,.66],
+      [-.34,.12,.49,.44,.65,.82,.49,.75],
+      [0,.12,.50,.45,.66,.84,.50,.77],
+      [.34,.12,.48,.43,.64,.80,.48,.73],
+      [.62,.12,.41,.36,.58,.68,.43,.62],
+      [.78,.12,.31,.26,.46,.54,.35,.48]
+    ];
+    const cupola = new THREE.Mesh(createCastTurretGeometry(THREE,cupolaStations),[armor,roof]);
+    cupola.name='armored-cupola';
+    cupola.position.y=.02;
+    cupola.castShadow=true; cupola.receiveShadow=true;
+    cupola.userData.defenseTurretGeometryProfile='DEFENSE_CUPOLA_LOFT_V2';
+    cupola.userData.defenseTurretStationCount=cupolaStations.length;
+    head.add(cupola);
+    defenseTurretGeometryProfile='DEFENSE_CUPOLA_LOFT_V2';
+    defenseTurretStationCount=cupolaStations.length;
     cylinder(THREE,head,'roof-hatch',.2,.24,.1,[-.2,.82,0],edge,12);
     sphere(THREE,head,'targeting-optic',.13,[.3,.66,.43],optic,[1,.65,.65]);
     for(const side of [-1,1]){
@@ -932,7 +1530,7 @@ export function createBuilding(THREE, type='barracks', options={}) {
   }
   // Rectangular-building details are not reused on curved towers or turrets:
   // their fixed offsets would leave detached panels and vents outside the silhouette.
-  if(type!=='controlTower' && type!=='tower' && type!=='turret') {
+  if(type!=='headquarters' && type!=='controlTower' && type!=='tower' && type!=='turret') {
     box(THREE,g,'faction-panel',[.5,.22,.045],[-1.25,1.25,1.04],faction);
     for(const x of [-.85,.85]){
       box(THREE,g,'exterior-light',[.18,.12,.06],[x,1.08,1.42],glass);
@@ -940,7 +1538,13 @@ export function createBuilding(THREE, type='barracks', options={}) {
       for(let i=0;i<3;i++) box(THREE,g,'vent-slat',[.34,.025,.025],[x,1.43+i*.07,-1.46],metal);
     }
   }
-  g.userData={kind:'building',buildingType:type,team,rotatingGun}; g.scale.setScalar(scale); return g;
+  const surfaceTextureCount=surfaceTextures?Object.values(surfaceTextures).filter(texture=>texture?.isTexture).length:0;
+  g.userData={kind:'building',buildingType:type,team,rotatingGun,defenseTurretGeometryProfile,defenseTurretStationCount,commandCoreGeometryProfile,commandCoreProfileVertexCount,commandCoreStationCount,
+    surfaceFinish:surfaceTextureCount?'CAST_CONCRETE_PAINT_MICROWEAR_V1':'UNTEXTURED_FALLBACK',surfaceTextureCount,
+    surfaceTextureResolution:surfaceTextures?.resolution||0,surfaceMaterialCount:surfaceMaterialBindings.length,
+    surfaceMaterialBindings,surfaceDetailEnabled:false,surfaceMaterialBindingsActive:0};
+  if(surfaceDetail)setBuildingSurfaceDetail(g,true);
+  g.scale.setScalar(scale); return g;
 }
 
 export function createTree(THREE, options={}) {

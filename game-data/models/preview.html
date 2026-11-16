@@ -29,7 +29,7 @@ header{padding:12px;gap:8px;align-items:flex-start}
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 import {OrbitControls} from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-import {createTank,createInfantry,updateInfantryAnimation,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode} from './blue-alert-models.js';
+import {createTank,createInfantry,updateInfantryAnimation,createBuilding,createLandscape,createTree,createRock,createAircraft,createHelicopter,createDrone,createProjectile,createExplosion,createMuzzleFlash,createHarvester,createCitadel,createRelay,createOreNode,setBuildingSurfaceDetail} from './blue-alert-models.js';
 const host=document.querySelector('#view'), scene=new THREE.Scene();scene.background=new THREE.Color(0x9aa9a4);scene.fog=new THREE.Fog(0x9aa9a4,45,125);
 const camera=new THREE.PerspectiveCamera(42,1,.1,300);camera.position.set(9,8,12);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
@@ -39,11 +39,11 @@ scene.add(new THREE.HemisphereLight(0xeaf2f0,0x4b5544,2));
 const sun=new THREE.DirectionalLight(0xfff0d5,3);sun.position.set(8,14,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
 const grid=new THREE.GridHelper(80,80,0x53655e,0x718078);grid.position.y=-.12;scene.add(grid);
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(120,120),new THREE.MeshStandardMaterial({color:0x56684f,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.16;ground.receiveShadow=true;scene.add(ground);
-let current;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
+let current;let hqSurfaceDetail=true;function clear(){if(current){scene.remove(current);current.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material]))m.dispose();}});current=null;}}
 const desc={
-tank:['Char de combat','Deux silhouettes de faction : BLUE SENTINEL à tourelle basse et RED BASTION à tourelle renforcée, avec chenilles segmentées, galets boulonnés et blindage incliné.'],
-infantry:['Fantassin','Silhouette tactique renforcée : casque facetté, respirateur scellé à filtres latéraux, plaques d’armure biseautées, équipement dorsal et fusil détaillé. Modèle procédural original, sans image générique.'],
-hq:['Quartier général','Centre de commandement, antenne radar, vitres, aile latérale et marquage de faction.'],
+tank:['Char de combat','Coque monobloc moulée en sept stations, glacis intégré, flancs inclinés, tourelle profilée et chenilles fermées à maillons.'],
+infantry:['Fantassin','Fantassin V4 : volumes anatomiques lissés, plaques composites convexes, casque haute définition, respirateur scellé, bottes à semelles crantées, équipement dorsal et fusil détaillé. Rig d’épaules, coudes, hanches et genoux conservé.'],
+hq:['Quartier général','Bunker à coque blindée moulée en profondeur, nez et arrière effilés, épaules inclinées, couronne facettée, vitrage encastré, entrée protégée et radar orientable.'],
 barracks:['Caserne','Bâtiment de production avec toit renforcé, porte de garage, fenêtres et ventilation.'],
 refinery:['Raffinerie','Hall industriel, cuves, tuyauterie et zone de chargement.'],
 turret:['Tourelle défensive','Barbette circulaire, coupole blindée facettée, double autocanon, optiques et boulonnerie périphérique.'],
@@ -74,11 +74,11 @@ else if(a==='harvester')current=createHarvester(THREE,{team:t});
 else if(a==='citadel')current=createCitadel(THREE,{team:t});
 else if(a==='relay')current=createRelay(THREE,{team:t});
 else if(a==='ore')current=createOreNode(THREE);
-else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t});
+else current=createBuilding(THREE,({hq:'headquarters'})[a]||a,{team:t,surfaceDetail:hqSurfaceDetail});
 scene.add(current);
 const profileTitle=a==='tank'?(t==='red'?'Char RED BASTION':'Char BLUE SENTINEL'):desc[a][0];
 document.querySelector('#title').textContent=profileTitle;
-const profileCopy=a==='tank'?(t==='red'?'RED BASTION — tourelle haute à plaques latérales, cupola de commandement et capteurs protégés.':'BLUE SENTINEL — tourelle basse profilée, joues inclinées et télémètre compact.'):desc[a][1];
+const profileCopy=a==='tank'?(t==='red'?'RED BASTION — coque monobloc à sept stations, glacis intégré, tourelle haute renforcée et mantelet blindé.':'BLUE SENTINEL — coque monobloc à sept stations, nez fortement incliné, tourelle basse et chenilles à maillons fermés.'):desc[a][1];
 document.querySelector('#desc').textContent=profileCopy;
 controls.target.set(0,a==='infantry'?.91:a==='tank'?.96:1,0);
 if(a==='tank'){
@@ -111,13 +111,36 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     }
   });
   const bounds=current?new THREE.Box3().setFromObject(current):null;
+  let weaponGripDiagnostics=null;
+  const infantryRig=current?.userData?.animationRig;
+  if(infantryRig?.weapon && infantryRig.leftHand && infantryRig.rightHand && infantryRig.leftGrip && infantryRig.rightGrip){
+    current.updateMatrixWorld(true);
+    const weaponForward=new THREE.Vector3(1,0,0).applyQuaternion(infantryRig.weapon.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const expectedForward=new THREE.Vector3(0,0,1).applyQuaternion(current.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const leftHandWorld=new THREE.Vector3();infantryRig.leftHand.getWorldPosition(leftHandWorld);
+    const rightHandWorld=new THREE.Vector3();infantryRig.rightHand.getWorldPosition(rightHandWorld);
+    const leftGripWorld=new THREE.Vector3();infantryRig.leftGrip.getWorldPosition(leftGripWorld);
+    const rightGripWorld=new THREE.Vector3();infantryRig.rightGrip.getWorldPosition(rightGripWorld);
+    weaponGripDiagnostics={
+      forwardAxis:[weaponForward.x,weaponForward.y,weaponForward.z],
+      forwardAlignment:weaponForward.dot(expectedForward),
+      leftGripError:leftHandWorld.distanceTo(leftGripWorld),
+      rightGripError:rightHandWorld.distanceTo(rightGripWorld),
+      leftHandPosition:[leftHandWorld.x,leftHandWorld.y,leftHandWorld.z],
+      leftGripPosition:[leftGripWorld.x,leftGripWorld.y,leftGripWorld.z],
+      rightHandPosition:[rightHandWorld.x,rightHandWorld.y,rightHandWorld.z],
+      rightGripPosition:[rightGripWorld.x,rightGripWorld.y,rightGripWorld.z],
+      torsoParented:infantryRig.leftArm.parent===infantryRig.torso && infantryRig.rightArm.parent===infantryRig.torso &&
+        infantryRig.leftLeg.parent===infantryRig.torso && infantryRig.rightLeg.parent===infantryRig.torso && infantryRig.weapon.parent===infantryRig.torso
+    };
+  }
   const signatureParts=[];
   const infantryArmorParts=[];
   current?.traverse(object=>{
     const partNames=object.userData?.mergedPartNames || [object.name];
     for(const partName of partNames){
       if(object.isMesh && (partName.includes('gas-mask') || partName.includes('respirator-') || partName.includes('faceted-helmet') || partName.includes('angular-pauldron') || partName.includes('articulated-knee-guard'))) infantryArmorParts.push(partName);
-      if(object.isMesh && (partName==='front-glacis' || partName==='engine-deck-grilles-instanced' || partName==='reactive-armor-tiles-instanced' || partName==='track-shoe-instanced' || partName==='wheel-bolts-instanced' || partName.includes('blue-sentinel') || partName==='blue-turret-cheeks-instanced' || partName.includes('red-bastion') || partName==='red-turret-cheeks-instanced' || partName==='red-bastion-side-plates-instanced' || partName==='heavy-turret-reinforcements-instanced')) signatureParts.push(partName);
+      if(object.isMesh && (partName==='cast-hull-shell' || partName==='front-glacis' || partName==='cannon-mantlet' || partName==='track-belt-loop-left' || partName==='track-belt-loop-right' || partName==='engine-deck-grilles-instanced' || partName==='reactive-armor-tiles-instanced' || partName==='track-shoe-instanced' || partName==='wheel-bolts-instanced' || partName.includes('blue-sentinel') || partName==='blue-turret-cheeks-instanced' || partName.includes('red-bastion') || partName==='red-turret-cheeks-instanced' || partName==='red-bastion-side-plates-instanced' || partName==='heavy-turret-reinforcements-instanced')) signatureParts.push(partName);
     }
   });
   return {
@@ -127,6 +150,26 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     team:document.querySelector('#team').value,
     factionProfile:current?.userData?.factionProfile||null,
     trackShoeInstances:current?.userData?.trackShoeInstances||0,
+    trackLinkCount:current?.userData?.trackLinkCount||0,
+    hullGeometryProfile:current?.userData?.hullGeometryProfile||null,
+    hullStationCount:current?.userData?.hullStationCount||0,
+    hullNormalProfile:current?.userData?.hullNormalProfile||null,
+    hullNormalCreaseAngle:current?.userData?.hullNormalCreaseAngle||0,
+    hullNormalVertexCount:current?.userData?.hullNormalVertexCount||0,
+    hullNormalFinite:current?.userData?.hullNormalFinite??false,
+    trackGeometryProfile:current?.userData?.trackGeometryProfile||null,
+    turretGeometryProfile:current?.userData?.turretGeometryProfile||null,
+    turretStationProfile:current?.userData?.turretStationProfile||null,
+    turretStationCount:current?.userData?.turretStationCount||0,
+    turretNormalProfile:current?.userData?.turretNormalProfile||null,
+    turretNormalCreaseAngle:current?.userData?.turretNormalCreaseAngle||0,
+    turretNormalVertexCount:current?.userData?.turretNormalVertexCount||0,
+    turretNormalFinite:current?.userData?.turretNormalFinite??false,
+    defenseTurretGeometryProfile:current?.userData?.defenseTurretGeometryProfile||null,
+    defenseTurretStationCount:current?.userData?.defenseTurretStationCount||0,
+    commandCoreGeometryProfile:current?.userData?.commandCoreGeometryProfile||null,
+    commandCoreProfileVertexCount:current?.userData?.commandCoreProfileVertexCount||0,
+    commandCoreStationCount:current?.userData?.commandCoreStationCount||0,
     wheelBoltInstances:current?.userData?.wheelBoltInstances||0,
     detailInstances:current?.userData?.detailInstances||null,
     signatureParts,
@@ -136,10 +179,19 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     surfaceFinish:current?.userData?.surfaceFinish||null,
     surfaceTextureCount:current?.userData?.surfaceTextureCount||0,
     surfaceMaterialCount:current?.userData?.surfaceMaterialCount||0,
+    surfaceTextureResolution:current?.userData?.surfaceTextureResolution||0,
+    surfaceDetailEnabled:current?.userData?.surfaceDetailEnabled??null,
+    surfaceMaterialBindingsActive:current?.userData?.surfaceMaterialBindingsActive||0,
     headScale:current?.userData?.headScale??null,
     bodyGeometryProfile:current?.userData?.bodyGeometryProfile||null,
+    armorGeometryProfile:current?.userData?.armorGeometryProfile||null,
+    bootGeometryProfile:current?.userData?.bootGeometryProfile||null,
+    geometryBudgetProfile:current?.userData?.geometryBudgetProfile||null,
+    curvedArmorPlateCount:current?.userData?.curvedArmorPlateCount||0,
     animationJointProfile:current?.userData?.animationJointProfile||null,
     weaponGripProfile:current?.userData?.weaponGripProfile||null,
+    weaponForwardAxis:current?.userData?.weaponForwardAxis||null,
+    weaponGripDiagnostics,
     jointDiagnostics:{
       leftElbow:!!current?.userData?.animationRig?.leftElbow,
       rightElbow:!!current?.userData?.animationRig?.rightElbow,
@@ -159,5 +211,6 @@ window.__BLUE_ALERTS_PREVIEW__ = () => {
     canvasHeight:renderer.domElement.height
   };
 };
+window.__BLUE_ALERTS_PREVIEW_QA__=Object.freeze({setHqSurfaceDetail(enabled){if(document.querySelector('#asset').value!=='hq')throw new Error('HQ surface QA requires the headquarters model.');hqSurfaceDetail=Boolean(enabled);if(!setBuildingSurfaceDetail(current,hqSurfaceDetail))throw new Error('HQ surface material bindings are unavailable.');return window.__BLUE_ALERTS_PREVIEW__();}});
 let previewClock=0;renderer.setAnimationLoop(()=>{previewClock+=.016;if(current?.userData?.animationRig)updateInfantryAnimation(current.userData.animationRig,.016,.85);if(current?.userData?.rotatingGun)current.userData.rotatingGun.rotation.y+=.006;if(current?.userData?.rotatingGun?.name==='rotating-radar')current.userData.rotatingGun.rotation.y+=.018;current?.traverse(o=>{if(o.userData?.emissivePulse&&o.material?.emissiveIntensity!==undefined)o.material.emissiveIntensity=.55+Math.sin(previewClock*3.2)*.45;});if(current?.userData?.mainRotor)current.userData.mainRotor.rotation.y+=.28;if(current?.userData?.tailRotor)current.userData.tailRotor.rotation.x+=.42;if(current?.userData?.rotors)for(const rotor of current.userData.rotors)rotor.rotation.y+=.36;if(current?.userData?.collectionDrum)current.userData.collectionDrum.rotation.x+=.08;if(current?.userData?.reactorRing)current.userData.reactorRing.rotation.z+=.008;if(current?.userData?.core)current.userData.core.rotation.y+=.012;if(current?.userData?.captureHalo)current.userData.captureHalo.rotation.z+=.008;controls.update();renderer.render(scene,camera);});
 </script></body></html>
