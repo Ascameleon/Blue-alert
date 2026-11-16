@@ -584,6 +584,13 @@ try {
   assert.ok(Math.abs(mobileDockCollapsed.sidebarHeight - 54) <= 1 &&
     Math.abs(mobileDockCollapsed.viewportBottom - 54) <= 1 && mobileDockCollapsed.cardsDisplay === 'none',
     'tapping the active mobile production tab must collapse the drawer again');
+  await mobile.locator('#sidebar .tab[data-t="struct"]').focus();
+  await mobile.locator('#sidebar .tab[data-t="struct"]').press('Enter');
+  await mobile.waitForFunction(() => document.body.classList.contains('mobile-build-open'));
+  await mobile.waitForFunction(() => Math.abs(document.querySelector('#sidebar').getBoundingClientRect().height - 132) <= 1);
+  await mobile.locator('#sidebar .tab[data-t="struct"]').press('Space');
+  await mobile.waitForFunction(() => !document.body.classList.contains('mobile-build-open'));
+  await mobile.waitForFunction(() => Math.abs(document.querySelector('#sidebar').getBoundingClientRect().height - 54) <= 1);
   await mobile.locator('#sidebar .tab[data-t="units"]').tap();
   await mobile.waitForFunction(() => document.body.classList.contains('mobile-build-open'));
   await mobile.locator('#sidebar .tab[data-t="units"]').tap();
