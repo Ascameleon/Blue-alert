@@ -533,19 +533,68 @@ try {
   });
   await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true });
   const mobileMetrics = await metrics(mobile);
+  const mobileDockInitial = await mobile.evaluate(() => {
+    const sidebar = document.querySelector('#sidebar');
+    const viewport = document.querySelector('#viewport');
+    const cards = document.querySelector('#cards');
+    const activeTab = document.querySelector('#sidebar .tab.active');
+    return {
+      sidebarHeight: sidebar.getBoundingClientRect().height,
+      viewportBottom: window.innerHeight - viewport.getBoundingClientRect().bottom,
+      cardsDisplay: getComputedStyle(cards).display,
+      activeExpanded: activeTab?.getAttribute('aria-expanded')
+    };
+  });
+  assert.ok(Math.abs(mobileDockInitial.sidebarHeight - 54) <= 1 &&
+    Math.abs(mobileDockInitial.viewportBottom - 54) <= 1 &&
+    mobileDockInitial.cardsDisplay === 'none' && mobileDockInitial.activeExpanded === 'false',
+    'mobile production drawer must start collapsed and preserve the battlefield');
+  await mobile.locator('#sidebar .tab[data-t="struct"]').tap();
+  await mobile.waitForFunction(() => document.body.classList.contains('mobile-build-open'));
+  await mobile.waitForFunction(() => Math.abs(document.querySelector('#sidebar').getBoundingClientRect().height - 132) <= 1);
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
       const r = el.getBoundingClientRect();
-      return { width: r.width, height: r.height, text: el.textContent.trim() };
+      return { width: r.width, height: r.height, text: el.textContent.trim(), expanded: el.getAttribute('aria-expanded') };
     });
     const card = document.querySelector('#cards .card');
     const r = card?.getBoundingClientRect();
+    const sidebar = document.querySelector('#sidebar');
+    const viewport = document.querySelector('#viewport');
     return {
       tabs,
       firstCard: r ? { width: r.width, height: r.height } : null,
-      sidebarHeight: document.querySelector('#sidebar').getBoundingClientRect().height
+      sidebarHeight: sidebar.getBoundingClientRect().height,
+      viewportBottom: window.innerHeight - viewport.getBoundingClientRect().bottom,
+      cardsDisplay: getComputedStyle(document.querySelector('#cards')).display
     };
   });
+  assert.ok(Math.abs(touchTargets.sidebarHeight - 132) <= 1 &&
+    Math.abs(touchTargets.viewportBottom - 132) <= 1 && touchTargets.cardsDisplay === 'flex' &&
+    touchTargets.tabs.find(t => t.text === 'Bâtir')?.expanded === 'true',
+    'mobile production drawer must expand with accessible state and preserve a usable battlefield');
+  await mobile.locator('#sidebar .tab[data-t="struct"]').tap();
+  await mobile.waitForFunction(() => !document.body.classList.contains('mobile-build-open'));
+  await mobile.waitForFunction(() => Math.abs(document.querySelector('#sidebar').getBoundingClientRect().height - 54) <= 1);
+  const mobileDockCollapsed = await mobile.evaluate(() => ({
+    sidebarHeight: document.querySelector('#sidebar').getBoundingClientRect().height,
+    viewportBottom: window.innerHeight - document.querySelector('#viewport').getBoundingClientRect().bottom,
+    cardsDisplay: getComputedStyle(document.querySelector('#cards')).display
+  }));
+  assert.ok(Math.abs(mobileDockCollapsed.sidebarHeight - 54) <= 1 &&
+    Math.abs(mobileDockCollapsed.viewportBottom - 54) <= 1 && mobileDockCollapsed.cardsDisplay === 'none',
+    'tapping the active mobile production tab must collapse the drawer again');
+  await mobile.locator('#sidebar .tab[data-t="struct"]').focus();
+  await mobile.locator('#sidebar .tab[data-t="struct"]').press('Enter');
+  await mobile.waitForFunction(() => document.body.classList.contains('mobile-build-open'));
+  await mobile.waitForFunction(() => Math.abs(document.querySelector('#sidebar').getBoundingClientRect().height - 132) <= 1);
+  await mobile.locator('#sidebar .tab[data-t="struct"]').press('Space');
+  await mobile.waitForFunction(() => !document.body.classList.contains('mobile-build-open'));
+  await mobile.waitForFunction(() => Math.abs(document.querySelector('#sidebar').getBoundingClientRect().height - 54) <= 1);
+  await mobile.locator('#sidebar .tab[data-t="units"]').tap();
+  await mobile.waitForFunction(() => document.body.classList.contains('mobile-build-open'));
+  await mobile.locator('#sidebar .tab[data-t="units"]').tap();
+  await mobile.waitForFunction(() => !document.body.classList.contains('mobile-build-open'));
   assert.ok(mobileMetrics.webgl && !mobileMetrics.contextLost, 'mobile viewport must render with a live WebGL context');
   assert.ok(mobileMetrics.documentWidth <= mobileMetrics.viewportWidth + 1, 'mobile game must not overflow horizontally');
   assert.ok(mobileMetrics.canvasRect.width >= 380 && mobileMetrics.canvasRect.height >= 600, 'mobile battlefield must retain a usable touch area');
@@ -719,11 +768,12 @@ try {
   const mobileBuildBefore = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILD_QA?.snapshot());
 const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.screenshot({ path: 'artifacts/v94-browser/mobile-v94-gameplay-390x844.png', fullPage: false });
-  const mobileHQBadgeBox = await mobile.locator('#mobileHQBadge').boundingBox();
-  assert.ok(mobileCommandsBox && mobileHQBadgeBox && mobileHQBadgeBox.y >= mobileCommandsBox.y + mobileCommandsBox.height + 6,
-    'the dedicated HQ badge must remain visible below the mobile command dock');
-  assert.equal(await mobile.locator('#mobileHQBadge').textContent(), 'QG • BASE ALPHA',
-    'mobile HUD must identify the blue command HQ');
+  const mobileHQBadgeDisplay = await mobile.locator('#mobileHQBadge').evaluate(el => getComputedStyle(el).display);
+  assert.equal(mobileHQBadgeDisplay, 'none',
+    'compact mobile HUD must suppress the redundant HQ badge and preserve battlefield space');
+  const mobileMissionBox = await mobile.locator('#mobileMission').boundingBox();
+  assert.ok(mobileCommandsBox && mobileMissionBox && mobileMissionBox.y >= mobileCommandsBox.y + mobileCommandsBox.height + 4,
+    'the mission objective must remain visible below the mobile command dock');
   assert.ok(mobileBuildBefore && mobileBuildBefore.pads.every(p => p.pad && p.grid && p.border),
     'mobile must render the same two construction pads');
   await mobile.waitForTimeout(2800);
