@@ -6,6 +6,8 @@ on:
       - 'BLUE_ALERTS.html'
       - 'BLUE_ALERTS_v94_ASSET_INTEGRATION.html'
       - 'game-data/models/**'
+      - 'public/vendor/**'
+      - 'scripts/prepare-pages-site.sh'
       - 'docs/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
@@ -27,11 +29,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Configure Pages
         uses: actions/configure-pages@v5
-      - name: Prepare static game
-        run: |
-          mkdir -p site/game-data/models
-          cp BLUE_ALERTS_v94_ASSET_INTEGRATION.html site/index.html
-          cp game-data/models/blue-alert-models.js site/game-data/models/blue-alert-models.js
+      - name: Prepare static game with offline assets
+        run: bash scripts/prepare-pages-site.sh site
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

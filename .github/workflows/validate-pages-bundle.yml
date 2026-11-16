@@ -1,0 +1,46 @@
+name: Validate BLUE ALERTS Pages bundle
+
+on:
+  pull_request:
+    paths:
+      - 'BLUE_ALERTS_v94_ASSET_INTEGRATION.html'
+      - 'game-data/models/**'
+      - 'public/vendor/**'
+      - 'scripts/prepare-pages-site.sh'
+      - '.github/workflows/deploy-pages.yml'
+      - '.github/workflows/validate-pages-bundle.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'BLUE_ALERTS_v94_ASSET_INTEGRATION.html'
+      - 'game-data/models/**'
+      - 'public/vendor/**'
+      - 'scripts/prepare-pages-site.sh'
+      - '.github/workflows/deploy-pages.yml'
+      - '.github/workflows/validate-pages-bundle.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-pages-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build the exact Pages payload
+        run: bash scripts/prepare-pages-site.sh site
+      - name: Verify offline runtime assets
+        run: |
+          test -s site/index.html
+          test -s site/game-data/models/blue-alert-models.js
+          test -s site/public/vendor/three.min.js
+          test -s site/public/vendor/THREE-LICENSE.txt
+          cmp -s public/vendor/three.min.js site/public/vendor/three.min.js
+          cmp -s public/vendor/THREE-LICENSE.txt site/public/vendor/THREE-LICENSE.txt
+          node -e "const THREE = require('./site/public/vendor/three.min.js'); if (THREE.REVISION !== '160') throw new Error('Expected Three.js r160, got ' + THREE.REVISION)"
+      - name: Preserve Pages payload for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: blue-alerts-pages-bundle
+          path: site/
