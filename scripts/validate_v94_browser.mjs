@@ -551,6 +551,7 @@ try {
     'mobile production drawer must start collapsed and preserve the battlefield');
   await mobile.locator('#sidebar .tab[data-t="struct"]').tap();
   await mobile.waitForFunction(() => document.body.classList.contains('mobile-build-open'));
+  await mobile.waitForFunction(() => Math.abs(document.querySelector('#sidebar').getBoundingClientRect().height - 132) <= 1);
   const touchTargets = await mobile.evaluate(() => {
     const tabs = [...document.querySelectorAll('#sidebar .tab')].map(el => {
       const r = el.getBoundingClientRect();
@@ -574,6 +575,7 @@ try {
     'mobile production drawer must expand with accessible state and preserve a usable battlefield');
   await mobile.locator('#sidebar .tab[data-t="struct"]').tap();
   await mobile.waitForFunction(() => !document.body.classList.contains('mobile-build-open'));
+  await mobile.waitForFunction(() => Math.abs(document.querySelector('#sidebar').getBoundingClientRect().height - 54) <= 1);
   const mobileDockCollapsed = await mobile.evaluate(() => ({
     sidebarHeight: document.querySelector('#sidebar').getBoundingClientRect().height,
     viewportBottom: window.innerHeight - document.querySelector('#viewport').getBoundingClientRect().bottom,
