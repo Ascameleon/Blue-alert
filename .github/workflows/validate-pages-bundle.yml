@@ -38,3 +38,9 @@ jobs:
           test -s site/public/vendor/THREE-LICENSE.txt
           cmp -s public/vendor/three.min.js site/public/vendor/three.min.js
           cmp -s public/vendor/THREE-LICENSE.txt site/public/vendor/THREE-LICENSE.txt
+          node -e "const THREE = require('./site/public/vendor/three.min.js'); if (THREE.REVISION !== '160') throw new Error('Expected Three.js r160, got ' + THREE.REVISION)"
+      - name: Preserve Pages payload for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: blue-alerts-pages-bundle
+          path: site/
