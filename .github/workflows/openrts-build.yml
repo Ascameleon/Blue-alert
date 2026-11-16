@@ -123,9 +123,16 @@ jobs:
             wait "$app_pid" 2>/dev/null || true
           }
           trap cleanup EXIT
-          for i in $(seq 1 10); do
+          readiness_deadline=$((SECONDS + 60))
+          while ! grep -q "battlefield controller online" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log" || \
+                ! grep -q "BLUE ALERTS runtime loaded 12 units" "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"; do
             if ! kill -0 "$app_pid" 2>/dev/null; then
-              echo "BLUE ALERTS skirmish exited during startup."
+              echo "BLUE ALERTS skirmish exited before battlefield readiness."
+              cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
+              exit 1
+            fi
+            if (( SECONDS >= readiness_deadline )); then
+              echo "Timed out waiting for BLUE ALERTS battlefield readiness."
               cat "$GITHUB_WORKSPACE/artifacts/openrts-launch.log"
               exit 1
             fi
