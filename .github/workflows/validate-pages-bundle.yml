@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Build the exact Pages payload
         run: bash scripts/prepare-pages-site.sh site
       - name: Verify offline runtime assets
@@ -40,7 +40,7 @@ jobs:
           cmp -s public/vendor/THREE-LICENSE.txt site/public/vendor/THREE-LICENSE.txt
           node -e "const THREE = require('./site/public/vendor/three.min.js'); if (THREE.REVISION !== '160') throw new Error('Expected Three.js r160, got ' + THREE.REVISION)"
       - name: Preserve Pages payload for inspection
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: blue-alerts-pages-bundle
           path: site/
