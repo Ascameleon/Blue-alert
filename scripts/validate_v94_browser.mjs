@@ -98,6 +98,27 @@ async function loadGame(page, options = {}) {
     '3D startup must complete without fallback or error UI: ' + JSON.stringify(startupState));
   await page.locator('#btnStart').click();
   await page.waitForFunction(() => document.getElementById('startOverlay')?.classList.contains('hidden'));
+  if (options.freezeCombat) {
+    // The mobile UI suite performs many layout and touch checks before its VFX
+    // assertions. Freeze autonomous combat immediately after startup so one
+    // faction cannot be eliminated while the test is exercising the HUD.
+    const frozen = await page.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
+    assert.ok(frozen?.started && !frozen.gameOver,
+      'mobile deterministic QA must freeze combat only after a live match has started');
+    try {
+      await page.waitForFunction(() => {
+        const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+        return state && state.activeProjectiles === 0 && state.modelProjectiles === 0;
+      }, null, { timeout: 12000, polling: 50 });
+    } catch (error) {
+      const state = await page.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+      console.log('MOBILE_INITIAL_COMBAT_DRAIN_TIMEOUT ' + JSON.stringify(state));
+      throw error;
+    }
+    const baseline = await page.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    assert.ok(baseline?.livingBlueCombatUnits > 0 && baseline?.livingRedCombatUnits > 0,
+      'mobile deterministic QA must retain live units on both factions after combat quiesces');
+  }
   await page.waitForTimeout(1200);
 }
 async function metrics(page) {
@@ -540,7 +561,7 @@ try {
     isMobile: true,
     hasTouch: true
   });
-  await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true });
+  await loadGame(mobile, { combatVfx: true, buildQa: true, environment: true, freezeCombat: true });
   const mobileMetrics = await metrics(mobile);
   const mobileDockInitial = await mobile.evaluate(() => {
     const sidebar = document.querySelector('#sidebar');
