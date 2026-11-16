@@ -4567,6 +4567,16 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       flamesSpawned: target.flamesSpawned || 0,
       scorchMark: !!target.scorch,
       pendingProjectiles: projectiles.filter(p => p.target === target).length,
+      pendingProjectileDetails: projectiles.filter(p => p.target === target).map(p => ({
+        life: Number(p.life.toFixed(3)),
+        speed: p.speed,
+        distance: Number(p.dest.distanceTo(p.pos).toFixed(3)),
+        start: p.start.toArray().map(value => Number(value.toFixed(3))),
+        position: p.pos.toArray().map(value => Number(value.toFixed(3))),
+        destination: p.dest.toArray().map(value => Number(value.toFixed(3))),
+        shooterId: p.shooter?.id || null
+      })),
+      targetWorldPosition: target.g?.position?.toArray().map(value => Number(value.toFixed(3))) || null,
       activeSmoke: fx.filter(e => e.kind === 'building-smoke').length,
       activeFlames: fx.filter(e => e.kind === 'building-flame').length
     };
