@@ -31,7 +31,7 @@ assert.ok(vendorLicense.includes('The MIT License') && vendorLicense.includes('t
 
 const inlineModelSource = model.replace(/^(\s*)export\s+/gm, '$1');
 const inlineFactory = '(() => {\n' + inlineModelSource + '\nreturn Object.freeze({ ' + exportedNames.join(', ') + ' });\n})()';
-const withVendor = html.replace(vendorTag, '<script>\n' + vendor + '\n</script>');
+const withVendor = html.replace(vendorTag, () => '<script>\n' + vendor + '\n</script>');
 const bundled = withVendor.replace(importPattern, inlineFactory);
 assert.notEqual(bundled, html, 'local vendor and model imports must be replaced');
 assert.ok(!bundled.includes(vendorTag), 'bundle must not request a separate Three.js file');
