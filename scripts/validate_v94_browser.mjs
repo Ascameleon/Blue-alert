@@ -907,9 +907,12 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   }));
   console.log('MOBILE_COMBAT_VFX ' + JSON.stringify({ shot: mobileShot, kill: mobileKill, afterCleanup: mobileClean }));
 
+  const mobileBlueUnitsBeforeBuildingProbe = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state().livingBlueCombatUnits);
   const mobileBuildingStart = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(mobileBuildingStart?.shooterKind,
-    'mobile building-damage QA must use a live blue combat unit');
+    'mobile building-damage QA must use a live or QA-spawned blue combat unit');
+  assert.equal(mobileBuildingStart.qaSpawnedShooter, mobileBlueUnitsBeforeBuildingProbe === 0,
+    'mobile building-damage QA must spawn a deterministic probe shooter only when battle attrition removed all starting blue units');
   console.log('MOBILE_BUILDING_STAGE1_START ' + JSON.stringify(mobileBuildingStart));
   try {
     await mobile.waitForFunction(() => {
