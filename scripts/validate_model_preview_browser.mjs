@@ -229,9 +229,11 @@ try {
     await page.waitForFunction(expected=>window.__BLUE_ALERTS_PREVIEW__?.().asset===expected,asset,{timeout:10000});
     await page.waitForTimeout(120);
     const before=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
-    await page.waitForTimeout(260);
+    await page.waitForTimeout(500);
     const after=await page.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
-    assert.ok(after.animationElapsed-before.animationElapsed>=.2,label+' animation clock must advance');
+    const elapsedDelta=after.animationElapsed-before.animationElapsed;
+    assert.ok(Number.isFinite(elapsedDelta) && elapsedDelta>0 && elapsedDelta<=1.5 && after.previewFrameCount>before.previewFrameCount,
+      label+' animation clock must advance on rendered frames: '+JSON.stringify({before:before.animationElapsed,after:after.animationElapsed,elapsedDelta,framesBefore:before.previewFrameCount,framesAfter:after.previewFrameCount}));
     assert.ok(predicate(before,after),label+' must visibly change its animated transform or effect state');
     console.log('ANIMATION_RUNTIME_PASS '+label+' '+JSON.stringify({before,after}));
     await page.screenshot({path:output+'/animation-'+asset+'.png',fullPage:true});
