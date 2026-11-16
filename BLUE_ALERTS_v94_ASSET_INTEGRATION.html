@@ -3866,16 +3866,19 @@ function tick() {
     const liveUnits = units.filter(v => !v.dead && v.g);
     const livePlayerUnits = liveUnits.filter(v => v.team === 1);
     for (const u of [...units]) {
+      // Flash timers must advance even after a unit dies. Dead units skip the
+      // movement/combat update below, but their attached muzzle flash still
+      // belongs to the scene and must fade out instead of remaining visible.
+      u.flashT = Math.max(0, u.flashT - dt);
+      if (u.g?.userData?.flash) {
+        setMuzzleFlashIntensity(u.g.userData.flash, u.flashT > 0 ? Math.min(1, u.flashT / 0.12) : 0);
+      }
       if (u.dead) continue;
       // Track actual displacement so a unit blocked by another unit or a tight
       // corner can recover instead of endlessly pushing against the obstacle.
       const frameStartX = u.g.position.x;
       const frameStartZ = u.g.position.z;
       u.cd -= dt;
-      u.flashT = Math.max(0, u.flashT - dt);
-      if (u.g.userData.flash) {
-        setMuzzleFlashIntensity(u.g.userData.flash, u.flashT > 0 ? Math.min(1, u.flashT / 0.12) : 0);
-      }
 
       // Determine combat target
       let combatTarget = null;
@@ -4460,6 +4463,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     activeProjectiles: projectiles.length,
     modelProjectiles: projectiles.filter(p => p.mesh?.userData?.kind === 'projectile').length,
     modelMuzzleFlashes: fx.filter(e => e.kind === 'model-muzzle').length + visibleModelMuzzleFlashCount(),
+    deadUnitMuzzleFlashes: units.filter(u => u.dead && u.g?.userData?.flash?.visible).length,
     modelExplosions: fx.filter(e => e.kind === 'model-explosion').length,
     modelExplosionLives: fx.filter(e => e.kind === 'model-explosion').map(e => e.life),
     modelExplosionPositions: fx.filter(e => e.kind === 'model-explosion').map(e => ({ x: e.mesh.position.x, z: e.mesh.position.z })),
