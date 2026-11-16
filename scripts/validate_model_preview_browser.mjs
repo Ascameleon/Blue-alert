@@ -254,6 +254,20 @@ try {
   await verifyMotion('muzzleFlash','muzzle flash pulse',(a,b)=>
     changedNode(a,b,'flash-core','scale') && changedNode(a,b,'flash-flare','opacity'));
 
+  const mobileQualityPage=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
+  mobileQualityPage.on('pageerror',error=>failures.push('mobile quality pageerror: '+error.message));
+  mobileQualityPage.on('console',message=>{if(message.type()==='error')failures.push('mobile quality console: '+message.text());});
+  const mobileQualityResponse=await mobileQualityPage.goto(baseUrl+'/game-data/models/preview.html',{waitUntil:'domcontentloaded',timeout:60000});
+  assert.equal(mobileQualityResponse?.status(),200,'mobile quality preview must load');
+  await mobileQualityPage.waitForFunction(()=>typeof window.__BLUE_ALERTS_PREVIEW__==='function' && window.__BLUE_ALERTS_PREVIEW__().drawCalls>0,null,{timeout:30000});
+  const mobileQuality=await mobileQualityPage.evaluate(()=>window.__BLUE_ALERTS_PREVIEW__());
+  assert.equal(mobileQuality.mobilePreview,true,'mobile viewport must select the mobile rendering profile');
+  assert.equal(mobileQuality.shadowMapEnabled,false,'mobile preview must disable expensive shadow maps');
+  assert.ok(mobileQuality.pixelRatio>0 && mobileQuality.pixelRatio<=1.15,'mobile preview pixel ratio must be capped at 1.15');
+  assert.ok(mobileQuality.canvasWidth<=Math.ceil(390*1.15)+2,'mobile canvas backing width must respect the pixel-ratio budget');
+  await mobileQualityPage.screenshot({path:output+'/mobile-quality-profile-390x844.png',fullPage:true});
+  await mobileQualityPage.close();
+
   await page.setViewportSize({width:390,height:844});
   await page.selectOption('#asset','tank');
   await page.waitForFunction(()=>window.__BLUE_ALERTS_PREVIEW__?.().asset==='tank' && window.__BLUE_ALERTS_PREVIEW__().factionProfile==='BLUE_SENTINEL',null,{timeout:10000});
@@ -300,6 +314,7 @@ try {
   await page.selectOption('#asset','turret');
   await page.waitForTimeout(450);
   await page.screenshot({path:output+'/mobile-turret-390x844.png',fullPage:true});
+  console.log('MOBILE_QUALITY '+JSON.stringify(mobileQuality));
   console.log('MOBILE_LAYOUT '+JSON.stringify(mobile));
   console.log('VISUAL_BASELINE '+JSON.stringify(baselineMetrics));
   assert.ok(mobile.documentWidth<=mobile.viewportWidth+1,'mobile preview must not overflow horizontally');
@@ -308,7 +323,7 @@ try {
   assert.ok(mobile.targets.length>=3 && mobile.targets.every(t=>t.width>=44 && t.height>=44),'all mobile controls must meet 44px touch-target minimum');
 
   assert.equal(failures.length,0,'browser must not report page, console or network errors: '+failures.join(' | '));
-  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','animation-aircraft.png','animation-helicopter.png','animation-drone.png','animation-controlTower.png','animation-explosion.png','animation-muzzleFlash.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
+  const files=['baseline-turret.png','baseline-turret-mobile-390x844.png','mobile-quality-profile-390x844.png','animation-aircraft.png','animation-helicopter.png','animation-drone.png','animation-controlTower.png','animation-explosion.png','animation-muzzleFlash.png','desktop-blue-sentinel-tank.png','desktop-red-bastion-tank.png','desktop-blue-sentinel-infantry.png','desktop-red-bastion-infantry.png','desktop-turret.png','desktop-control-tower.png','mobile-blue-sentinel-tank-390x844.png','mobile-red-bastion-tank-390x844.png','mobile-blue-sentinel-infantry-390x844.png','mobile-red-bastion-infantry-390x844.png','mobile-control-tower-390x844.png','mobile-turret-390x844.png'];
   for(const file of files) assert.ok((await stat(output+'/'+file)).size>10000,'screenshot must contain rendered evidence: '+file);
   console.log(JSON.stringify({status:'PASS',baseline:baselineMetrics,initial,turret,tower,mobile,screenshots:files},null,2));
 } catch(error) {

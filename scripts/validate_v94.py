@@ -304,8 +304,9 @@ def main():
     required_building_qa = (
         "units.find(u => !u.dead && u.team === 1 && u.kind === 'light' && u.dmg > 0 && u.g)",
         "units.find(u => !u.dead && u.team === 1 && u.dmg > 0 && u.g)",
+        "createUnit(target.x - 6, target.z + 1, 1, 'light')",
+        "qaSpawnedShooter",
         "shooterKind: shooter.kind",
-        "live blue combat unit",
     )
     missing = [token for token in required_building_qa if token not in building_qa_section]
     if missing:
@@ -324,6 +325,8 @@ def main():
         "resumeCombat",
         "desktopBuildingFreeze?.combatSuppressed === true",
         "mobileClean.combatSuppressed === true",
+        "qaSpawnedShooter",
+        "mobileBlueUnitsBeforeBuildingProbe",
         "shooterKind",
         "desktopEconomyFreeze",
         "mobileEconomyFreeze",

@@ -392,7 +392,8 @@ try {
     await desktop.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
+        state.modelMuzzleFlashes === 0 && state.deadUnitMuzzleFlashes === 0 &&
+      state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
     }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -425,11 +426,19 @@ try {
   const desktopBuildingFreeze = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.freezeNewCombat());
   assert.ok(desktopBuildingFreeze?.combatSuppressed === true,
     'desktop building-damage QA must freeze unrelated combat before its controlled projectile burst');
-  await desktop.waitForFunction(() => {
-    const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
-    return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-      state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
-  }, null, { timeout: 15000, polling: 50 });
+  try {
+    await desktop.waitForFunction(() => {
+      const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
+      return state && state.combatSuppressed === true &&
+        state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
+        state.modelMuzzleFlashes === 0 && state.deadUnitMuzzleFlashes === 0 &&
+        state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
+    }, null, { timeout: 15000, polling: 50 });
+  } catch (error) {
+    const state = await desktop.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
+    console.log('DESKTOP_BUILDING_QUIESCE_TIMEOUT ' + JSON.stringify(state));
+    throw error;
+  }
   const desktopBuildingStart = await desktop.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(desktopBuildingStart?.shooterKind,
     'desktop building-damage QA must use a live blue combat unit');
@@ -888,7 +897,8 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
     await mobile.waitForFunction(() => {
       const state = window.__BLUE_ALERTS_COMBAT_QA__?.state();
       return state && state.activeProjectiles === 0 && state.modelProjectiles === 0 &&
-        state.modelMuzzleFlashes === 0 && state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
+        state.modelMuzzleFlashes === 0 && state.deadUnitMuzzleFlashes === 0 &&
+        state.modelExplosions === 0 && state.impactRings === 0 && state.impactSparks === 0;
     }, null, { timeout: 30000, polling: 50 });
   } catch (error) {
     const state = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__?.state());
@@ -907,9 +917,12 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   }));
   console.log('MOBILE_COMBAT_VFX ' + JSON.stringify({ shot: mobileShot, kill: mobileKill, afterCleanup: mobileClean }));
 
+  const mobileBlueUnitsBeforeBuildingProbe = await mobile.evaluate(() => window.__BLUE_ALERTS_COMBAT_QA__.state().livingBlueCombatUnits);
   const mobileBuildingStart = await mobile.evaluate(() => window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__.fireToStage(1));
   assert.ok(mobileBuildingStart?.shooterKind,
-    'mobile building-damage QA must use a live blue combat unit');
+    'mobile building-damage QA must use a live or QA-spawned blue combat unit');
+  assert.equal(mobileBuildingStart.qaSpawnedShooter, mobileBlueUnitsBeforeBuildingProbe === 0,
+    'mobile building-damage QA must spawn a deterministic probe shooter only when battle attrition removed all starting blue units');
   console.log('MOBILE_BUILDING_STAGE1_START ' + JSON.stringify(mobileBuildingStart));
   try {
     await mobile.waitForFunction(() => {

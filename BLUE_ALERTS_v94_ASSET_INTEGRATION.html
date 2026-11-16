@@ -3866,16 +3866,19 @@ function tick() {
     const liveUnits = units.filter(v => !v.dead && v.g);
     const livePlayerUnits = liveUnits.filter(v => v.team === 1);
     for (const u of [...units]) {
+      // Flash timers must advance even after a unit dies. Dead units skip the
+      // movement/combat update below, but their attached muzzle flash still
+      // belongs to the scene and must fade out instead of remaining visible.
+      u.flashT = Math.max(0, u.flashT - dt);
+      if (u.g?.userData?.flash) {
+        setMuzzleFlashIntensity(u.g.userData.flash, u.flashT > 0 ? Math.min(1, u.flashT / 0.12) : 0);
+      }
       if (u.dead) continue;
       // Track actual displacement so a unit blocked by another unit or a tight
       // corner can recover instead of endlessly pushing against the obstacle.
       const frameStartX = u.g.position.x;
       const frameStartZ = u.g.position.z;
       u.cd -= dt;
-      u.flashT = Math.max(0, u.flashT - dt);
-      if (u.g.userData.flash) {
-        setMuzzleFlashIntensity(u.g.userData.flash, u.flashT > 0 ? Math.min(1, u.flashT / 0.12) : 0);
-      }
 
       // Determine combat target
       let combatTarget = null;
@@ -4460,6 +4463,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
     activeProjectiles: projectiles.length,
     modelProjectiles: projectiles.filter(p => p.mesh?.userData?.kind === 'projectile').length,
     modelMuzzleFlashes: fx.filter(e => e.kind === 'model-muzzle').length + visibleModelMuzzleFlashCount(),
+    deadUnitMuzzleFlashes: units.filter(u => u.dead && u.g?.userData?.flash?.visible).length,
     modelExplosions: fx.filter(e => e.kind === 'model-explosion').length,
     modelExplosionLives: fx.filter(e => e.kind === 'model-explosion').map(e => e.life),
     modelExplosionPositions: fx.filter(e => e.kind === 'model-explosion').map(e => ({ x: e.mesh.position.x, z: e.mesh.position.z })),
@@ -4577,9 +4581,18 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
           .sort((a, b) => b.hp - a.hp)[0] || null;
       }
       const target = buildingProbeTarget;
-      const shooter = units.find(u => !u.dead && u.team === 1 && u.kind === 'light' && u.dmg > 0 && u.g) ||
+      if (!target) throw new Error('Building damage QA requires a healthy enemy turret.');
+      let shooter = units.find(u => !u.dead && u.team === 1 && u.kind === 'light' && u.dmg > 0 && u.g) ||
         units.find(u => !u.dead && u.team === 1 && u.dmg > 0 && u.g);
-      if (!target || !shooter) throw new Error('Building damage QA requires a healthy enemy turret and a live blue combat unit.');
+      // The mobile VFX lifecycle test may legitimately lose every starting blue
+      // combat unit while waiting for projectiles and effects to drain. Spawn a
+      // deterministic QA-only shooter after combat is suppressed so the separate
+      // building-damage probe does not depend on the earlier battle outcome.
+      let qaSpawnedShooter = false;
+      if (!shooter) {
+        shooter = createUnit(target.x - 6, target.z + 1, 1, 'light');
+        qaSpawnedShooter = true;
+      }
       shooter.g.position.set(target.x - 6, 0.04, target.z + 1);
       shooter.g.rotation.y = 0;
       shooter.path = null; shooter.pathIdx = 0; shooter.dest = null;
@@ -4593,7 +4606,7 @@ if (new URLSearchParams(location.search).get('qa') === '1') {
       const expectedHpAfter = hpBefore - shots * damagePerShot;
       if (expectedHpAfter <= 0) throw new Error('Building damage QA refuses a burst that would destroy the target before its damage state can be inspected.');
       for (let i = 0; i < shots; i++) fireProjectile(shooter, target);
-      return { stage, shooterKind: shooter.kind, shots, damagePerShot, hpBefore, expectedHpAfter, ...buildingDamageSnapshot() };
+      return { stage, shooterKind: shooter.kind, qaSpawnedShooter, shots, damagePerShot, hpBefore, expectedHpAfter, ...buildingDamageSnapshot() };
     }
   });
 
