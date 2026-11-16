@@ -8,6 +8,8 @@ import tempfile
 
 HTML = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("BLUE_ALERTS_v94_ASSET_INTEGRATION.html")
 MODEL_LIBRARY = Path("game-data/models/blue-alert-models.js")
+VENDOR_LIBRARY = Path("public/vendor/three.min.js")
+VENDOR_LICENSE = Path("public/vendor/THREE-LICENSE.txt")
 BROWSER_TEST = Path("scripts/validate_v94_browser.mjs")
 
 
@@ -16,6 +18,7 @@ class ScriptCollector(HTMLParser):
         super().__init__(convert_charrefs=False)
         self.scripts = []
         self.external_scripts = []
+        self.local_scripts = []
         self.current = None
         self.current_type = ""
 
@@ -24,7 +27,10 @@ class ScriptCollector(HTMLParser):
             return
         attrs = dict(attrs)
         if attrs.get("src"):
-            self.external_scripts.append(attrs["src"])
+            if attrs["src"].startswith(("http://", "https://")):
+                self.external_scripts.append(attrs["src"])
+            else:
+                self.local_scripts.append(attrs["src"])
             self.current = None
             self.current_type = ""
         else:
@@ -63,8 +69,18 @@ def main():
         raise SystemExit(f"FAIL: {HTML} is missing")
     if not MODEL_LIBRARY.is_file():
         raise SystemExit(f"FAIL: {MODEL_LIBRARY} is missing")
+    if not VENDOR_LIBRARY.is_file():
+        raise SystemExit(f"FAIL: {VENDOR_LIBRARY} is missing")
+    if not VENDOR_LICENSE.is_file():
+        raise SystemExit(f"FAIL: {VENDOR_LICENSE} is missing")
 
     source = HTML.read_text(encoding="utf-8")
+    vendor_source = VENDOR_LIBRARY.read_text(encoding="utf-8")
+    vendor_license = VENDOR_LICENSE.read_text(encoding="utf-8")
+    if 'const e="160"' not in vendor_source or "t.REVISION=e" not in vendor_source:
+        raise SystemExit("FAIL: vendored Three.js must be revision 160")
+    if "SPDX-License-Identifier: MIT" not in vendor_source or "The MIT License" not in vendor_license:
+        raise SystemExit("FAIL: vendored Three.js MIT notices are missing")
     lower = source.lower()
     required_html = ("<!doctype html", "<html", "</html>", "<body", "</body>")
     missing = [token for token in required_html if token not in lower]
@@ -78,6 +94,8 @@ def main():
         "function spawn",
         "BLUE_MODELS",
         "game-data/models/blue-alert-models.js",
+        '<script src="./public/vendor/three.min.js"></script>',
+        "globalThis.THREE?.REVISION === '160'", 
         "new THREE.Scene",
         "new THREE.PerspectiveCamera",
         "function terrainHash",
@@ -337,6 +355,9 @@ def main():
     parser = ScriptCollector()
     parser.feed(source)
     parser.close()
+    missing_local_scripts = [path for path in parser.local_scripts if not Path(path).is_file()]
+    if missing_local_scripts:
+        raise SystemExit("FAIL: local script assets are missing: " + ", ".join(missing_local_scripts))
     if not parser.scripts:
         raise SystemExit("FAIL: no inline JavaScript found to syntax-check")
 
@@ -344,6 +365,7 @@ def main():
         check_js(code, script_type == "module", f"HTML script #{index}")
 
     check_js(MODEL_LIBRARY.read_text(encoding="utf-8"), True, "v94 model library")
+    check_js(vendor_source, False, "vendored Three.js r160")
     print(
         f"PASS: {HTML}; {len(parser.scripts)} inline script(s), "
         f"model library {MODEL_LIBRARY.stat().st_size} bytes; JavaScript syntax valid."

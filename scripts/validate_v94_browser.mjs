@@ -33,7 +33,17 @@ await mkdir(output, { recursive: true });
 let browser;
 const failures = [];
 const successfulThree = [];
-function watch(page) {
+const externalRequests = [];
+async function watch(page) {
+  await page.route('**/*', async route => {
+    const requestUrl = new URL(route.request().url());
+    if (requestUrl.hostname !== '127.0.0.1') {
+      externalRequests.push(requestUrl.href);
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
   page.on('pageerror', error => failures.push('pageerror: ' + error.message));
   page.on('console', message => {
     if (message.type() === 'error') failures.push('console: ' + message.text());
@@ -51,7 +61,7 @@ function watch(page) {
   });
 }
 async function loadGame(page, options = {}) {
-  watch(page);
+  await watch(page);
   const params = new URLSearchParams();
   if (options.combatVfx) params.set('qa', '1');
   if (options.combatRig) params.set('combat-rig', '1');
@@ -100,6 +110,7 @@ async function metrics(page) {
     return {
       viewportWidth: innerWidth,
       documentWidth: document.documentElement.scrollWidth,
+      threeRevision: window.THREE?.REVISION || null,
       viewportRect: { width: vr?.width || 0, height: vr?.height || 0 },
       canvasRect: { width: cr?.width || 0, height: cr?.height || 0 },
       canvasBacking: { width: canvas?.width || 0, height: canvas?.height || 0 },
@@ -455,7 +466,7 @@ try {
   const infantryWalkStart = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__.walkProbe());
   await desktop.waitForFunction(start => {
     const state = window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot();
-    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 && Math.abs(state.leftLeg - state.rightLeg) > 0.1;
+    return state && state.position[0] > start[0] + 0.3 && state.walkAmount > 0.2 && Math.abs(state.leftLeg - state.rightLeg) > 0.1 && Math.abs(state.leftArm - state.rightArm) > 0.04;
   }, infantryWalkStart.position, { timeout: 5000, polling: 50 });
   const desktopInfantryGait = await desktop.evaluate(() => window.__BLUE_ALERTS_INFANTRY_QA__?.snapshot());
   assert.ok(desktopInfantryGait.position[0] > infantryWalkStart.position[0] + 0.3 && desktopInfantryGait.walkAmount > 0.2 && Math.abs(desktopInfantryGait.leftArm - desktopInfantryGait.rightArm) > 0.04, 'desktop V94 infantry arms and legs must animate in response to real movement');
@@ -895,7 +906,9 @@ const mobileCommandsBox = await mobile.locator('#mobileCommands').boundingBox();
   await mobile.waitForTimeout(300);
   await mobile.screenshot({ path: output + '/mobile-v94-woodland-tree-detail-390x844.png', fullPage: true });
 
-  assert.ok(successfulThree.length > 0, 'a Three.js module must load successfully');
+  assert.equal(desktopMetrics.threeRevision, '160', 'desktop must use the embedded Three.js r160 runtime');
+  assert.equal(successfulThree.length, 0, 'the embedded runtime must avoid all Three.js CDN requests');
+  assert.equal(externalRequests.length, 0, 'the standalone game must render without any external network request');
   assert.equal(failures.length, 0, 'browser must report no page or console errors: ' + failures.join(' | '));
   for (const file of ['desktop-v94-gameplay.png', 'mobile-v94-gameplay-390x844.png', 'desktop-v94-projectile-vfx.png', 'desktop-v94-explosion-vfx.png', 'mobile-v94-projectile-vfx-390x844.png', 'mobile-v94-explosion-vfx-390x844.png', 'desktop-v94-impact-vfx.png', 'mobile-v94-impact-vfx-390x844.png', 'desktop-v94-building-damaged.png', 'desktop-v94-building-critical.png', 'mobile-v94-building-damaged-390x844.png', 'mobile-v94-building-critical-390x844.png', 'desktop-v94-infantry-gait.png', 'mobile-v94-infantry-gait-390x844.png', 'desktop-v94-camera-baseline-48.png', 'mobile-v94-camera-baseline-48-390x844.png', 'desktop-v94-terrain-surface.png', 'mobile-v94-terrain-surface-390x844.png', 'desktop-v94-woodland-tree-baseline.png', 'desktop-v94-woodland-tree-detail.png', 'mobile-v94-woodland-tree-baseline-390x844.png', 'mobile-v94-woodland-tree-detail-390x844.png', 'desktop-v94-mission-complete.png', 'mobile-v94-mission-toast-clearance-390x844.png', 'mobile-v94-mission-progress-390x844.png', 'desktop-v94-road-wear-baseline.png', 'desktop-v94-road-wear-detail.png', 'desktop-v94-logistics-corridor-wear-baseline.png', 'desktop-v94-logistics-corridor-wear-detail.png', 'mobile-v94-road-wear-baseline-390x844.png', 'mobile-v94-road-wear-detail-390x844.png', 'mobile-v94-logistics-corridor-wear-baseline-390x844.png', 'mobile-v94-logistics-corridor-wear-detail-390x844.png']) {
     assert.ok((await stat(output + '/' + file)).size > 30000, 'rendered gameplay screenshot must contain visible evidence: ' + file);
