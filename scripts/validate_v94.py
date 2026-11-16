@@ -283,6 +283,24 @@ def main():
     building_qa_start = source.index("window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__")
     building_qa_end = source.index("window.__BLUE_ALERTS_MISSION_QA__", building_qa_start)
     building_qa_section = source[building_qa_start:building_qa_end]
+    infantry_qa_start = source.index("const infantryProbe")
+    infantry_qa_end = source.index("const visibleModelMuzzleFlashCount", infantry_qa_start)
+    infantry_qa_section = source[infantry_qa_start:infantry_qa_end]
+    required_infantry_qa = ("weaponGripProfile", "weaponHoldProfile", "leftGripError", "rightGripError",
+                            "muzzleAxisDot", "pelvisBob", "pelvisSway", "leftAnklePitch",
+                            "rightAnklePitch", "leftAnkleLift", "rightAnkleLift", "headScale", "helmetProfile", "faceProtectionProfile", "uniformProfile", "camDist = 9.5")
+    missing = [token for token in required_infantry_qa if token not in infantry_qa_section]
+    if missing:
+        raise SystemExit("FAIL: infantry QA must verify hand-to-rifle alignment and forward muzzle axis: " + ", ".join(missing))
+
+    combat_qa_start = source.index("window.__BLUE_ALERTS_COMBAT_QA__ = Object.freeze({")
+    combat_qa_end = source.index("window.__BLUE_ALERTS_BUILDING_DAMAGE_QA__", combat_qa_start)
+    combat_qa_section = source[combat_qa_start:combat_qa_end]
+    required_infantry_fire = ("fireInfantry()", "muzzleError", "projectileStart", "flashVisible")
+    missing = [token for token in required_infantry_fire if token not in combat_qa_section]
+    if missing:
+        raise SystemExit("FAIL: infantry firing QA must verify projectile origin at the live rifle muzzle: " + ", ".join(missing))
+
     required_building_qa = (
         "units.find(u => !u.dead && u.team === 1 && u.kind === 'light' && u.dmg > 0 && u.g)",
         "units.find(u => !u.dead && u.team === 1 && u.dmg > 0 && u.g)",
@@ -326,6 +344,16 @@ def main():
         "mobile-v94-road-wear-baseline-390x844.png",
         "mobile-v94-road-wear-detail-390x844.png",
         "desktop-v94-mission-complete.png",
+        "desktop-v94-infantry-fire.png",
+        "mobile-v94-infantry-fire-390x844.png",
+        "fireInfantry()",
+        "desktopInfantryGait.locomotionProfile",
+        "desktopInfantryGait.pelvisBob",
+        "desktopInfantryGait.leftAnkleLift",
+        "mobileInfantryGait.locomotionProfile",
+        "mobileInfantryGait.pelvisBob",
+        "mobileInfantryGait.leftAnkleLift",
+        "muzzleError",
         "await desktop.locator('#endOverlay').evaluate(el => el.classList.add('hidden'))",
         "desktop-v94-industrial-yard.png",
         "desktop-v94-terrain-surface.png",
@@ -343,7 +371,34 @@ def main():
     for index, (script_type, code) in enumerate(parser.scripts, start=1):
         check_js(code, script_type == "module", f"HTML script #{index}")
 
-    check_js(MODEL_LIBRARY.read_text(encoding="utf-8"), True, "v94 model library")
+    model_source = MODEL_LIBRARY.read_text(encoding="utf-8")
+    required_infantry_rig = (
+        "pelvis.name = 'infantry-pelvis-rig'",
+        "pelvis.add(torso)",
+        "torso.add(head)",
+        "torso.add(pivot)",
+        "torso.add(rifleGroup)",
+        "label + '-ankle-pivot'",
+        "sole.name = label + '-reinforced-combat-boot-sole'",
+        "label+'-reinforced-combat-boot-toe-cap'",
+        "locomotionProfile:'PLANTED_FOOT_WEIGHT_SHIFT_V1'",
+        "handGeometryProfile:'ANATOMICAL_GLOVE_WRAP_V1'",
+        "bootGeometryProfile:'SCULPTED_FIELD_BOOT_V1'",
+        "renderProfile:'SENTINEL_BASTION_FIELD_SOLDIER_V4'",
+        "helmetProfile:'LOW_PROFILE_BALLISTIC_HELMET_GOGGLES_V2'",
+        "faceProtectionProfile:'BALLISTIC_BALACLAVA_COMPACT_RESPIRATOR_V2'",
+        "uniformProfile:'MATTE_FIELD_UNIFORM_PLATE_CARRIER_V2'",
+        "head.scale.setScalar(.74)",
+        "createInfantryLoftGeometry(THREE, [",
+        "rig.pelvis.position.y = .75",
+        "rig.leftAnkle.position.y = -.28 + leftLift",
+        "rig.rightAnkle.position.y = -.28 + rightLift",
+    )
+    missing = [feature for feature in required_infantry_rig if feature not in model_source]
+    if missing:
+        raise SystemExit("FAIL: infantry must use the articulated pelvis/ankle locomotion rig: " + ", ".join(missing))
+
+    check_js(model_source, True, "v94 model library")
     print(
         f"PASS: {HTML}; {len(parser.scripts)} inline script(s), "
         f"model library {MODEL_LIBRARY.stat().st_size} bytes; JavaScript syntax valid."
