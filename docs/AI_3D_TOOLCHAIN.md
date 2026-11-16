@@ -7,7 +7,7 @@ This toolchain supports production of the existing Blue Alert RTS. It does not r
 | Role | Project | Repository | Use in Blue Alert | Constraints |
 |---|---|---|---|---|
 | Coding agent | Qwen Code | https://github.com/QwenLM/qwen-code | Inspect the repository, implement bounded changes, run tests and review diffs | Requires a desktop/remote development host, Node.js 22+ for npm install, and user-configured model authentication |
-| Video / prompt skill | MiniMax H3 | https://github.com/MiniMax-AI/MiniMax-H3 | Use the portable `h3-prompt-writing` skill to author consistent cinematic reference prompts | The skill itself does not generate video; hosted generation needs a MiniMax account/API and may consume credits |
+| Prompt/model reference (not approved) | MiniMax H3 | https://github.com/MiniMax-AI/MiniMax-H3 | Not used in the Blue Alert production pipeline pending license review | The upstream model repository points to the MiniMax H3 Community License Agreement, not an OSI-approved open-source license. Its acceptable-use policy includes a prohibition on military purposes; because Blue Alert is a military-themed RTS, do not use H3 or its outputs for this project until qualified legal review confirms that the intended game use is permitted. No separate permissive license for the bundled prompt skill was verified |
 | MiniMax API bridge | MiniMax MCP | https://github.com/MiniMax-AI/MiniMax-MCP | Optional connection to MiniMax image/video/audio APIs from an MCP client | API credentials required; generation may be billed. Never store keys in this repository |
 | Local image/video workflow | ComfyUI + official Comfy MCP | https://github.com/Comfy-Org/comfy-mcp | Reproducible local workflows for concept art, texture maps, image references and media review | Requires ComfyUI and a capable host/GPU; project license is AGPL-3.0-or-later OR commercial—review before redistribution |
 | 3D authoring bridge | MCP for Blender | https://github.com/ahujasid/mcp-for-blender | Create and refine meshes, materials, UVs, rigs, animations, LODs and export GLB/glTF assets | Requires Blender on a desktop/remote host; third-party MIT integration; imported assets retain their own licenses |
@@ -45,7 +45,7 @@ pip install comfy-mcp "comfy-cli>=1.14.0"
 This is only the MCP bridge; install and configure ComfyUI separately, then follow the upstream README to connect the local server.
 
 MiniMax:
-- Install the portable prompt skill from the H3 repository only if desired: `npx skills add https://github.com/MiniMax-AI/MiniMax-H3 --skill h3-prompt-writing`.
+- MiniMax H3 is excluded from this project's approved toolchain pending qualified license review. The upstream [Community License Agreement](https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE) is not an OSI-approved open-source license and its acceptable-use policy prohibits military purposes. Do not install the H3 skill, use H3 model weights, or generate/integrate H3 outputs for this military-themed RTS unless a qualified review confirms the intended use is permitted.
 - Connect the official MiniMax MCP only after the owner supplies/configures API credentials and explicitly approves any paid generation.
 
 ## Hard boundaries
@@ -56,3 +56,16 @@ MiniMax:
 - Do not commit generated media unless the asset license and provenance are recorded.
 - Keep the current engine and repository history. A Godot/Unreal/Unity migration requires a separate technical decision.
 - A tool is not considered connected until its local/remote endpoint is configured and a harmless smoke test succeeds. Documentation or a GitHub link alone is not proof of connection.
+
+## License audit — 16 November 2026
+
+The following upstream license files were checked before documenting these integrations:
+
+- **Qwen Code:** Apache License 2.0 (`QwenLM/qwen-code/LICENSE`).
+- **MiniMax MCP:** MIT (`MiniMax-AI/MiniMax-MCP/LICENSE`); the software license does not make hosted generation free, and API use may be billed.
+- **Comfy MCP:** dual-licensed under AGPL-3.0-or-later or a separate commercial license (`Comfy-Org/comfy-mcp/LICENSE`). Do not embed or redistribute it in a proprietary product under the AGPL option without reviewing the obligations; no commercial license is assumed.
+- **MCP for Blender:** MIT (`ahujasid/mcp-for-blender/LICENSE`).
+- **Godot MCP:** MIT (`Coding-Solo/godot-mcp/LICENSE`); this remains conditional and is not integrated into the current game.
+- **MiniMax H3:** the upstream README links to the [MiniMax H3 Community License Agreement](https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE). This is a custom community license, not an OSI-approved open-source license; it has territorial restrictions and an acceptable-use policy that prohibits military purposes. Blue Alert therefore does not use H3 or H3-generated outputs pending qualified legal review. No separate permissive license for the bundled prompt skill was verified.
+
+This audit covers the listed upstream project licenses only. Third-party models, assets, textures, generated media and dependencies must be checked independently before redistribution.
