@@ -42,9 +42,9 @@ OpenRTS est référencé dans ce dépôt comme sous-module Git. **Il n'est pas e
 
 OpenRTS est sous licence MIT ; conserver ses notices lors de toute redistribution. Aucun achat n'est requis pour cette étape, mais le build télécharge des dépendances si elles ne sont pas déjà en cache.
 
-## Prototype web
+## Prototype web historique
 
-Le fichier `BLUE_ALERTS.html` conserve le prototype web précédent. Son rendu 3D dépend du chargement de Three.js depuis un CDN ; le mode 3D hors ligne n'est pas garanti.
+Le fichier `BLUE_ALERTS.html` conserve l'ancien prototype web et reste distinct du build V94 publié. Il conserve son ancien chargement de Three.js ; pour la version autonome et hors ligne, utiliser le build V94 préparé par `scripts/prepare-pages-site.sh`.
 
 
 ## Version 94 — intégration des modèles 3D
@@ -53,4 +53,4 @@ Fichier de première version intégrée : [BLUE_ALERTS_v94_ASSET_INTEGRATION.htm
 
 Cette version conserve la boucle de jeu et les mécaniques du prototype web, tout en utilisant la bibliothèque procédurale `game-data/models/blue-alert-models.js` pour le visuel des chars légers/lourds, fantassins, QG, centrale utilitaire, caserne, usine, raffinerie et tourelles. La citadelle et les moissonneuses gardent leurs modèles natifs. Si la bibliothèque de modèles ne peut pas être chargée, le code visuel natif de secours reste présent.
 
-La version importe les modules Three.js depuis un CDN, comme le prototype existant, et charge la bibliothèque de modèles par chemin relatif. Pour tester la version avec les fichiers du dépôt, lance-la depuis un serveur HTTP (par exemple GitHub Pages ou un serveur local), pas depuis une page GitHub `blob`. La validation complète du rendu WebGL dans Chrome doit encore être faite sur un navigateur réel.
+Le déploiement GitHub Pages prépare `index.html` à partir de cette version, puis embarque localement `public/vendor/three.min.js`, `public/vendor/THREE-LICENSE.txt` et la bibliothèque de modèles. Le runtime Three.js du build publié ne dépend donc pas d'un CDN au lancement ; la notice MIT de Three.js est conservée dans le site préparé. Pour tester les fichiers du dépôt, lance la préparation avec `bash scripts/prepare-pages-site.sh site`, puis sers le dossier `site` via HTTP (par exemple `python3 -m http.server 4173 --directory site`) ; ne l'ouvre pas depuis une page GitHub `blob`. Le rendu WebGL reste soumis à la prise en charge WebGL du navigateur et doit être vérifié sur un appareil réel.
