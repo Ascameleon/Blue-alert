@@ -92,8 +92,9 @@ jobs:
           retention-days: 14
       - name: Install Playwright Chromium
         run: |
-          npm install --no-save --no-package-lock playwright
-          npx playwright install --with-deps chromium
+          npm install --no-save --no-package-lock playwright@1.65.1
+          node -e "const version = require('./node_modules/playwright/package.json').version; if (version !== '1.65.1') throw new Error('Expected Playwright 1.65.1, got ' + version); console.log('Verified Playwright ' + version);"
+          ./node_modules/.bin/playwright install --with-deps chromium
       - name: Build standalone playable V94 HTML
         run: node scripts/build_single_html.mjs
       - name: Render 3D model preview at desktop and mobile sizes
